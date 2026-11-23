@@ -204,6 +204,60 @@ class ProtectionsB6Test : RobolectricTest() {
         assertEquals("never put back beside it", 1, kite.placed.count { it.form["order_type"] == "SL" })
     }
 
+    /** The stops resting at Zerodha on [sym] (working SL orders). */
+    private fun restingStops() = kite.orders.values.count { it.symbol == sym && it.type == "SL" && it.working }
+
+    /**
+     * Sixth round (the unsure stop): Zerodha took the stop, but its answer was a GeneralException and its order book did not show it yet
+     * ([Broker.KiteUnsure]). The protection is kept as "its stop may be resting", looked for, and no other stop is placed on the holding - not
+     * even when Boss sets it again; once the book shows it, it is adopted as the stop. One stop, never two.
+     */
+    @Test fun anUnsureStopThatShowsLaterIsAdoptedNeverDoubled() {
+        Broker.lostSearchInlineForTest = true; Broker.lostLookGapMsForTest = 0L
+        kite.trailReads = 1_000                                              // in the book only later
+        kite.nextPlace(reply = FakeKite.Reply.GENERAL_EXCEPTION_AFTER_ACCEPT)
+        val msg = protect()
+        assertTrue(msg, msg.contains("the stop may be resting at Zerodha"))
+        val p = active().single()
+        assertEquals(Protections.STOP_LOST, p.note)
+        assertEquals(null, p.stopOrderId)
+        val again = protect()
+        assertTrue(again, again.startsWith("Not protected: the stop placed on $sym a moment ago may be resting at Zerodha"))
+        at(12, 5)
+        tick()
+        assertEquals("nothing placed beside it while it is looked for", 1, restingStops())
+        kite.showInBook()
+        tick()
+        val q = active().single()
+        assertEquals("adopted as its stop", kite.orders.values.single { it.type == "SL" }.id, q.stopOrderId)
+        assertEquals("", q.note)
+        tick()
+        assertEquals("one stop, never two", 1, restingStops())
+    }
+
+    /**
+     * Sixth round: the stop never reached Zerodha (its answer a GeneralException, nothing in the book). Nothing is placed beside it while it is
+     * looked for; only once a read of the book that succeeded 2 minutes after it went still does not show it is it placed again - once.
+     */
+    @Test fun anUnsureStopThatNeverShowsIsPlacedAgainOnlyAfterTheWindow() {
+        Broker.lostSearchInlineForTest = true; Broker.lostLookGapMsForTest = 0L
+        kite.nextPlace(reply = FakeKite.Reply.GENERAL_EXCEPTION)
+        val msg = protect()
+        assertTrue(msg, msg.contains("the stop may be resting at Zerodha"))
+        val p = active().single()
+        at(12, 5)
+        tick()
+        assertEquals("nothing placed within the window", 0, restingStops())
+        assertEquals(Protections.STOP_LOST, active().single().note)
+        Broker.ageLostForTest("protstop:${p.id}", Broker.LOST_SEARCH_MS + 1_000)
+        tick()
+        val q = active().single()
+        assertEquals("placed again once a good read 2 minutes on did not show it", 1, restingStops())
+        assertEquals(kite.orders.values.single { it.type == "SL" && it.working }.id, q.stopOrderId)
+        tick()
+        assertEquals("once", 1, restingStops())
+    }
+
     /** The sale refused outright: the stop is put back at once, the target still the app's. */
     @Test fun aRefusedTargetSalePutsTheStopBackAtOnce() {
         protect()
