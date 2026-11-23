@@ -119,7 +119,8 @@ internal object SquareOffExit {
 
     /**
      * 22 Nov 2026 (B6 review, third round): the order tags of the books that count their own lost and on-their-way sales in
-     * [lostPendingProviders] (by product row) - "iraorb" for [OrbArms]. [send] leaves those to their book's count; another sender's exit
+     * [lostPendingProviders] (by product row) - "iraorb" for [OrbArms], [com.optionslab.engine.orb.LiveMirror.TAG] for [ArmLive]. [send]
+     * leaves those sales to their book's count; another sender's exit
      * sale sent a moment ago and not in the fresh read ([ExitCoordinator.unshownPending]) holds the row back. A book adds its tag with
      * its provider.
      */
@@ -171,11 +172,15 @@ internal object SquareOffExit {
         "iraalgoflat" -> "the flat-by"
         "orb" -> "an ORB / Liquidity 15+5 exit"
         "orb-stop" -> "an ORB / Liquidity 15+5 stop going back at Zerodha"
+        // (22 Nov 2026, B6 review: the arms' live copies' exits and the protections' app-watched targets claim their rows too.)
         "armlive" -> "an arm's live exit"
-        "protections" -> "a protection's exit"
-        "boss" -> "your own exit from the app"
+        "protections" -> "a protection's target sale"
+        BOSS_OWNER -> "your exit from the app"
         else -> "another seller ($owner)"
     }
+
+    /** 22 Nov 2026 (B6 review, second round): the name Boss's own exit from the app claims a row by ([claimExit]; AppModel's takeover). */
+    const val BOSS_OWNER = "boss"
 
     /** A row's claim ([claimExit]): [release] it in a finally. Each claim releases once (a second call changes nothing). */
     class ExitClaim internal constructor(private val key: String, private val owner: String) {
@@ -324,7 +329,10 @@ internal object SquareOffExit {
             // whose reply was lost - sent in the last minute, still on its way or its reply lost and not found since ([Broker.findRecent]
             // gives it its id), that the fresh read does not show and no book counts ([lostPendingTags]): nothing this pass. A counting
             // book's sales are its count, [lost].)
-            val unshown = ExitCoordinator.unshownPending(p.exchange, p.symbol, side.name, booksNow, exceptBy = lostPendingTags)
+            // (22 Nov 2026, B6-B: a book's count is subtracted from a SALE only ([lostQty] below) - a buy back of a short under its tag is
+            // never left to it.)
+            val unshown = ExitCoordinator.unshownPending(p.exchange, p.symbol, side.name, booksNow,
+                exceptBy = if (side == Kite.Side.SELL) lostPendingTags else emptySet())
             if (unshown > 0) { skipped("another exit sale on it, sent a moment ago, is not in Zerodha's order book yet", armSelling = true); return false }
             val same = workingNow.filter { it.symbol == p.symbol && it.side == side.name && it.product == p.product }
             // 25 Oct review: a plain exit already working on it - this square-off's own, the other square-off's, or the arm's own

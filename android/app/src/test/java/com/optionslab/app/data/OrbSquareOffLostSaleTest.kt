@@ -877,4 +877,22 @@ class OrbSquareOffLostSaleTest : RobolectricTest() {
         kite.positionsCatchUp()
         assertEquals("flat, never short", 0, held())
     }
+
+    /**
+     * A book's own tag is left to its count on the SALE side only (as B6-B's): a buy-back of a short with a lost buy under that tag not in
+     * the book yet is held back - the books' counts only ever lower a sale, so nothing else would stop a second buy beside it.
+     */
+    @Test fun aBuyBackIsNeverLeftToABooksSaleCount() {
+        state(emptyList())
+        runBlocking { OrbArms.view() }
+        kite.position(sym, -30, 200.0, product = "MIS")
+        kite.positionsTrailReads = 1_000
+        kite.trailReads = 1_000
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)
+        runCatching { runBlocking { Broker.placeOrder(Kite.Order(sym, Kite.Side.BUY, 30, 30, "MIS", "MARKET", null, 0.05, "NFO", "iraorb"), exit = true) } }
+        kite.requests.clear()
+        at(15, 5); expiryPass()
+        assertTrue("no buy beside it", kite.placed.none { it.form["tag"] == "iraalgoexpiry" })
+        assertEquals(1, SquareOffExit.skipsForTest("NFO", sym, "MIS"))
+    }
 }
