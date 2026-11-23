@@ -945,6 +945,13 @@ object Protections {
     fun isTakenOver(id: String): Boolean = takenOver.containsKey(id)
 
     /**
+     * 23 Nov 2026 (B6 review, ninth round): whether [id] may be one of the protections' own orders - an active protection's stop or target as
+     * the list was last published, or any id while it is not read yet. Memory only (never the lock or the disk). (A stop placed again by a
+     * look and not published yet is not matched until that look ends.)
+     */
+    fun mayOwn(id: String): Boolean = published?.any { it.active && (it.stopOrderId == id || it.targetOrderId == id) } ?: true
+
+    /**
      * 20 Nov 2026 (audit, the square-offs): [ids] were noted ([noteTakenOver]) but their cancel did not take (still working at Zerodha):
      * forgotten, so a later cancel of them by Boss in Kite is his (never put back). Memory only; never blocks.
      */

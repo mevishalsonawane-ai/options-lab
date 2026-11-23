@@ -753,6 +753,20 @@ class ProtectionsB6Test : RobolectricTest() {
     }
 
     /**
+     * Ninth round: [Protections.mayOwn] - any id while the list is not read; once read, only an active protection's own stop or target, so
+     * Boss's exit from the app never puts the protections' hour-long mark on another book's order.
+     */
+    @Test fun onlyAProtectionsOwnOrdersMayBeItsOnceTheListIsRead() {
+        Protections.forgetMemoryForTest()
+        assertTrue("not read yet: may be", Protections.mayOwn("990000001"))
+        protect()
+        val p = active().single()
+        assertTrue(Protections.mayOwn(p.stopOrderId!!))
+        p.targetOrderId?.let { assertTrue(Protections.mayOwn(it)) }
+        assertFalse("another book's order", Protections.mayOwn("990000001"))
+    }
+
+    /**
      * Second round (nit with a safety effect): a read of the marks' file that fails for a moment (the Keystore) leaves them not loaded, and no
      * write replaces the file meanwhile; read later, its marks come back beside the new ones. One that fails authentication, or does not
      * parse, is set aside and the marks start afresh.

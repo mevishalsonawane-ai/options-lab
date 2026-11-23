@@ -1461,6 +1461,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             if (ref != null && tick != null) {
                 val r = rest.single()
                 val px = marketableLimit(o.side, ref, tick)
+                // (23 Nov 2026, B6 review, ninth round, with B6-H: the resting exit turned into his LIMIT is the app's own doing - marked first in
+                // each book that may own it ([markOwnExits]), so that LIMIT ended cancelled while the marks hold (each book ends its own at its "a
+                // cancel that never took" check once it is seen working on) puts the stop it was back; his cancel of it from the app later, stuck,
+                // is marked afresh ([cancelStuckOrder]).)
+                markOwnExits(listOf(r.id))
                 val m = runCatching { b.modify(r, r.qty, "LIMIT", px, null) }
                 runCatching { com.optionslab.app.data.Diag.record("orders", "square-off ${o.tradingSymbol}: its resting exit ${if (m.isSuccess) "turned into a LIMIT at $px" else
                     "could not be modified (${m.exceptionOrNull()?.message?.take(120)}); cancelled instead"} (you, the exit)") }
@@ -1481,6 +1486,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         // is put back at Zerodha, never read as Boss's (memory at once; never a wait on that book's lock).
         val orbIds = rest.map { it.id }.filter { com.optionslab.app.data.OrbArms.mayOwnStop(it) }
         runCatching { com.optionslab.app.data.OrbArms.markOwnCancels(orbIds) }
+        // (23 Nov 2026, B6 review, ninth round, with B6-H: and the saved strategies' book, so a leg's stop taken out here and found cancelled
+        // while the leg is still held rests again - never read as Boss's own cancel in Kite, a restart included.)
+        val stratIds = rest.map { it.id }
+        runCatching { com.optionslab.app.data.Strategies.markOwnCancels(stratIds) }
         taken?.addAll(rest.map { it.id })
         for (r in rest) runCatching { b.cancel(r.id, r.variety) }
         // The cancels confirmed (or the check that follows sees what still works and says so).
@@ -1511,6 +1520,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             ?.let { still -> runCatching { com.optionslab.app.data.ArmLive.unmarkOwnCancels(still) } }
         working?.filter { it in orbIds }?.takeIf { it.isNotEmpty() }
             ?.let { still -> runCatching { com.optionslab.app.data.OrbArms.unmarkOwnCancels(still) } }
+        working?.filter { it in stratIds }?.takeIf { it.isNotEmpty() }
+            ?.let { still -> runCatching { com.optionslab.app.data.Strategies.unmarkOwnCancels(still) } }
         runCatching { com.optionslab.app.data.Diag.record("orders", "square-off ${o.tradingSymbol}: the cancel of its resting exits could not be confirmed (the order book did not answer); checked again before the leg goes") }
         return Took.Cleared
     }
@@ -1974,8 +1985,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             val done = setOf("COMPLETE", "CANCELLED", "REJECTED")
             if (runCatching { b.orderState(st.orderId)?.status }.getOrNull() in done) return@launch
             try {
-                b.cancel(st.orderId)
-                val f = b.orderState(st.orderId)
+                cancelStuckOrder(st)
+                val f = untilEnded(st.orderId, b.orderState(st.orderId))
+                // (23 Nov 2026, B6 review, ninth round: as Cancel does - once Zerodha shows it ended, the leg covers nothing: its contract's
+                // arms and protections may rest its stop again at once, never only when its hands-off runs out.)
+                if (f?.status in done) st.plan.legs.getOrNull(st.index)?.let { com.optionslab.app.data.ArmLive.handsBack(it.exchange, it.tradingSymbol) }
                 say("Leg ${st.index + 1} was still working at Zerodha: cancelled${f?.filled?.takeIf { it > 0 }?.let { " after $it filled - check Positions" } ?: ""}. " +
                     "The remaining legs were not sent.")
             } catch (e: Exception) {
@@ -1997,7 +2011,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      */
     data class StuckLeg(val plan: OrderPlan, val index: Int, val orderId: String, val fills: List<com.optionslab.app.data.Broker.Fill>, val status: String,
                         /** 23 Nov 2026 (B6 review, fifth round): the part of Boss's exit going alone, carried to the legs sent after it. */
-                        val part: PartSent? = null)
+                        val part: PartSent? = null,
+                        /** 23 Nov 2026 (B6 review, ninth round): [orderId] is a book's resting exit turned into his LIMIT ([Took.Exit]). */
+                        val converted: Boolean = false)
 
     /**
      * 23 Nov 2026 (B6 review, fifth and sixth rounds): what of Boss's exit went and what did not when part of it could not go ([sendFrom]),
@@ -2066,6 +2082,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     val stuck = MutableStateFlow<StuckLeg?>(null)
 
     private val WORKING = setOf("OPEN", "TRIGGER PENDING", "UNKNOWN", "OPEN PENDING", "VALIDATION PENDING", "PUT ORDER REQ RECEIVED", "MODIFY PENDING", "AMO REQ RECEIVED")
+    /** 23 Nov 2026 (B6 review, ninth round): an order's states that are its end (nothing more can fill). */
+    private val ORDER_ENDED = setOf("COMPLETE", "CANCELLED", "REJECTED")
 
     /**
      * Null when the send started; else why nothing was sent (18 Oct: Jarvis says it, never an earlier send's state).
@@ -2385,7 +2403,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                                 leg.tradingSymbol, leg.side == com.optionslab.engine.Kite.Side.BUY, live = true, entry = f.avgPrice, closing = true)
                             // (6 Nov review: the contract stays hands-off until the whole exit is done - later slices go too - [finally].)
                             if (f.status != "COMPLETE" || f.filled < leg.quantity) {
-                                if (f.status in WORKING) stuck.value = StuckLeg(p, i, took.id, fills.toList(), f.status, part)
+                                if (f.status in WORKING) stuck.value = StuckLeg(p, i, took.id, fills.toList(), f.status, part, converted = true)
                                 sending.value = Load.Failed("${done}Leg ${i + 1}: its stop at Zerodha was turned into a sell at %.2f, but it is %s%s%s. "
                                     .format(java.util.Locale.ENGLISH, took.price, f.status.lowercase(), if (f.filled > 0) " (${f.filled} of ${leg.quantity} filled)" else "",
                                         if (f.message.isNotBlank()) ": ${f.message.trimEnd().removeSuffix(".")}" else "") + (if (i + 1 < p.legs.size) "The remaining legs were NOT sent." else "")
@@ -2400,6 +2418,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     // Named before the fill is awaited, so the order book shows who sent it from its first refresh.
                     launch { runCatching { com.optionslab.app.data.Strategies.tagOwner("kite:$id", cur.source) } }
                     var f = runCatching { b.awaitOrder(id) }.getOrElse { com.optionslab.app.data.Broker.Fill(id, "UNKNOWN", 0.0, 0, "status not confirmed; check the order book") }
+                    // (23 Nov 2026, B6 review, ninth round: a resting exit turned into this leg's exit when it went again, below - [StuckLeg.converted].)
+                    var convertedId: String? = null
                     // 6 Nov: an exit Zerodha refused for margin ("Insufficient funds") means an exit already resting on the contract
                     // made his sale look like a new short. Once, at once: the resting exits are taken over ([takeOverLeg]) and the exit
                     // goes again (never into a short: takeOverLeg does nothing unless the position still holds what the leg closes).
@@ -2459,6 +2479,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                         val took2 = again2
                         when {
                             took2 is Took.Exit -> {
+                                convertedId = took2.id
                                 launch { runCatching { com.optionslab.app.data.Strategies.tagOwner("kite:${took2.id}", cur.source) } }
                                 f = runCatching { b.awaitOrder(took2.id) }.getOrElse { e -> com.optionslab.app.data.Broker.Fill(took2.id, "UNKNOWN", 0.0, 0, e.message ?: "status not confirmed") }
                             }
@@ -2480,7 +2501,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                         leg.tradingSymbol, leg.side == com.optionslab.engine.Kite.Side.BUY, live = true, entry = f.avgPrice, closing = if (cur.exit) true else null)
                     if (f.status != "COMPLETE" || f.filled < leg.quantity) {
                         val working = f.status in WORKING
-                        if (working) stuck.value = StuckLeg(p, i, f.orderId, fills.toList(), f.status, part)
+                        if (working) stuck.value = StuckLeg(p, i, f.orderId, fills.toList(), f.status, part, converted = f.orderId == convertedId)
                         sending.value = Load.Failed(
                             "Leg ${i + 1} ${f.status.lowercase()}${if (f.filled > 0) " (${f.filled} of ${leg.quantity} filled)" else ""}" +
                                 "${if (f.message.isNotBlank()) ": ${f.message.trimEnd().removeSuffix(".")}" else ""}. " +
@@ -2585,15 +2606,80 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * 23 Nov 2026 (B6 review, ninth round, with B6-H): [ids], resting exits the app turns into Boss's exit or cancels as his stuck exit,
+     * marked the app's own - before the modify or cancel goes - in each book that may own them, so one found cancelled while the position is
+     * still held is put back, never read as his cancel in Kite: the protections ([com.optionslab.app.data.Protections.noteTakenOver], only
+     * their own orders - [com.optionslab.app.data.Protections.mayOwn]: no other book's order carries their hour-long mark), the arms' book,
+     * the ORB / Liquidity book (each only its own stops, or every id while that book is not read yet) and the saved strategies' (which keeps
+     * only its own). Pine watches its own level. Memory at once; each book writes its marks off this path.
+     */
+    private suspend fun markOwnExits(ids: List<String>): OwnExitMarks {
+        val prot = ids.filter { com.optionslab.app.data.Protections.mayOwn(it) }
+        runCatching { com.optionslab.app.data.Protections.noteTakenOver(prot) }
+        val armIds = ids.filter { id -> com.optionslab.app.data.ArmLive.view.value.let { v -> !v.loaded || v.open.any { it.stopOrderId == id } } }
+        runCatching { com.optionslab.app.data.ArmLive.markOwnCancels(armIds) }
+        val orbIds = ids.filter { com.optionslab.app.data.OrbArms.mayOwnStop(it) }
+        runCatching { com.optionslab.app.data.OrbArms.markOwnCancels(orbIds) }
+        runCatching { com.optionslab.app.data.Strategies.markOwnCancels(ids) }
+        return OwnExitMarks(prot, armIds, orbIds, ids)
+    }
+
+    /** 23 Nov 2026 (B6 review, ninth round): what [markOwnExits] marked, book by book ([unmarkOwnExits] takes back only these). */
+    private class OwnExitMarks(val protections: List<String>, val arms: List<String>, val orb: List<String>, val strategies: List<String>)
+
+    /** 23 Nov 2026 (B6 review, ninth round): [m]'s marks taken back, each in the book it was made in - a cancel Zerodha refused outright cancelled nothing of the app's. */
+    private suspend fun unmarkOwnExits(m: OwnExitMarks) {
+        runCatching { com.optionslab.app.data.Protections.forgetTakenOver(m.protections) }
+        runCatching { com.optionslab.app.data.ArmLive.unmarkOwnCancels(m.arms) }
+        runCatching { com.optionslab.app.data.OrbArms.unmarkOwnCancels(m.orb) }
+        runCatching { com.optionslab.app.data.Strategies.unmarkOwnCancels(m.strategies) }
+    }
+
+    /**
+     * 23 Nov 2026 (B6 review, ninth round): [first] - the state of [id] read right after the app's cancel of it - read again briefly (about
+     * 1.5 s at most) until Zerodha shows it ended ("CANCEL PENDING" may still fill); a read that fails keeps the last one.
+     */
+    private suspend fun untilEnded(id: String, first: com.optionslab.app.data.Broker.Fill?): com.optionslab.app.data.Broker.Fill? {
+        var f = first
+        var k = 0
+        while (f?.status !in ORDER_ENDED && k++ < 5) {
+            kotlinx.coroutines.delay(300)
+            runCatching { com.optionslab.app.data.Broker.orderState(id) }.getOrNull()?.let { f = it }
+        }
+        return f
+    }
+
+    /**
+     * 23 Nov 2026 (B6 review, ninth round, with B6-H): the stuck leg [st] cancelled from here (Cancel, or the plan closed). One that is a book's
+     * resting exit turned into his LIMIT ([StuckLeg.converted]) and still working at Zerodha is the app's own cancel: marked afresh in each
+     * book first ([markOwnExits]; the marks made when it was turned may have ended since, as it was seen working), so the stop it was goes
+     * back while the position is held - never read as his cancel in Kite. One Zerodha shows ended already (he cancelled it in Kite, it
+     * filled) is not marked; one whose state could not be read is (a cancel of his own in Kite that moment read as the app's is the lesser
+     * harm than a held position left with no stop). A cancel Zerodha refuses outright takes the marks back ([unmarkOwnExits]); one that does
+     * not take otherwise ends at each book's own check once it is seen working on. Throws as [com.optionslab.app.data.Broker.cancel].
+     */
+    private suspend fun cancelStuckOrder(st: StuckLeg) {
+        val b = com.optionslab.app.data.Broker
+        val marks = if (st.converted && runCatching { b.orderState(st.orderId)?.status }.getOrNull() !in ORDER_ENDED) markOwnExits(listOf(st.orderId)) else null
+        try { b.cancel(st.orderId) }
+        catch (e: kotlinx.coroutines.CancellationException) { throw e }
+        catch (e: Exception) {
+            if (marks != null && b.definite(e)) unmarkOwnExits(marks)
+            throw e
+        }
+    }
+
     /** Cancel the stuck leg; the legs after it stay unsent. Called after PIN/biometric. */
     fun cancelStuck() {
         val st = stuck.value ?: return
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                com.optionslab.app.data.Broker.cancel(st.orderId)
-                val f = com.optionslab.app.data.Broker.orderState(st.orderId)
+                cancelStuckOrder(st)
+                val f = untilEnded(st.orderId, com.optionslab.app.data.Broker.orderState(st.orderId))
                 // 6 Nov review: confirmed no longer working, the leg covers nothing: its contract's arm watches it again at once.
-                if (f == null || f.status !in WORKING) st.plan.legs.getOrNull(st.index)?.let { com.optionslab.app.data.ArmLive.handsBack(it.exchange, it.tradingSymbol) }
+                // (23 Nov 2026, B6 review, ninth round: only once Zerodha shows it ended - "CANCEL PENDING" may still fill.)
+                if (f?.status in ORDER_ENDED) st.plan.legs.getOrNull(st.index)?.let { com.optionslab.app.data.ArmLive.handsBack(it.exchange, it.tradingSymbol) }
                 say("Leg ${st.index + 1} cancelled${f?.filled?.takeIf { it > 0 }?.let { " after $it filled - check Positions" } ?: ""}. The remaining legs were not sent.")
                 stuck.value = null
             } catch (e: Exception) { say("Cancel failed: ${e.message}") }

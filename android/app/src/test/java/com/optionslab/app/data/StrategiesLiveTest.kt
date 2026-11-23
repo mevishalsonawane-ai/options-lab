@@ -2723,4 +2723,126 @@ class StrategiesLiveTest : RobolectricTest() {
         runBlocking { Strategies.manageOnly(compromised = false) }
         assertEquals("shrunk on the next look", 75, gttQty(kite.gtts.getValue(gid)))
     }
+
+    // ---- B6-B round 9 (with B6-H): Boss's own exit from the app marks the leg stops it takes out -------------------------------------
+
+    /** Boss's exit from the app for the whole row, sent and answered as [answer] says; the send's end awaited, then [after] on its model. */
+    private fun bossExit(answer: () -> Unit, after: (com.optionslab.app.ui.AppModel) -> Unit = {}) {
+        val store = androidx.lifecycle.ViewModelStore()
+        try {
+            val m = com.optionslab.app.testing.BrokerArea.model(context as android.app.Application, store)
+            m.loadAccount(quiet = true)
+            com.optionslab.app.testing.BrokerArea.await("the account") { m.account.value as? com.optionslab.app.ui.Load.Done }
+            m.planSquareOff(runBlocking { Broker.positions() }.first { it.symbol == NIFTY_CE })
+            com.optionslab.app.testing.BrokerArea.await("the exit plan") { (m.plan.value as? com.optionslab.app.ui.Load.Done)?.value }
+            answer()
+            m.sendPlan()
+            com.optionslab.app.testing.BrokerArea.await("the send", 40_000) {
+                m.sending.value.takeIf { it is com.optionslab.app.ui.Load.Failed || it is com.optionslab.app.ui.Load.Done } }
+            com.optionslab.app.testing.BrokerArea.settle(1_500)
+            after(m)
+        } finally { store.clear() }
+    }
+
+    /**
+     * Boss's exit from the app takes a leg's stop out (cancelled: more is held than the stop covers), and his sale is refused. The stop is the
+     * app's own cancel in the strategies' book: the leg's stop rests again - never read as his cancel in Kite.
+     */
+    @Test fun bossesExitFromTheAppMarksTheLegsStopTheAppsOwnSoItIsPutBack() {
+        val stop = liveLegWithItsStop()
+        kite.position(NIFTY_CE, 150, 100.0, product = "MIS")                // his own 75 beside the leg's
+        // (Not a margin refusal: that one is taken over and sent again at once.)
+        bossExit({ kite.nextPlace(outcome = Outcome.REJECT, message = "Your order price is lower than the current lower circuit limit") })
+        assertEquals("taken out for his exit", "CANCELLED", kite.order(stop.id).status)
+        assertTrue("marked the app's own", runBlocking { Strategies.ownCancelForTest(stop.id) })
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("put back", 1, workingStops().size)
+        assertTrue(logged("stop_cancelled_by_you").isEmpty())
+    }
+
+    /**
+     * Boss's exit from the app turns the leg's stop into his LIMIT exit (the one resting exit covering it all); that LIMIT ends cancelled
+     * unfilled (as when he cancels it stuck). The converted order is the app's own: the leg's stop rests again, never read as his cancel.
+     */
+    @Test fun aLegsStopTurnedIntoBossesExitIsTheAppsOwnWhenThatExitIsCancelled() {
+        val stop = liveLegWithItsStop()
+        bossExit({ kite.afterNext("/orders/regular/${stop.id}") { kite.order(stop.id).status = "CANCELLED" } })
+        assertEquals("turned into his LIMIT", "LIMIT", kite.order(stop.id).type)
+        assertEquals("CANCELLED", kite.order(stop.id).status)
+        assertTrue("marked the app's own", runBlocking { Strategies.ownCancelForTest(stop.id) })
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("put back", 1, workingStops().size)
+        assertTrue(logged("stop_cancelled_by_you").isEmpty())
+    }
+
+    /**
+     * Boss's exit from the app turns the leg's stop into his LIMIT, which sticks (working, unfilled). Seen working well past the strategies'
+     * re-check, the mark made when it was turned ends (as for any cancel that never took); [then] runs on the model with the stuck leg.
+     */
+    private fun stuckExit(then: (com.optionslab.app.ui.AppModel, FakeKite.Order) -> Unit) {
+        val stop = liveLegWithItsStop()
+        runBlocking { Protections.active() }                               // the protections' list read (none of them): never a mark of theirs
+        bossExit({ }) { m ->
+            assertEquals("turned into his LIMIT", "LIMIT", kite.order(stop.id).type)
+            assertTrue("stuck: still working", kite.order(stop.id).working)
+            assertEquals(stop.id, m.stuck.value?.orderId)
+            assertTrue("a resting exit turned into his", m.stuck.value!!.converted)
+            later(Strategies.OWN_CANCEL_RECHECK_MS + 1_000)
+            runBlocking { Strategies.manageOnly(compromised = false) }
+            assertFalse("seen working well after it was turned: ended", runBlocking { Strategies.ownCancelForTest(stop.id) })
+            assertFalse("never a protection's mark on a leg's stop", Protections.isTakenOver(stop.id))
+            then(m, stop)
+        }
+    }
+
+    /**
+     * His cancel of that stuck exit from the app ([cancel]: Cancel, or the plan closed) marks it the app's own afresh, so the leg's stop is
+     * put back - never read as his cancel in Kite - and the contract is handed back at once (no wait for its hands-off to run out).
+     */
+    private fun stuckExitCancelledFromTheApp(cancel: (com.optionslab.app.ui.AppModel) -> Unit) {
+        stuckExit { m, stop ->
+            cancel(m)
+            com.optionslab.app.testing.BrokerArea.await("the cancel") { kite.order(stop.id).takeIf { it.status == "CANCELLED" } }
+            com.optionslab.app.testing.BrokerArea.settle(500)
+            assertTrue("marked afresh before it went", runBlocking { Strategies.ownCancelForTest(stop.id) })
+            assertFalse("handed back", ArmLive.handsOffNow("NFO", NIFTY_CE))
+        }
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("put back", 1, workingStops().size)
+        assertTrue(logged("stop_cancelled_by_you").isEmpty())
+    }
+
+    @Test fun aLegsStopTurnedIntoBossesStuckExitIsPutBackWhenHeCancelsItFromTheApp() = stuckExitCancelledFromTheApp { it.cancelStuck() }
+
+    @Test fun aLegsStopTurnedIntoBossesStuckExitIsPutBackWhenHeClosesThePlan() = stuckExitCancelledFromTheApp { it.dismissPlan() }
+
+    /**
+     * Boss cancels his stuck exit in Kite himself (its hands-off over), then taps Cancel in the app: Zerodha shows it ended, so the app marks
+     * nothing - his cancel stays his, and the leg's stop is not put back.
+     */
+    @Test fun aStuckExitBossCancelledInKiteFirstStaysHisWhenHeThenCancelsItInTheApp() {
+        stuckExit { m, stop ->
+            ArmLive.handsBack("NFO", NIFTY_CE)                              // its hands-off ran out
+            kite.order(stop.id).status = "CANCELLED"                        // he cancels it in Kite
+            m.message.value = null
+            m.cancelStuck()
+            com.optionslab.app.testing.BrokerArea.await("the refusal") { m.message.value?.takeIf { it.startsWith("Cancel failed") } }
+            assertFalse("nothing marked", runBlocking { Strategies.ownCancelForTest(stop.id) })
+        }
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertTrue("his: not put back", workingStops().isEmpty())
+        assertEquals(1, logged("stop_cancelled_by_you").size)
+    }
+
+    /** The app's cancel of the stuck exit refused outright (it filled as the cancel went): nothing of the app's was cancelled - marks taken back. */
+    @Test fun aStuckExitsCancelRefusedOutrightTakesItsMarksBack() {
+        stuckExit { m, stop ->
+            kite.fillsAsCancelled(stop.id, 75, 99.0)
+            m.message.value = null
+            m.cancelStuck()
+            com.optionslab.app.testing.BrokerArea.await("the refusal") { m.message.value?.takeIf { it.startsWith("Cancel failed") } }
+            assertEquals("COMPLETE", kite.order(stop.id).status)
+            assertFalse("taken back", runBlocking { Strategies.ownCancelForTest(stop.id) })
+        }
+    }
 }
