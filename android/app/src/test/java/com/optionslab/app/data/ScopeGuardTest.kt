@@ -89,6 +89,7 @@ class ScopeGuardTest : RobolectricTest() {
             "Broker.lostScope" to scopeOf(Broker, "lostScope"),
             "Broker.killScope" to scopeOf(Broker, "killScope"),
             "OrbArms.offLock" to scopeOf(OrbArms, "offLock"),
+            "ArmLive" to scopeOf(ArmLive, "scope"),
             "Paper.gapReads" to scopeOf(Paper, "gapReads"),
             "Paper.exitReads" to scopeOf(Paper, "exitReads"),
             "Autopilot" to scopeOf(com.optionslab.app.ira.Autopilot, "scope"),

@@ -186,6 +186,24 @@ class ProtectionsB6Test : RobolectricTest() {
         assertEquals(0, held())
     }
 
+    /**
+     * B6-G follow-ups, item 1: Kite's unsure answer to the target's sale ([Broker.KiteUnsure]) goes straight to the lost sale's route - no second
+     * ~4 s search of its own - and its stop stays out while the sale may be going.
+     */
+    @Test fun anUnsureAnswerToATargetSaleGoesStraightToItsLostSale() {
+        protect()
+        val p = active().single()
+        at(12, 5)
+        kite.quote("NFO:$sym", 131.0, 130.95, 131.05)
+        kite.nextPlace(reply = FakeKite.Reply.GENERAL_EXCEPTION)
+        val searches = Broker.callerSearchesForTest.get()
+        tick()
+        assertEquals("no second search of its own", searches, Broker.callerSearchesForTest.get())
+        assertTrue("looked for as a lost sale", Broker.lostKeys("prottarget:").isNotEmpty())
+        assertEquals("its stop stays out while the sale may be going", "CANCELLED", kite.order(p.stopOrderId!!).status)
+        assertEquals("never put back beside it", 1, kite.placed.count { it.form["order_type"] == "SL" })
+    }
+
     /** The sale refused outright: the stop is put back at once, the target still the app's. */
     @Test fun aRefusedTargetSalePutsTheStopBackAtOnce() {
         protect()

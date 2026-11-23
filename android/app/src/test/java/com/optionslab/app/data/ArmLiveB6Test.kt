@@ -628,4 +628,76 @@ class ArmLiveB6Test : RobolectricTest() {
         watch()
         assertTrue(ArmLive.ownCancelForTest(sid))
     }
+
+    // ---- 23 Nov 2026, B6-B sixth round with B6-G's follow-ups --------------------------------------------------------------------------
+
+    /**
+     * Kite's unsure answer to the arm's exit sale ([Broker.KiteUnsure]: its GeneralException, nothing in the book after the door's looks):
+     * straight to the lost exit - no second ~4 s search of its own under the book's lock - and nothing more sold while it is looked for.
+     */
+    @Test fun anUnsureAnswerToAnArmsExitGoesStraightToItsLostExit() {
+        ArmLive.entered(ask(donchian, "unsure"))
+        watch()
+        kite.nextPlace(reply = FakeKite.Reply.GENERAL_EXCEPTION)
+        legs["unsure"] = donchian to 0
+        val searches = Broker.callerSearchesForTest.get()
+        watch()
+        assertEquals("no second search of its own", searches, Broker.callerSearchesForTest.get())
+        assertEquals("held as a lost exit", setOf("NFO|$sym|MIS"), ArmLive.lostExitsForTest())
+        val sells = kite.placed.count { it.form["transaction_type"] == "SELL" && it.form["order_type"] == "MARKET" }
+        watch()
+        assertEquals("nothing more sold while it is looked for", sells, kite.placed.count { it.form["transaction_type"] == "SELL" && it.form["order_type"] == "MARKET" })
+    }
+
+    /**
+     * B6-G's [SquareOffExit.armLimitStale] with the arm's own exit: the arm's LIMIT exit (MARKET blocked) left resting when its own cancel was
+     * lost, its stop already out. At the expiry backstop, 60 s on, the square-off cancels that stale LIMIT (marked as the app's own) and sells;
+     * while its sale works, the arm never puts its stop back beside it (the room its working sale leaves is none) - one sale, never two.
+     */
+    @Test fun anOrphanedArmLimitTakenOverAtTheBackstopNeverGetsTheArmsStopBackBesideTheSale() {
+        val today = Market.today()
+        val s = "BANKNIFTY26NOV52000CE"
+        kite.instruments += FakeKite.Ins(22_000_050, s, "BANKNIFTY", today, 52_000.0, "CE", 30)
+        kite.quote("NFO:$s", 200.0, 199.95, 200.05)
+        java.io.File(context.filesDir, "kite_instruments.json").delete(); runBlocking { Broker.instruments() }
+        val c = Paper.Contract("BANKNIFTY-TEST-52000CE-X", "BANKNIFTY", today, 52_000.0, Right.CE, 30, "NSE_FO|TESTX")
+        ArmLive.entered(ask(donchian, "orph", c = c))
+        watch()
+        val sid = view().openReal.single().stopOrderId!!
+        // Its exit: MARKET blocked, sent as a LIMIT that rests; its own cancel of it after its wait is lost - left resting, the stop out.
+        kite.nextPlace(reply = FakeKite.Reply.INPUT_EXCEPTION, message = "MIS MARKET orders are blocked for this BANKNIFTY contract due to its open interest (OI) being less than 100 lots.")
+        kite.nextPlace(outcome = FakeKite.Outcome.OPEN)
+        kite.afterNext("/orders/regular") { kite.afterNext("/orders/regular") { kite.cancelsLost = 1 } }
+        legs["orph"] = donchian to 0
+        watch()
+        assertEquals("its stop out for the exit", "CANCELLED", kite.order(sid).status)
+        val lim = kite.orders.values.single { it.type == "LIMIT" && it.tag == LiveMirror.TAG && it.side == "SELL" }
+        assertTrue("left resting", lim.working)
+        // The backstop, a minute on: the stale LIMIT is the square-off's to take over; its own sale rests a moment.
+        val t0 = Market.now().toInstant()
+        Market.testClock = java.time.Clock.fixed(t0.plusSeconds(60), com.optionslab.engine.IST)
+        kite.nextPlace(outcome = FakeKite.Outcome.OPEN)
+        ExpirySquareOff.testNow = today.atTime(15, 8).atZone(com.optionslab.engine.IST)
+        runBlocking { ExpirySquareOff.maybeRun(context, AppSettings.load()) }
+        fun expirySells() = kite.placed.filter { it.form["tag"] == "iraalgoexpiry" }
+        assertEquals("the stale LIMIT taken out", "CANCELLED", kite.order(lim.id).status)
+        assertEquals("one square-off sale", 1, expirySells().size)
+        val stops = kite.placed.count { it.form["order_type"] == "SL" }
+        fun armSells() = kite.placed.count { it.form["tag"] == LiveMirror.TAG && it.form["transaction_type"] == "SELL" && it.form["order_type"] != "SL" }
+        val armSold = armSells()
+        later(5); watch()
+        later(20); watch()
+        assertEquals("no stop put back beside the square-off's sale", stops, kite.placed.count { it.form["order_type"] == "SL" })
+        assertEquals("nothing sold by the arm beside it", armSold, armSells())
+        assertEquals("one square-off sale, never two", 1, expirySells().size)
+    }
+
+    /** B6-G merge: one rule for the row's stop owners - a name ending "-stop" is a stop going in, never a sale. */
+    @Test fun everyStopOwnerIsToldByItsSuffix() {
+        for (o in listOf(ArmLive.STOP_CLAIM_OWNER, Protections.STOP_CLAIM_OWNER, OrbArms.CLAIM_STOP_OWNER, PineAuto.CLAIM_STOP_OWNER, Strategies.CLAIM_STOP_OWNER))
+            assertTrue(o, SquareOffExit.isStopOwner(o))
+        for (o in listOf(ArmLive.CLAIM_OWNER, Protections.CLAIM_OWNER, OrbArms.CLAIM_OWNER, PineAuto.CLAIM_OWNER, Strategies.CLAIM_OWNER, "iraalgoflat",
+                "iraalgoexpiry", "${SquareOffExit.BOSS_OWNER}#ab12cd34", null))
+            assertFalse("$o", SquareOffExit.isStopOwner(o))
+    }
 }

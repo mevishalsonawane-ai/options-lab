@@ -868,4 +868,25 @@ class BossExitClaimTest : RobolectricTest() {
             assertEquals(75, kite.positions.getValue("NFO:$pe:NRML").first)
         } finally { SquareOffExit.lostPendingProviders.remove("test") }
     }
+
+    /** B6-G follow-ups, item 1: Kite's unsure answer to Boss's exit ([Broker.KiteUnsure]) is said at once - no second ~4 s search of its own. */
+    @Test fun anUnsureAnswerToBossesExitIsSaidWithoutASecondSearch() {
+        val m = model()
+        m.planSquareOff(position(ce))
+        BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
+        kite.nextPlace(reply = FakeKite.Reply.GENERAL_EXCEPTION)
+        val searches = Broker.callerSearchesForTest.get()
+        m.sendPlan()
+        val why = refused(m)
+        assertTrue(why, why.contains("No matching order was found at Zerodha; check the order book before trying again."))
+        assertEquals("no second search of its own", searches, Broker.callerSearchesForTest.get())
+        // (Review: that sale may still exist - a second tap at once is held back beside it, named as his own earlier exit.)
+        val sells = kite.placed.count { it.form["transaction_type"] == "SELL" }
+        m.planSquareOff(position(ce))
+        BrokerArea.await("the exit planned again") { (m.plan.value as? Load.Done)?.value?.takeIf { m.sending.value == Load.Idle } }
+        m.sendPlan()
+        val again = refused(m)
+        assertTrue(again, again.contains("your own earlier exit of 75 on $ce"))
+        assertEquals("never a second sale beside it", sells, kite.placed.count { it.form["transaction_type"] == "SELL" })
+    }
 }

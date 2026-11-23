@@ -69,7 +69,8 @@ object ArmLive {
     private val entryLock = Mutex()
     /** 18 Nov 2026: an arm's live entry is on its way now (memory only): the ORB arms never take a position for a lost entry meanwhile. */
     val entryInFlight: Boolean get() = entryLock.isLocked
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    // (23 Nov 2026, B6 follow-ups: a failure escaping one of its jobs is noted, never the end of the process - [ScopeGuard].)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("ArmLive"))
     private val written = Vault.LastWrite()
 
     fun init(context: Context) {
@@ -1411,7 +1412,8 @@ object ArmLive {
                 catch (e2: Exception) {
                     if (ArmOrderLabels.zerodhaRefused(e2)) ArmOrderLabels.refused(sent2)
                     if (Broker.definite(e2)) { notMirrored(a, e2.message ?: "Zerodha refused the order", dropIntent = true); return@withLock }
-                    try { Broker.findRecentRetrying(retry, known) } catch (_: Exception) { null }
+                    // (23 Nov 2026, B6 follow-ups, item 1: Kite's unsure answer was looked for in the door already - not again.)
+                    if (e2 is Broker.KiteUnsure) null else try { Broker.findRecentRetrying(retry, known) } catch (_: Exception) { null }
                 }
             } else {
             if (Broker.definite(e)) {
@@ -1994,7 +1996,10 @@ object ArmLive {
         val id = try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
             refusal = e.message?.take(160)
             notSent = e is Broker.NotSent
-            if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, known()) }.getOrNull() ?: null.also { lost = true }
+            // (23 Nov 2026, B6 follow-ups, item 1: Kite's unsure answer - [Broker.KiteUnsure] - was looked for in the door already: straight to
+            // the lost-reply route, never a second ~4 s search under the book's lock.)
+            if (Broker.definite(e)) null
+            else (if (e is Broker.KiteUnsure) null else runCatching { Broker.findRecentRetrying(o, known()) }.getOrNull()) ?: null.also { lost = true }
         }
         // 20 Nov 2026 (audit B5 deep review): its reply lost and not found yet: UNKNOWN - looked for on the next looks, never a second stop
         // beside it meanwhile ([restStop]); the app watches the level.
@@ -2564,7 +2569,8 @@ object ArmLive {
                     if (limit != null) {
                         try { Broker.placeOrder(limit, exit = true) } catch (e2: Exception) {
                             val seen = known().toSet() + working.map { it.id }
-                            val again = if (Broker.definite(e2)) null else runCatching { Broker.findRecentRetrying(limit, seen) }.getOrNull()
+                            // (23 Nov 2026, B6 follow-ups, item 1: Kite's unsure answer was looked for in the door already - straight to the lost exit.)
+                            val again = if (Broker.definite(e2) || e2 is Broker.KiteUnsure) null else runCatching { Broker.findRecentRetrying(limit, seen) }.getOrNull()
                             again ?: run {
                                 com.optionslab.app.work.Alerts.post("${p.label}: the live exit failed (MARKET blocked, then ${e2.message?.take(120)}); retrying on the next look.",
                                     com.optionslab.app.work.Alerts.Kind.ERROR, WHO, throttle = true)
@@ -2574,7 +2580,8 @@ object ArmLive {
                         }
                     } else {
                         val seen = known().toSet() + working.map { it.id }
-                        val found = if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, seen) }.getOrNull()
+                        // (23 Nov 2026, B6 follow-ups, item 1: Kite's unsure answer was looked for in the door already - straight to the lost exit.)
+                        val found = if (Broker.definite(e) || e is Broker.KiteUnsure) null else runCatching { Broker.findRecentRetrying(o, seen) }.getOrNull()
                         found ?: run {
                             com.optionslab.app.work.Alerts.post("${p.label}: the live exit failed (${e.message?.take(160)}); retrying on the next look.",
                                 com.optionslab.app.work.Alerts.Kind.ERROR, WHO, throttle = true)

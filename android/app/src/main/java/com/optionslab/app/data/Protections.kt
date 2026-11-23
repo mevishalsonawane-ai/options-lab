@@ -1490,7 +1490,9 @@ object Protections {
         Broker.placeOrder(o, exit = true)
     } catch (e: Exception) {
         if (Broker.definite(e)) throw e
-        val found = try { Broker.findRecentRetrying(o, known) } catch (_: Exception) {
+        // (23 Nov 2026, B6 follow-ups, item 1: Kite's unsure answer - [Broker.KiteUnsure] - was looked for in the door already: straight to the
+        // lost-reply words below, never a second ~4 s search.)
+        val found = if (e is Broker.KiteUnsure) null else try { Broker.findRecentRetrying(o, known) } catch (_: Exception) {
             throw java.io.IOException("${e.message}; the order book could not be read, so a ${o.orderType} ${o.side.name} of ${o.tradingSymbol} " +
                 "may be resting at Zerodha: check the order book")
         }
@@ -1904,7 +1906,7 @@ object Protections {
         }
         // (Second review: any of the app's stops going back - its name ends "-stop" - holds the row only a moment. Sixth round: a look about a
         // second on is asked for, so the target is tried again even when the price slips back meanwhile - its reached mark kept.)
-        if (claim == null && holder?.endsWith("-stop") == true) {
+        if (claim == null && SquareOffExit.isStopOwner(holder)) {
             targetWait[p.id] = nowMs() + TARGET_PENDING_LOOK_MS
             askFollowUp(TARGET_PENDING_LOOK_MS)
             return p
@@ -2038,7 +2040,9 @@ object Protections {
                 if (back != null && (back.id != p.id || !back.active)) { forgetTakenOver(listOf(stop.id)); return back }
                 return p
             }
-            val found = try { Broker.findRecentRetrying(order, known) } catch (x: kotlinx.coroutines.CancellationException) { throw x } catch (_: Exception) { null }
+            // (23 Nov 2026, B6 follow-ups, item 1: Kite's unsure answer was looked for in the door already - straight to the lost sale's route.)
+            val found = if (e is Broker.KiteUnsure) null
+                else try { Broker.findRecentRetrying(order, known) } catch (x: kotlinx.coroutines.CancellationException) { throw x } catch (_: Exception) { null }
             found ?: run {
                 // (Its reply lost and not found yet: it may be selling - no stop goes back beside it until the book shows it or lets it go.)
                 Broker.noteLost(TARGET_LOST + p.id, order, known, "${p.symbol}: its target's sale")

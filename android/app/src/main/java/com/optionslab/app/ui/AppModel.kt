@@ -1121,7 +1121,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         if (claim != null) return claim
         // (23 Nov 2026, B6 review, fourth round: a stop going back holds the row only a moment - said so; a sale is said as a sale.)
         val holder = sq.exitClaimedBy(o.exchange, o.tradingSymbol, o.product)
-        throw java.io.IOException(if (holder?.endsWith("-stop") == true)
+        throw java.io.IOException(if (sq.isStopOwner(holder))
             "${sq.claimWords(holder)} on ${o.tradingSymbol} - it holds the contract only a moment, so your exit was not sent beside it: plan the " +
                 "exit again in a moment. If it must go now, close it in Kite."
         else "${sq.claimWords(holder)} is already selling ${o.tradingSymbol} at Zerodha, so your exit was not sent beside it - for a few seconds, " +
@@ -2287,7 +2287,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                         } catch (e: Exception) {
                             if (b.definite(e)) throw e
                             // The reply was lost, not necessarily the order: look for it (the book can trail the POST) before saying "not sent".
-                            runCatching { b.findRecentRetrying(leg, fills.map { it.orderId }) }.getOrNull()
+                            // (23 Nov 2026, B6 follow-ups, item 1: Kite's unsure answer - [Broker.KiteUnsure] - was looked for in the door already:
+                            // straight to the words below, never a second ~4 s search.)
+                            (if (e is com.optionslab.app.data.Broker.KiteUnsure) null else runCatching { b.findRecentRetrying(leg, fills.map { it.orderId }) }.getOrNull())
                                 ?: throw java.io.IOException("${e.message}. No matching order was found at Zerodha; check the order book before trying again.")
                         }
                     }
@@ -2366,8 +2368,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                                         b.placeOrder(leg, exit = true, verdict = p.verdicts.getOrNull(i))
                                     } catch (e: Exception) {
                                         if (b.definite(e)) throw e
-                                        // A lost reply is not a lost order: looked for before anything is said ([findRecentRetrying]).
-                                        runCatching { b.findRecentRetrying(leg, (fills.map { it.orderId } + f.orderId)) }.getOrNull()
+                                        // A lost reply is not a lost order: looked for before anything is said ([findRecentRetrying]). (Kite's unsure
+                                        // answer was looked for in the door already: not again.)
+                                        (if (e is com.optionslab.app.data.Broker.KiteUnsure) null else runCatching { b.findRecentRetrying(leg, (fills.map { it.orderId } + f.orderId)) }.getOrNull())
                                             ?: throw java.io.IOException("${e.message}. No matching order was found at Zerodha; check the order book before trying again.")
                                     }
                                 }
