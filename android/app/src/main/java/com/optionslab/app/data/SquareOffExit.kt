@@ -172,11 +172,12 @@ internal object SquareOffExit {
         "iraalgoflat" -> "the flat-by"
         "orb" -> "an ORB / Liquidity 15+5 exit"
         "orb-stop" -> "an ORB / Liquidity 15+5 stop going back at Zerodha"
+        // (22 Nov 2026, B6 review: the arms' live copies' exits and the protections' app-watched targets claim their rows too.)
         "armlive" -> "an arm's live exit"
-        "protections" -> "a protection's exit"
-        BOSS_OWNER -> "your own exit from the app"
+        "protections" -> "a protection's target sale"
+        BOSS_OWNER -> "your exit from the app"
         // (22 Nov 2026, B6-B third round: each of Boss's sends claims under its own name, "boss#...".)
-        else -> if (owner.startsWith("$BOSS_OWNER#")) "your own exit from the app" else "another seller ($owner)"
+        else -> if (owner.startsWith("$BOSS_OWNER#")) "your exit from the app" else "another seller ($owner)"
     }
 
     /** 22 Nov 2026 (B6 review, second round): the name Boss's own exit from the app claims a row by ([claimExit]; AppModel's takeover). */

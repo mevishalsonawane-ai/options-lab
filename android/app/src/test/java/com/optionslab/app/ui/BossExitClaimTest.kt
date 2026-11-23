@@ -85,7 +85,7 @@ class BossExitClaimTest : RobolectricTest() {
         try {
             m.sendPlan()
             val why = refused(m)
-            assertTrue(why, why.startsWith("Not sent: a protection's exit is already selling $ce"))
+            assertTrue(why, why.startsWith("Not sent: a protection's target sale is already selling $ce"))
             assertTrue("its stop left resting", kite.order(p.stopOrderId!!).working)
             assertTrue("nothing cancelled or modified", kite.writes.none { it.method == "DELETE" || it.method == "PUT" })
             assertEquals("no sale", placed, kite.placed.size)
@@ -193,7 +193,7 @@ class BossExitClaimTest : RobolectricTest() {
         try {
             m.sendPlan()
             val why = refused(m)
-            assertTrue(why, why.startsWith("Not sent: your own exit from the app is already selling $ce"))
+            assertTrue(why, why.startsWith("Not sent: your exit from the app is already selling $ce"))
             assertEquals("nothing sent", placed, kite.placed.size)
         } finally { other.release() }
     }
