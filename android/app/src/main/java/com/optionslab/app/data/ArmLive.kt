@@ -81,6 +81,8 @@ object ArmLive {
         // one ([unsettledSales]); a lost exit kept in the book is known once the book is read in this process (at most [LOST_LET_GO_MS]).
         lostUnknownUntil = System.currentTimeMillis() + LOST_LET_GO_MS
         SquareOffExit.lostPendingProviders["armlive"] = { sym, product -> unsettledSales(sym, product) }
+        // (23 Nov 2026, B6 review, fourth round: Boss's own exit counts the sales booked a moment ago through its lag guard - not twice.)
+        SquareOffExit.bossPendingProviders["armlive"] = { sym, product -> unsettledSales(sym, product, booked = false) }
         // (22 Nov 2026, B6 review, second round: with the square-offs' third round - these sales, counted there, are left to that count, never
         // read as another sender's sale the fresh read does not show yet.)
         SquareOffExit.lostPendingTags += LiveMirror.TAG
@@ -1854,9 +1856,11 @@ object ArmLive {
         // that did not go puts its stop back).
         // (Its id is written with the look's own save, or the entry's; a death before that leaves the stop resting with no trade owning
         // it, which the restart takes back as this trade's own: [orphanStop].)
-        // 22 Nov 2026 (B6 review, second round, with the square-offs' protocol): the row's claim held while the stop goes in ([CLAIM_OWNER];
-        // this trade's own exit putting it back holds it already) - another seller on the row: not rested this pass, the app watches the level.
-        val claim = SquareOffExit.claimExit(p.exchange, p.symbol, p.product, CLAIM_OWNER) ?: return p.copy(stopTrigger = trigger)
+        // 22 Nov 2026 (B6 review, second round, with the square-offs' protocol): the row's claim held while the stop goes in - another seller on
+        // the row: not rested this pass, the app watches the level. (23 Nov 2026, fourth round: under its own name, [STOP_CLAIM_OWNER], so Boss
+        // is told a stop is going in, not a sale; an exit of these arms putting it back holds the row already.)
+        val owner = if (SquareOffExit.exitClaimedBy(p.exchange, p.symbol, p.product) == CLAIM_OWNER) CLAIM_OWNER else STOP_CLAIM_OWNER
+        val claim = SquareOffExit.claimExit(p.exchange, p.symbol, p.product, owner) ?: return p.copy(stopTrigger = trigger)
         try {
             return ExitCoordinator.turn(p.exchange, p.symbol, "arm ${p.label} stop") { restStopInTurn(p, trigger, ltp, spec, exitSide) }
         } finally { claim.release() }
@@ -2380,7 +2384,9 @@ object ArmLive {
     /** 22 Nov 2026 (B6 review): these arms' name on a position row's exit claim ([SquareOffExit.claimExit]). */
     internal const val CLAIM_OWNER = "armlive"
     /** 22 Nov 2026 (B6 review, second round, m-2): another seller holds [p]'s position row ([SquareOffExit.claimExit]). Memory only. */
-    private fun rowClaimedByOther(p: Pos): Boolean = SquareOffExit.exitClaimedBy(p.exchange, p.symbol, p.product)?.let { it != CLAIM_OWNER } == true
+    private fun rowClaimedByOther(p: Pos): Boolean = SquareOffExit.exitClaimedBy(p.exchange, p.symbol, p.product)?.let { it != CLAIM_OWNER && it != STOP_CLAIM_OWNER } == true
+    /** 23 Nov 2026 (B6 review, fourth round): these arms' name on a row's claim while one of their stops goes back at Zerodha ([restStop]). */
+    internal const val STOP_CLAIM_OWNER = "armlive-stop"
     /** 22 Nov 2026 (B6 review): by trade (ref), the minute its exit's wait for another seller's claim was last written in the diary. Memory. */
     private val claimSaid = java.util.concurrent.ConcurrentHashMap<String, Long>()
     /** TEST ONLY: how many times these arms' exits took a row's claim. */
@@ -2392,15 +2398,22 @@ object ArmLive {
     /** 22 Nov 2026 (B6 review, second round, m-3): one exit's claim on [p]'s position row, taken at most once ([take]); [exitLive] lets it go. */
     private class RowClaim(private val p: Pos, private val why: String) {
         private var held: SquareOffExit.ExitClaim? = null
-        fun take(): Claimed {
+        suspend fun take(): Claimed {
             if (held != null) return Claimed.BEFORE
             held = SquareOffExit.claimExit(p.exchange, p.symbol, p.product, CLAIM_OWNER)
+            // (23 Nov 2026, B6 review, fourth round: one of these arms' own stops going back holds it only a moment - waited for, up to about a
+            // second, never a look lost to it.)
+            var waited = 0
+            while (held == null && waited < 1_000 && SquareOffExit.exitClaimedBy(p.exchange, p.symbol, p.product) == STOP_CLAIM_OWNER) {
+                kotlinx.coroutines.delay(100); waited += 100
+                held = SquareOffExit.claimExit(p.exchange, p.symbol, p.product, CLAIM_OWNER)
+            }
             if (held != null) { claimsTakenForTest.incrementAndGet(); return Claimed.NOW }
             // (In the diary at most once a minute for the trade: the live lane comes every tick.)
             val minute = runCatching { nowMs() / 60_000 }.getOrDefault(0L)
             if (claimSaid.size > 200) claimSaid.clear()
             if (claimSaid.put(p.ref, minute) != minute) runCatching { Diag.record("armlive", "${p.label}: ${p.symbol}'s live exit ($why) waits: " +
-                "${SquareOffExit.claimWords(SquareOffExit.exitClaimedBy(p.exchange, p.symbol, p.product))} is selling it; its stop stays") }
+                "${SquareOffExit.claimWords(SquareOffExit.exitClaimedBy(p.exchange, p.symbol, p.product))} holds it; its stop stays") }
             return Claimed.NO
         }
         fun release() { held?.release(); held = null }
@@ -3167,14 +3180,14 @@ object ArmLive {
      * start, or set aside as damaged less than [LOST_LET_GO_MS] ago - a lost exit older than that shows in Zerodha's own books, which the
      * square-offs read. Memory only: never the book's lock, the disk or the network.
      */
-    internal fun unsettledSales(symbol: String, product: String): Int {
+    internal fun unsettledSales(symbol: String, product: String, booked: Boolean = true): Int {
         val wall = System.currentTimeMillis()
         // (Second round, m-7: only for a row these arms may hold - Boss's own stocks and the like were told "an arm's exit sale has not settled".)
         if ((wall < lostAsideUntil || (cache == null && wall < lostUnknownUntil)) && armsMayHold(symbol, product)) return -1
         val gapNow = runCatching { SquareOffExit.clock() }.getOrDefault(wall)
         return lostExits.values.filter { it.order.tradingSymbol == symbol && it.order.product == product }.sumOf { it.order.quantity } +
             (salesInFlight["$symbol|$product"] ?: 0) +
-            (bookedSales["$symbol|$product"].orEmpty().filter { (_, at) -> gapNow - at in 0 until SquareOffExit.gapMs }.sumOf { it.first })
+            (if (!booked) 0 else bookedSales["$symbol|$product"].orEmpty().filter { (_, at) -> gapNow - at in 0 until SquareOffExit.gapMs }.sumOf { it.first })
     }
 
     /**

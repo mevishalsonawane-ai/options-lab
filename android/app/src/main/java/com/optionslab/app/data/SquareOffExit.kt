@@ -175,6 +175,9 @@ internal object SquareOffExit {
         // (22 Nov 2026, B6 review: the arms' live copies' exits and the protections' app-watched targets claim their rows too.)
         "armlive" -> "an arm's live exit"
         "protections" -> "a protection's target sale"
+        // (23 Nov 2026, B6-B fourth round: the arms' and the protections' stops going back hold the row under their own names.)
+        "armlive-stop" -> "an arm's stop going back at Zerodha"
+        "protections-stop" -> "a protection's stop going back at Zerodha"
         BOSS_OWNER -> "your exit from the app"
         // (22 Nov 2026, B6-B third round: each of Boss's sends claims under its own name, "boss#...".)
         else -> if (owner.startsWith("$BOSS_OWNER#")) "your exit from the app" else "another seller ($owner)"
@@ -213,6 +216,16 @@ internal object SquareOffExit {
     /** TEST ONLY (22 Nov 2026): the passes in a row that left [exchange]:[symbol] [product] unsold ([skips]), by either square-off. */
     internal fun skipsForTest(exchange: String, symbol: String, product: String): Int =
         skips.filterKeys { it.endsWith("|$exchange:$symbol:$product") }.values.sumOf { it.count }
+
+    /**
+     * 23 Nov 2026 (B6-B, fourth round): for Boss's own exit from the app ([com.optionslab.app.ui.AppModel]) - each book's exit sales of [symbol]
+     * [product] not settled yet, by book name ([claimWords] words it): lost or on their way, never one booked in the last [gapMs], whose fill
+     * his exit's lag guard counts already ([bossPendingProviders]; a book without one: its [lostPendingProviders] count, booked ones too).
+     * Negative: that book cannot tell now. Memory only.
+     */
+    internal val bossPendingProviders = java.util.concurrent.ConcurrentHashMap<String, (symbol: String, product: String) -> Int>()
+    internal fun pendingForBoss(symbol: String, product: String): Map<String, Int> =
+        lostPendingProviders.mapValues { (name, f) -> runCatching { (bossPendingProviders[name] ?: f)(symbol, product) }.getOrDefault(-1) }
 
     /**
      * The unresolved lost exit sales on [symbol]'s [product] row across [lostPendingProviders]: their quantity, or null when a book cannot
@@ -299,7 +312,7 @@ internal object SquareOffExit {
             claim = claimExit(p.exchange, p.symbol, p.product, tag) ?: run {
                 val holder = exitClaimedBy(p.exchange, p.symbol, p.product)
                 // (Review: a stop of an arm going back at Zerodha holds the row a moment - no sale of its is going out.)
-                skipped("${claimWords(holder)} held it", armSelling = holder != OrbArms.CLAIM_STOP_OWNER)
+                skipped("${claimWords(holder)} held it", armSelling = holder?.endsWith("-stop") != true)
                 return false
             }
             // 22 Nov 2026 (B6 review): an arm's exit sale on this row not settled yet - its reply lost, or on its way ([lostPendingProviders])

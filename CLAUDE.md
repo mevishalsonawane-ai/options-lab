@@ -212,6 +212,9 @@ notes; match the surrounding code.
   mark whose cancel never took (refused, or its stop still seen working well after the cancel) ends, so Boss's later cancel of it is his.
   A protection's stop that its target's sale finds already cancelled (Zerodha refuses the app's cancel) is not the app's: its mark ends,
   nothing is sold, and the next look reads that cancel by the rule above.
+  (23 Nov) Boss's manual exit from the app holds the contract while it sells. It is refused - with the reason, about how long, and "close it
+  in Kite" - only while another sale on it may still be filling (a lost or unshown sale, another seller holding the row); when part can go
+  safely, that quantity is offered for him to confirm.
 - ORDER COUNT AND KILL SWITCH (20 Nov audit, B5).
   - Today's order count at Zerodha that cannot be read (read twice) is unknown, never 0. The order count check starts in shadow: the
     live entry goes as before, logged "would have refused: order count unknown" and counted. Its Bot settings switch (off by default)

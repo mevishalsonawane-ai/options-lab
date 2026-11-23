@@ -106,6 +106,8 @@ object Protections {
         marksFile = File(app.noBackupFilesDir, MARKS_FILE)
         // 22 Nov 2026 (B6 review): the square-offs count the app's own target sales as going ([targetSalesGoing]) and take no stop out beside one.
         SquareOffExit.lostPendingProviders["protections"] = { sym, product -> targetSalesGoing(sym, product) }
+        // (23 Nov 2026, B6 review, fourth round: Boss's own exit counts a target sale Zerodha took through its lag guard - not twice.)
+        SquareOffExit.bossPendingProviders["protections"] = { sym, product -> targetSalesGoing(sym, product, booked = false) }
         startUnknownUntil = System.currentTimeMillis() + Broker.LOST_SEARCH_MS
     }
 
@@ -1376,9 +1378,14 @@ object Protections {
      */
     private suspend fun restAgainInTurn(p00: Item, net0: Int, said: String? = null, lagSafe: Boolean = false,
                                         mustShow: Map<String, Int>? = null): Item? {
-        val claim = SquareOffExit.claimExit(p00.exchange, p00.symbol, p00.product, CLAIM_OWNER) ?: return p00
+        // (23 Nov 2026, B6 review, fourth round: under its own name, [STOP_CLAIM_OWNER], so Boss is told a stop is going in, not a sale.)
+        val owner = if (SquareOffExit.exitClaimedBy(p00.exchange, p00.symbol, p00.product) == CLAIM_OWNER) CLAIM_OWNER else STOP_CLAIM_OWNER
+        val claim = SquareOffExit.claimExit(p00.exchange, p00.symbol, p00.product, owner) ?: return p00
         try { return restAgainClaimed(p00, net0, said, lagSafe, mustShow) } finally { claim.release() }
     }
+
+    /** 23 Nov 2026 (B6 review, fourth round): the protections' name on a row's claim while one of their stops goes back ([restAgainInTurn]). */
+    internal const val STOP_CLAIM_OWNER = "protections-stop"
 
     /** [restAgainInTurn] with the row's exit claim held. */
     private suspend fun restAgainClaimed(p00: Item, net0: Int, said: String?, lagSafe: Boolean, mustShow: Map<String, Int>?): Item? {
@@ -1828,7 +1835,9 @@ object Protections {
      * 22 Nov 2026 (B6 review): the app's own target sales ([sellAtTarget]) by protection id - symbol, product, quantity, when (the square-offs'
      * clock), and the key its lost reply is looked for under, if lost. Counted as going for the square-offs ([targetSalesGoing]). Memory only.
      */
-    private data class TargetSale(val symbol: String, val product: String, val qty: Int, val atMs: Long, val lostKey: String? = null)
+    private data class TargetSale(val symbol: String, val product: String, val qty: Int, val atMs: Long, val lostKey: String? = null,
+                                  /** 23 Nov 2026: Zerodha took it (placed, or a lost one found) - its fill is in an exit's lag guard. */
+                                  val placed: Boolean = false)
     private val targetSales = java.util.concurrent.ConcurrentHashMap<Long, TargetSale>()
     private fun gapClock(): Long = runCatching { SquareOffExit.clock() }.getOrDefault(System.currentTimeMillis())
 
@@ -1841,7 +1850,7 @@ object Protections {
      * lost target sale's saved mark ([TARGET_LOST], read back with the list) younger than [Broker.LOST_SEARCH_MS] that this process does not
      * know the sale of - by then Zerodha's order book shows any sale it took.
      */
-    internal fun targetSalesGoing(symbol: String, product: String): Int {
+    internal fun targetSalesGoing(symbol: String, product: String, booked: Boolean = true): Int {
         val now = gapClock()
         targetSales.entries.removeIf { (_, t) -> now - t.atMs !in 0 until SquareOffExit.gapMs && (t.lostKey == null || !Broker.lostPending(t.lostKey)) }
         val wall = System.currentTimeMillis()
@@ -1857,7 +1866,7 @@ object Protections {
                 k.removePrefix(TARGET_LOST).toLongOrNull()?.let { id -> list.any { it.id == id && it.symbol == symbol && it.product == product } } == true
         }
         if (unknown) return -1
-        return targetSales.values.filter { it.symbol == symbol && it.product == product }.sumOf { it.qty }
+        return targetSales.values.filter { it.symbol == symbol && it.product == product && (booked || !it.placed) }.sumOf { it.qty }
     }
 
     /** 22 Nov 2026 (B6 review, second round): until when (wall clock) a lost target sale saved before this process started may not be known. */
@@ -1882,12 +1891,19 @@ object Protections {
      * [out] (second round): the stop came out for this sale already (its cancel showed a moment late, [TARGET_CANCEL]) - the sale only.
      */
     private suspend fun sellAtTarget(p: Item, so: Broker.OrderRow, ltp: Double?, out: Boolean = false): Item {
+        // (22 Nov 2026, with the square-offs' protocol: one seller at a time on the row - taken before the stop comes out, let go in a finally;
+        // held by a square-off: nothing taken out, it sells the row. 23 Nov 2026, fourth round: one of the protections' own stops going back
+        // holds it only a moment - waited for, up to about a second.)
+        var claim = SquareOffExit.claimExit(p.exchange, p.symbol, p.product, CLAIM_OWNER)
+        var waited = 0
+        while (claim == null && waited < 1_000 && SquareOffExit.exitClaimedBy(p.exchange, p.symbol, p.product) == STOP_CLAIM_OWNER) {
+            kotlinx.coroutines.delay(100); waited += 100
+            claim = SquareOffExit.claimExit(p.exchange, p.symbol, p.product, CLAIM_OWNER)
+        }
         targetHit.remove(p.id)
         // (Second round, m-1: until this try takes something out, the stream looks leave it be for a while - [targetWait].)
         targetWait[p.id] = nowMs() + TARGET_WAIT_MS
-        // (22 Nov 2026, with the square-offs' protocol: one seller at a time on the row - taken before the stop comes out, let go in a finally;
-        // held by a square-off: nothing taken out, it sells the row.)
-        val claim = SquareOffExit.claimExit(p.exchange, p.symbol, p.product, CLAIM_OWNER) ?: return p
+        if (claim == null) return p
         try { return sellAtTargetClaimed(p, so, ltp, out) } finally { claim.release() }
     }
 
@@ -1896,7 +1912,7 @@ object Protections {
 
     /** 22 Nov 2026 (B6 review, second round, m-2): another seller holds [p]'s position row ([SquareOffExit.claimExit]) - no stop goes back. */
     private fun rowClaimedByOther(p: Item): Boolean =
-        SquareOffExit.exitClaimedBy(p.exchange, p.symbol, p.product)?.let { it != CLAIM_OWNER } == true
+        SquareOffExit.exitClaimedBy(p.exchange, p.symbol, p.product)?.let { it != CLAIM_OWNER && it != STOP_CLAIM_OWNER } == true
 
     /** [sellAtTarget] with the row's exit claim held. */
     private suspend fun sellAtTargetClaimed(p: Item, so: Broker.OrderRow, ltp: Double?, out: Boolean): Item = ExitCoordinator.turn(p.exchange, p.symbol, "protection target") {
@@ -2023,7 +2039,7 @@ object Protections {
             }
         }
         // (Second round, m-4: counted from now, when Zerodha took it, for the square-offs' gap.)
-        targetSales[p.id] = TargetSale(p.symbol, p.product, sell, gapClock())
+        targetSales[p.id] = TargetSale(p.symbol, p.product, sell, gapClock(), placed = true)
         forgetTakenOver(listOf(TARGET_CANCEL + stop.id))
         runCatching { Strategies.tagOwner("kite:$id", "Protection · target") }
         // The stop stays out while the sale fills; still held once it is done (refused later, part filled): put back by the next looks.
@@ -2192,7 +2208,7 @@ object Protections {
                 Broker.LostLook.Searching -> return p
                 is Broker.LostLook.Found -> {
                     // (Second round, m-4: counted for the square-offs' gap from now, when it is known - after a restart too.)
-                    targetSales[p.id] = TargetSale(p.symbol, p.product, l.qty, gapClock())
+                    targetSales[p.id] = TargetSale(p.symbol, p.product, l.qty, gapClock(), placed = true)
                     forgetTakenOver(listOfNotNull(TARGET_LOST + p.id, p.stopOrderId?.let { TARGET_CANCEL + it }))
                     exitFilledFor(listOfNotNull(p.stopOrderId), mapOf(l.id to l.qty)); return p
                 }

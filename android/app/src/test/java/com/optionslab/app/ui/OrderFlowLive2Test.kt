@@ -320,7 +320,7 @@ class OrderFlowLive2Test : RobolectricTest() {
         kite.position(ce, 0, 0.0)                                           // closed from Kite meanwhile
         m.sendPlan()
         // (22 Nov 2026, B6 review, third round: sized under the row's claim before anything resting is taken over.)
-        assertTrue(refused(m).startsWith("Not sent: nothing of $ce is left to sell - Zerodha shows it closed"))
+        assertTrue(refused(m).let { it.startsWith("Not sent: Zerodha shows $ce closed") && it.contains("so nothing of it is left to sell") })
         assertTrue("nothing modified or sent", kite.writes.none { it.method == "PUT" } && kite.placed.size == 1)
         assertEquals("the resting order is left as it was", "LIMIT", kite.order(target).type); assertEquals(130.0, kite.order(target).price, 1e-9)
     }

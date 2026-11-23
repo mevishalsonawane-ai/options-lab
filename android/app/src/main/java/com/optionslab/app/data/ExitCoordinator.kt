@@ -221,6 +221,14 @@ object ExitCoordinator {
     }.getOrDefault(false)
 
     /**
+     * 23 Nov 2026 (B6-B, fourth round): every exit on [exchange]:[symbol] sent from here in the last minute that [read] does not show - answered,
+     * on its way or lost - with who sent it and when, for Boss's own exit's check and words ([com.optionslab.app.ui.AppModel]). Memory only.
+     */
+    fun missingSends(exchange: String, symbol: String, read: List<Broker.OrderRow>): List<ExitRegistry.Sent> = runCatching {
+        registry.missingFrom(ExitRegistry.Kind.ORDER, ExitDesk.key(exchange, symbol), orderRows(read))
+    }.getOrDefault(emptyList())
+
+    /**
      * 22 Nov 2026 (B6 review, third round): the quantity of the exits on the [side] of [exchange]:[symbol] sent from here in the last
      * minute that are still on their way or lost their reply (no id from Zerodha yet) and that [read] does not show - but the sales sent
      * under a tag in [exceptBy] (a square-off's own, or a book that counts its own sales). A stop (SL, SL-M) counts whoever sent it: it

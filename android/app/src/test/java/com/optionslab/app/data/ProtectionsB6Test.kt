@@ -104,6 +104,8 @@ class ProtectionsB6Test : RobolectricTest() {
         assertEquals("flat, never short", 0, held())
         assertTrue("its cancel marked the app's own", Protections.takenOverForTest(p.stopOrderId!!))
         assertEquals("the square-offs count it as going for their gap", 75, SquareOffExit.lostPending(sym, "MIS"))
+        // (Fourth round, m3: never for Boss's own exit - Zerodha took it, so its fill is in his lag guard.)
+        assertEquals(0, SquareOffExit.pendingForBoss(sym, "MIS")["protections"])
         Protections.ageTargetSalesForTest(SquareOffExit.GAP_MS)
         assertEquals(0, Protections.targetSalesGoing(sym, "MIS"))
         com.optionslab.app.testing.SecondRead.clockOn(); tick()
@@ -306,7 +308,8 @@ class ProtectionsB6Test : RobolectricTest() {
         tick()
         val now = active().single()
         assertTrue("put back once it let go", now.stopOrderId != sid && kite.order(now.stopOrderId!!).working)
-        assertEquals("the row claimed as the protections' while it went in", Protections.CLAIM_OWNER, claimedWhilePut)
+        assertEquals("the row claimed under the protections' stop name while it went in", Protections.STOP_CLAIM_OWNER, claimedWhilePut)
+        assertEquals("said as a stop going back", "a protection's stop going back at Zerodha", SquareOffExit.claimWords(Protections.STOP_CLAIM_OWNER))
         assertEquals(null, SquareOffExit.exitClaimedBy("NFO", sym, "NRML"))
     }
 

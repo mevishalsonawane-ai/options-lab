@@ -79,6 +79,8 @@ object OrbArms {
         ArmLive.register(com.optionslab.engine.orb.LiveMirror.ORB) { mirrorLegs }
         // 22 Nov 2026 (B6 review): the square-offs subtract these arms' unsettled exit sales (lost, or on their way) and take no stop out beside one.
         SquareOffExit.lostPendingProviders["orb"] = { sym, product -> if (product == "MIS") unsettledSales(sym) else 0 }
+        // (23 Nov 2026, B6-B fourth round: Boss's own exit counts a sale booked a moment ago through its lag guard - not twice.)
+        SquareOffExit.bossPendingProviders["orb"] = { sym, product -> if (product == "MIS") unsettledSales(sym, booked = false) else 0 }
         SquareOffExit.lostPendingTags += "iraorb"                       // (22 Nov 2026, third round: its sales counted there, by row)
     }
 
@@ -5970,8 +5972,8 @@ object OrbArms {
      * arms' lock, the book or the network. (Before this process has read the book its saved lost sales are not known: the square-offs
      * wait for it, [bookReadHint].)
      */
-    internal fun unsettledSales(kite: String): Int =
-        lostExits.values.filter { it.sym == kite && !it.notFound }.sumOf { it.order.quantity } + (salesInFlight[kite] ?: 0) + bookedLately(kite)
+    internal fun unsettledSales(kite: String, booked: Boolean = true): Int =
+        lostExits.values.filter { it.sym == kite && !it.notFound }.sumOf { it.order.quantity } + (salesInFlight[kite] ?: 0) + (if (booked) bookedLately(kite) else 0)
 
     /**
      * 22 Nov 2026 (B6 review, second round: a sale booked a moment ago may not show in a square-off's read of the books yet - an orders read

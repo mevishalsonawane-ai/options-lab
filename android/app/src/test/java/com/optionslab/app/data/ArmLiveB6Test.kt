@@ -206,6 +206,9 @@ class ArmLiveB6Test : RobolectricTest() {
         assertEquals("counted while it is sent", 30, during)
         assertEquals("the square-offs told a sale started", before + 1, startedDuring)
         assertEquals("booked: still counted for the square-offs' gap", 30, ArmLive.unsettledSales(sym, "MIS"))
+        // (Fourth round, m3: never for Boss's own exit - its lag guard counts that fill already.)
+        assertEquals(0, ArmLive.unsettledSales(sym, "MIS", booked = false))
+        assertEquals(0, SquareOffExit.pendingForBoss(sym, "MIS")["armlive"])
         ArmLive.ageBookedSalesForTest(SquareOffExit.GAP_MS)
         assertEquals("then nothing on its way", 0, ArmLive.unsettledSales(sym, "MIS"))
         // A lost one: on its own row only.
@@ -345,7 +348,8 @@ class ArmLiveB6Test : RobolectricTest() {
         kite.afterNext("/orders/regular") { claimedWhileRested = SquareOffExit.exitClaimedBy("NFO", sym, "MIS") }
         later(5); watch()
         assertEquals("rested again once it let go", 1, kite.orders.values.count { it.working && it.side == "SELL" })
-        assertEquals("the row claimed as the arms' while it went in", ArmLive.CLAIM_OWNER, claimedWhileRested)
+        assertEquals("the row claimed under the arms' stop name while it went in", ArmLive.STOP_CLAIM_OWNER, claimedWhileRested)
+        assertEquals("said as a stop going back", "an arm's stop going back at Zerodha", SquareOffExit.claimWords(ArmLive.STOP_CLAIM_OWNER))
         assertEquals(null, SquareOffExit.exitClaimedBy("NFO", sym, "MIS"))
         assertEquals(30, held())
     }
