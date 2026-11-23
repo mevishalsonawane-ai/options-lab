@@ -58,9 +58,13 @@ class McxGuardStrategyStopTest : RobolectricTest() {
     @Test fun theMcxExpiryExitsCancelOfAStrategyStopIsMarkedTheAppsOwn() {
         assertTrue("open now", McxMarket.isOpen())
         val sl = strategyStop()
+        // (B6-H round 3: looked at the moment Zerodha gets the cancel - marked before it goes, never after.)
+        var markedFirst: Boolean? = null
+        kite.beforeNext("/orders/regular/$sl") { markedFirst = runBlocking { Strategies.ownCancelForTest(sl) } }
         run()
         assertEquals("taken out before the sale", "CANCELLED", kite.order(sl).status)
-        assertTrue("marked the app's own, never Boss's", runBlocking { Strategies.ownCancelForTest(sl) })
+        assertEquals("marked the app's own before the cancel reached Zerodha", true, markedFirst)
+        assertTrue("and still marked after", runBlocking { Strategies.ownCancelForTest(sl) })
     }
 
     @Test fun aCancelZerodhaRefusedOutrightIsTakenBack() {

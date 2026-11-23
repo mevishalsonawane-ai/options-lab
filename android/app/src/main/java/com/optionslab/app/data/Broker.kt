@@ -2651,7 +2651,9 @@ object Broker {
                       /** 18 Oct review: each leg's side, quantity and product (what an active GTT would sell or buy). */
                       val legSides: List<String> = emptyList(), val legQtys: List<Int> = emptyList(), val legProducts: List<String> = emptyList(),
                       /** 23 Nov 2026 (B6-H): when a fired GTT placed its order (its first result's "timestamp", Zerodha's clock; "" when not given). */
-                      val firedAt: String = "") {
+                      val firedAt: String = "",
+                      /** 23 Nov 2026 (B6-H round 3): when Zerodha last changed it (its "updated_at"; "" when not given). */
+                      val updatedAt: String = "") {
         val active: Boolean get() = status.lowercase() == "active"
         /** The quantity this GTT, while active, would send on [side] in [product] (its first leg: a single-leg stop). */
         fun covers(side: String, product: String): Int =
@@ -2669,7 +2671,8 @@ object Broker {
             rows(g.optJSONArray("orders")).map { it.optString("transaction_type") },
             rows(g.optJSONArray("orders")).map { it.optInt("quantity") },
             rows(g.optJSONArray("orders")).map { it.optString("product") },
-            rows(g.optJSONArray("orders")).firstNotNullOfOrNull { o -> o.optJSONObject("result")?.optString("timestamp")?.takeIf { it.isNotBlank() && it != "null" } } ?: "")
+            rows(g.optJSONArray("orders")).firstNotNullOfOrNull { o -> o.optJSONObject("result")?.optString("timestamp")?.takeIf { it.isNotBlank() && it != "null" } } ?: "",
+            g.optString("updated_at").takeIf { it != "null" } ?: "")
     }.sortedByDescending { it.created }.also { ExitCoordinator.gttsRead(it) }
 
     /** Places a GTT. Callers must have had the owner confirm it. */
