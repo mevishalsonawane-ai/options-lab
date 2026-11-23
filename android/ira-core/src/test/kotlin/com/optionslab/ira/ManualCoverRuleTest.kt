@@ -361,6 +361,30 @@ class ManualCoverRuleTest {
         assertFalse(t(tag = "iraarm")); assertFalse(t(tag = "iraorb")); assertFalse(t(tag = "irapine"))
         assertFalse(t(side = "", ex = "", product = ""), "an update without them: the two looks")
         assertTrue(t(side = "buy"), "the side read either case")
+        // 23 Nov 2026 (B6-I round 2): another app's order (a third-party tag) is Boss's own too.
+        assertTrue(t(tag = "sensibull"), "another app's tag: Boss's"); assertTrue(t(tag = "Streak"))
+        assertFalse(t(tag = "iraprotect")); assertFalse(t(tag = "iraalgostrat")); assertFalse(t(tag = "iraalgoexpiry")); assertFalse(t(tag = "iraalgoflat"))
+    }
+
+    /** 23 Nov 2026 (B6-I round 2): the app's own tags, and Boss's - none, the app's order screen's, another app's. */
+    @Test fun theAppsOwnTagsAndBosss() {
+        for (t in ManualCoverRule.APP_TAGS) { assertTrue(ManualCoverRule.appTag(t), t); assertFalse(ManualCoverRule.bossTag(t), t) }
+        assertTrue(ManualCoverRule.appTag("IRAORB"), "either case")
+        assertTrue(ManualCoverRule.appTag("iranew"), "any tag of the app's own family, a later one too")
+        assertTrue(ManualCoverRule.bossTag(""), "Kite's own app: no tag")
+        assertTrue(ManualCoverRule.bossTag("iraalgo"), "the app's own order screen: Boss's hand order")
+        assertTrue(ManualCoverRule.bossTag("sensibull")); assertTrue(ManualCoverRule.bossTag("gtt")); assertTrue(ManualCoverRule.bossTag("streak"))
+    }
+
+    /** 23 Nov 2026 (B6-I round 2): the room over a points stop is at most half its distance - at an 800 average a 10-point stop's 5, not 8. */
+    @Test fun theRoomOverAPointsStopIsAtMostHalfItsDistance() {
+        assertEquals(5.0, ManualCoverRule.room(800.0, 0.05, 790.0), 1e-9)
+        assertEquals(8.0, ManualCoverRule.room(800.0, 0.05), 1e-9, "no stop given: 1% as before")
+        assertEquals(Plan.Both(790.0, 810.0), ManualCoverRule.plan(800.0, 796.0, 0.05), "a normal dip still covered")
+        assertEquals(Plan.Both(790.0, 810.0), ManualCoverRule.plan(800.0, 795.0, 0.05), "exactly the room")
+        assertEquals(Plan.TooLow(790.0), ManualCoverRule.plan(800.0, 794.95, 0.05), "under half the stop's distance over it")
+        assertEquals(0.15, ManualCoverRule.room(5.0, 0.05, 4.75), 1e-9, "three ticks at the least")
+        assertEquals(1.2535, ManualCoverRule.room(125.35, 0.05, 115.35), 1e-9, "1% where it is the smaller")
     }
 
     @Test fun aReportedFillIsConfirmedByAtLeastThatMuchHeld() {
@@ -388,6 +412,8 @@ class ManualCoverRuleTest {
         // 23 Nov 2026: the points rule in words, Boss's own points included.
         assertTrue(ManualCoverRule.saidProtected(sym, 130, 125.35, "Protected.").contains("a stop 10 points under your average and a target sell 10 points over it"))
         assertTrue(ManualCoverRule.saidProtected(sym, 130, 125.35, "Protected.", 7.5, 20.0).contains("a stop 7.5 points under your average and a target sell 20 points over it"))
+        // 23 Nov 2026 (B6-I round 2): how to exit or set his own stop while the app's SL rests.
+        assertTrue(ManualCoverRule.saidProtected(sym, 130, 125.35, "Protected.").endsWith(ManualCoverRule.OWN_EXIT_HELP))
         assertTrue(ManualCoverRule.saidGaveUp(sym, 130, "RMS").contains("is NOT protected"))
         assertTrue(ManualCoverRule.saidGaveUp(sym, 130, "timed out", ManualCoverRule.MAX_ATTEMPTS).contains("tried 10 times"))
     }

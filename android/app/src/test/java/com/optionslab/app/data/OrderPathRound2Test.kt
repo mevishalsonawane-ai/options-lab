@@ -397,6 +397,28 @@ class OrderPathRound2Test : RobolectricTest() {
     }
 
     /**
+     * 23 Nov 2026 (B6-I round 2): Boss's own sell reported on the stream on a contract with an automatic protection - the order path too:
+     * nothing read from the settings vault, only the protections' look asked for (it runs in their own worker).
+     */
+    @Test fun bossesOwnSellUpdateOnTheStreamsThreadReadsNothingAndOnlyAsksTheProtectionsLook() {
+        ManualCover.resetForTest(on = true)
+        try {
+            kite.position(sym, 30, 200.0, product = "MIS")
+            assertTrue(runBlocking { Protections.protectLive(sym, "NFO", "MIS", 30, 200.0, 180.0, null, null, auto = true) }.startsWith("Protected"))
+            assertTrue("NFO:$sym" in Protections.autoKeysHint)
+            val asked = Protections.lookSoonAskedForTest()
+            SecurePrefs.readsForTest.set(0)
+            SecurePrefs.countedThread = Thread.currentThread()
+            try {
+                KiteStream.textForTest("""{"type":"order","data":{"order_id":"9102","status":"TRIGGER PENDING","tradingsymbol":"$sym","exchange":"NFO",""" +
+                    """"product":"MIS","transaction_type":"SELL","quantity":30,"filled_quantity":0,"average_price":0,"tag":null}}""")
+            } finally { SecurePrefs.countedThread = null }
+            assertEquals("settings reads on the stream's thread for Boss's sell", 0L, SecurePrefs.readsForTest.get())
+            assertEquals("the protections' look asked for (in their own worker)", asked + 1, Protections.lookSoonAskedForTest())
+        } finally { ManualCover.resetForTest(on = false); Protections.resetFollowUpForTest() }
+    }
+
+    /**
      * 18 Oct, review: the stream's drop and its gap (both told on the socket thread) read nothing from the vault either, and
      * reach the speed card on its next read. One queued on an earlier day (no look overnight) is never filed under today.
      */

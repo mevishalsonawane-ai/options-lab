@@ -223,14 +223,20 @@ notes; match the surrounding code.
   settings and on Home's "Stop & target on my Kite buys" card: off is one tap, on takes the PIN. In Live, a live NSE / BSE option Boss
   bought himself (never shorts, futures, stock or MCX) that nothing in the app follows gets a stop 10 premium points under its average
   and a target sell 10 over it (bought at 120: 110 / 130), in place of 7 Nov's 5% / 10%. Boss edits the points on that card (saved on
-  this phone only; in Live a wider stop takes the PIN); an option too cheap for the points gets a 5% stop, said; protections already
-  placed keep their levels. A buy placed in Kite is covered as soon as Zerodha reports it COMPLETE (or the rest cancelled after a part
-  fill; a part fill still working waits): the order update only queues the look, which needs a fresh positions read showing at least
-  that quantity; anything else after two looks 20 s apart, as before. Every leave-alone rule stays. Intraday only the stop rests at
-  Zerodha (the target is watched by the app). Boss's own orders come first: a stop or target order of the app's he moved in Kite is kept
-  at his level, never moved back (a GTT of the app's he moves is not followed); his own sell working beside the app's stop, target or GTT
-  takes the app's out (marked as the app's own cancel first, confirmed out), told once - loudly when his order is no stop or covers less
-  than is held - never two exits.
+  this phone only; in Live a wider stop takes the PIN); an option too cheap for the points (stop under 2 ticks) gets a 5% stop, said;
+  protections already placed keep their levels. Boss's own order is any whose tag is not the app's (none, the app's order screen's, another
+  app's). A buy of his placed outside the app is covered about 3 s after Zerodha reports it COMPLETE (or the rest cancelled after a part
+  fill; a part fill still working waits): the order update only queues the look, which re-reads orders and GTTs in the exit turn (a stop
+  he set at once wins) and needs a fresh positions read showing at least that quantity; lots he adds beside the app's own protection are
+  covered too (never more than held); anything else after two looks 20 s apart, as before. Every leave-alone rule stays. Intraday only the
+  stop rests at Zerodha (the target is watched by the app). Boss's own orders come first: a stop or target order of the app's he moved in
+  Kite is kept at his level, never moved back (a GTT of the app's he moves is not followed). Per side (his stops fire in a fall, his
+  targets in a rise): his own stop or GTT beside the app's brings the app's stop (or its GTT) down to what his stops do not cover (raised
+  again if his cover drops), his own target replaces the app's target, and the app's protection comes out - marked as its own cancel
+  first, confirmed out - only when his stops cover all that is held; told once. A sale of his on the stream asks for that look at once,
+  and one that closed the position takes the app's stop out at once (two agreeing reads). His sell on the spread's other leg takes the wing's protection
+  off at once. He is told how to exit while the app's SL rests (modify it in Kite, to MARKET or his level, or cancel it), and again when
+  Zerodha refuses his own sale - never two exits.
 - ORDER COUNT AND KILL SWITCH (20 Nov audit, B5).
   - Today's order count at Zerodha that cannot be read (read twice) is unknown, never 0. The order count check starts in shadow: the
     live entry goes as before, logged "would have refused: order count unknown" and counted. Its Bot settings switch (off by default)

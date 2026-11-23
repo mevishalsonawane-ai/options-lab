@@ -110,15 +110,19 @@ internal fun ManualCoverHomeCardContent(view: ManualCover.View, said: String?, o
             onSavePoints(stopText, targetText)
         }
         Note("Points on the option's price (bought at 120: stop 110, target 130), from ${ManualCoverRule.points(ManualCoverRule.MIN_POINTS)} to " +
-            "${ManualCoverRule.points(ManualCoverRule.MAX_POINTS)}. An option too cheap for the stop's points gets a 5% stop instead. " +
-            "Positions already protected keep their levels. In Live, a wider stop takes your PIN; switching it on takes your PIN.",
-            Modifier.padding(top = 4.dp))
+            "${ManualCoverRule.points(ManualCoverRule.MAX_POINTS)}. Below about ₹${ManualCoverRule.points(view.stopPoints)} the stop can sit near zero; " +
+            "the 5% stop is used only under 2 ticks. Positions already protected keep their levels. In Live, a wider stop takes your PIN; switching " +
+            "it on takes your PIN.", Modifier.padding(top = 4.dp))
         Note("Only NSE and BSE options you bought: never shorts, futures, stock or MCX.", Modifier.padding(top = 2.dp))
         Note("Intraday (MIS): only the stop rests at Zerodha; the target is watched by the app (only while the app runs). Carried (NRML): " +
             "both rest at Zerodha, as one GTT overnight.", Modifier.padding(top = 2.dp))
-        Note("Your own orders come first: move the app's stop or target in Kite and the app keeps your level; place your own sell in Kite and " +
-            "the app takes its own out (never two exits). Never on a position with your own stop, target or GTT already working.",
-            Modifier.padding(top = 2.dp))
+        // 23 Nov 2026 (B6-I round 2): Zerodha may refuse a second full sale of his beside the app's SL - how to exit or set his own stop.
+        Note(ManualCoverRule.OWN_EXIT_HELP, Modifier.padding(top = 2.dp).testTag("manualcover-home-help"))
+        Note("Your own orders come first: move the app's stop or target in Kite and the app keeps your level; your own stop or GTT in Kite " +
+            "brings the app's stop down to the rest, or takes it out when yours covers all you hold; your own target replaces the app's target " +
+            "(never two exits). A buy of yours is " +
+            "covered about 3 s after it fills (a stop you set at once wins); lots you add are covered too. Never on a position with your own " +
+            "stop, target or GTT already working.", Modifier.padding(top = 2.dp))
         Note(view.last.ifEmpty { "Nothing protected or left alone yet." }, Modifier.padding(top = 4.dp).testTag("manualcover-home-last"))
         said?.let { Note(it, Modifier.padding(top = 4.dp)) }
     }

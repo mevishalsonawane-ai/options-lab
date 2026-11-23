@@ -317,15 +317,23 @@ object ManualCoverRule {
         object NoPrice : Plan()
     }
 
-    /** The room the last price needs over the stop ([ROOM_TICKS] ticks or [ROOM_FRACTION] of the average, the larger). */
-    fun room(avg: Double, tick: Double): Double = maxOf(ROOM_TICKS * tick, avg * ROOM_FRACTION)
+    /**
+     * The room the last price needs over the stop ([ROOM_TICKS] ticks or [ROOM_FRACTION] of the average, the larger). 23 Nov 2026 (B6-I
+     * round 2: 1% of an 800 average is 8, most of a 10-point stop, so a normal dip refused the cover): with the [stop] known, the 1% is
+     * at most half the stop's distance from the average - max(3 ticks, min(1% of the average, (average - stop) / 2)).
+     */
+    fun room(avg: Double, tick: Double, stop: Double? = null): Double {
+        val fraction = avg * ROOM_FRACTION
+        val half = stop?.let { (avg - it) / 2 }?.takeIf { it > 0 }
+        return maxOf(ROOM_TICKS * tick, if (half != null) minOf(fraction, half) else fraction)
+    }
 
     fun plan(avg: Double, last: Double, tick: Double, stopPoints: Double = DEFAULT_STOP_POINTS, targetPoints: Double = DEFAULT_TARGET_POINTS): Plan {
         val l = levels(avg, tick, stopPoints, targetPoints) ?: return Plan.NoPrice
         if (!(last > 0) || !last.isFinite()) return Plan.NoPrice
         return when {
             // 7 Nov, review: too close over the stop is "too low" too (it would trigger, or be refused, at once).
-            last < l.stop + room(avg, tick) - 1e-9 -> Plan.TooLow(l.stop)
+            last < l.stop + room(avg, tick, l.stop) - 1e-9 -> Plan.TooLow(l.stop)
             last >= l.target -> Plan.StopOnly(l.stop, l.target, l.fallback)
             else -> Plan.Both(l.stop, l.target, l.fallback)
         }
@@ -340,9 +348,37 @@ object ManualCoverRule {
      * ([PRODUCTS]), and done filling: COMPLETE, or CANCELLED after part of it filled (the rest cancelled: what is held is covered).
      * A part fill still working is not (its COMPLETE update comes later). Shorts, futures, stock and MCX never are.
      */
+    // (23 Nov 2026, B6-I round 2: any order that is not the app's own - Kite's own app or site, or another app's tag: Sensibull, Streak... -
+    // looked at at once; still never the app's own order screen's, "iraalgo".)
     fun fillTriggers(side: String, exchange: String, product: String, symbol: String, status: String, filled: Int, tag: String): Boolean =
-        tag.isBlank() && side.equals("BUY", ignoreCase = true) && exchange in EXCHANGES && product in PRODUCTS && isOption(symbol) && filled > 0 &&
+        bossTag(tag) && !tag.equals(HAND_TAG, ignoreCase = true) && side.equals("BUY", ignoreCase = true) && exchange in EXCHANGES &&
+            product in PRODUCTS && isOption(symbol) && filled > 0 &&
             (status.equals("COMPLETE", ignoreCase = true) || status.equals("CANCELLED", ignoreCase = true))
+
+    /**
+     * 23 Nov 2026 (B6-I round 2): the Zerodha tags of the orders the app sends by itself (the ORB family, Pine, the protections, the
+     * strategies, the arms' live copies, the expiry square-off and the flat-by). Any tag in the app's own "ira" family counts as the app's
+     * too (a tag added later), except [HAND_TAG].
+     */
+    val APP_TAGS = setOf("iraorb", "irapine", "iraprotect", "iraalgostrat", "iraarm", "iraalgoexpiry", "iraalgoflat")
+    /** The app's own order screen's tag: Boss's own hand order, as one in Kite. */
+    const val HAND_TAG = "iraalgo"
+
+    /** 23 Nov 2026 (B6-I round 2): whether an order with [tag] was sent by the app by itself ([APP_TAGS]). */
+    fun appTag(tag: String): Boolean {
+        val t = tag.trim().lowercase()
+        return t in APP_TAGS || (t.startsWith("ira") && t != HAND_TAG)
+    }
+
+    /** 23 Nov 2026 (B6-I round 2): Boss's own order - any tag that is not the app's ([appTag]): none, [HAND_TAG], another app's. */
+    fun bossTag(tag: String): Boolean = !appTag(tag)
+
+    /**
+     * 23 Nov 2026 (B6-I round 2): a reported fill waits this long before it is covered, and Zerodha's orders and GTTs are read again then
+     * inside the contract's exit turn, so a stop Boss sets at once himself wins and the app places nothing (still immediate next to the
+     * old 20-60 s).
+     */
+    const val FILL_GRACE_MS = 3_000L
 
     /**
      * Whether a fill reported done ([fillTriggers]) of [filled] units is confirmed by Zerodha's positions read afresh: at least that
@@ -507,11 +543,17 @@ object ManualCoverRule {
         (if (fallback) "a stop 5% under your average (the option is too cheap for a ${points(stopPoints)}-point stop)"
         else "a stop ${points(stopPoints)} points under your average") + " and a target sell ${points(targetPoints)} points over it"
 
-    /** Boss's words when it protected a position Boss bought by hand (23 Nov 2026: the points rule, [ruleWords]). */
+    /**
+     * 23 Nov 2026 (B6-I round 2): how Boss exits or sets his own stop while the app's stop rests - Zerodha may refuse a second full sale
+     * of his ("insufficient funds") beside it.
+     */
+    const val OWN_EXIT_HELP = "To exit or set your own stop, modify the app's SL in Kite (to MARKET to exit, or to your level) or cancel it."
+
+    /** Boss's words when it protected a position Boss bought by hand (23 Nov 2026: the points rule, [ruleWords], and [OWN_EXIT_HELP]). */
     fun saidProtected(symbol: String, qty: Int, avg: Double, result: String, stopPoints: Double = DEFAULT_STOP_POINTS,
                       targetPoints: Double = DEFAULT_TARGET_POINTS, fallback: Boolean = false): String =
         "$symbol: you bought $qty yourself (average ${f2(avg)}) and nothing in the app followed it, so the app protected it " +
-            "automatically: ${ruleWords(stopPoints, targetPoints, fallback)} (Stop and target on my manual positions). $result"
+            "automatically: ${ruleWords(stopPoints, targetPoints, fallback)} (Stop and target on my manual positions). $result $OWN_EXIT_HELP"
 
     /** The price is already at or over the target: the stop alone. */
     fun saidStopOnly(symbol: String, last: Double, target: Double): String =

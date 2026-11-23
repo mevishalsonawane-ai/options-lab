@@ -72,7 +72,12 @@ class ManualCoverHomeCardTest {
         assertTrue(shows("as soon as Zerodha reports your Kite buy filled", sub = true))
         assertTrue(shows("Only NSE and BSE options you bought: never shorts, futures, stock or MCX."))
         assertTrue(shows("the target is watched by the app", sub = true))
-        assertTrue(shows("the app takes its own out (never two exits)", sub = true))
+        assertTrue(shows("brings the app's stop down to the rest, or takes it out when yours covers all you hold; your own target replaces the " +
+            "app's target (never two exits)", sub = true))
+        // 23 Nov 2026 (B6-I round 2): how to exit or set his own stop while the app's SL rests; the cheap option's stop near zero.
+        assertTrue(shows(com.optionslab.ira.ManualCoverRule.OWN_EXIT_HELP))
+        assertTrue(shows("Below about ₹10 the stop can sit near zero; the 5% stop is used only under 2 ticks.", sub = true))
+        assertTrue(shows("covered about 3 s after it fills (a stop you set at once wins)", sub = true))
         assertTrue(shows("Protected: NIFTY26N0925150CE (130), stop 115.35", sub = true))
         assertTrue(shows("On: placed automatically in market hours (09:15-15:24)"))
         compose.onNodeWithText(toggle).performClick()

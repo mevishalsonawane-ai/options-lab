@@ -30,13 +30,16 @@ import kotlinx.coroutines.withTimeoutOrNull
  *    place of 7 Nov's 5% / 10%; both points are Boss's to change (Home's card, [setPoints]: saved on this phone only, "g.", never
  *    from a backup; widening the stop in Live takes the PIN). An option too cheap for the points keeps the 5% stop
  *    ([ManualCoverRule.levels]), and says so. Protections already set keep the levels they were placed with.
- *  - at once: a BUY placed in Kite (no tag) that Zerodha reports COMPLETE on the stream (or CANCELLED after part filled) is looked at
- *    at once ([onOrderUpdate] only queues it; the look runs in this object's own job). For such a fill the two looks 20 s apart are
- *    replaced by: the order done filling, and Zerodha's positions read afresh showing at least that quantity
- *    ([ManualCoverRule.fillHeld]; less: looked at again in 2 s, a few times). Everything else the look checks is unchanged. The
- *    watch's pass stays the backstop for anything the updates missed (with its two looks).
- *  - Boss's own exit respected: a stop or target of its own Boss moved in Kite is adopted (never moved back), and one of its own with
- *    Boss's own sell working beside it is taken out ([Protections]: never two exits on one holding), told once.
+ *  - at once: a BUY of Boss's placed outside the app (round 2: any tag not the app's, [ManualCoverRule.bossTag]) that Zerodha reports
+ *    COMPLETE on the stream (or CANCELLED after part filled) is looked at about 3 s later ([onOrderUpdate] only queues it; the look runs
+ *    in this object's own job; round 2: the grace lets a stop he sets at once win). For such a fill the two looks 20 s apart are replaced
+ *    by: the order done filling, and Zerodha's positions read afresh showing at least that quantity ([ManualCoverRule.fillHeld]; less:
+ *    looked at again in 2 s, a few times). Everything else the look checks is unchanged. The watch's pass stays the backstop for anything
+ *    the updates missed (with its two looks). Round 2: lots he adds beside the app's own protection are covered too ([grow]); his sale
+ *    of a spread's other leg takes the wing's protection off at once ([unhedge]).
+ *  - Boss's own exit respected: a stop or target of its own Boss moved in Kite is adopted (never moved back); round 2: his own sell or
+ *    GTT beside it brings its stop down to what his does not cover, and takes it out only when his covers all held ([Protections]: never
+ *    two exits on one holding), told once; a sale of his on the stream asks for that look at once.
  *
  * The rules are [ManualCoverRule]'s. It leaves a contract alone when an arm, Pine, an arm's live trade or a protection follows it
  * ([ZerodhaSync.beliefs]) or it is a leg of a live Strategy Module run ([Strategies.liveLegSymbols]); it expires today and the
@@ -265,8 +268,8 @@ object ManualCover {
         // 7 Nov, review: the start's read not landed yet (a slow vault): read here, on the watch's worker thread (never the main one).
         if (!loaded) load()
         val day = Market.today()
-        // (23 Nov 2026: fills the stream reported while it cannot act - Paper, logged out, outside its hours - are dropped, never kept
-        // for later: the watch's two looks cover anything still held once it can.)
+        // (23 Nov 2026: what the stream reported while it cannot act - Paper, logged out, outside its hours - is dropped, never kept for
+        // later: the watch's two looks cover anything still held once it can.)
         if (!s.live || !s.allowRealOrders || !Broker.loggedIn || !ManualCoverRule.inHours(Market.isTradingDay(day), Market.minuteNow())) {
             inbox.clear(); return
         }
@@ -274,8 +277,13 @@ object ManualCover {
         // hedge (only ever removing: it lowers risk); it places nothing.
         val placing = loaded && on
         val next = passLock.withLock { look(s, day, placing, immediate) }
-        // 23 Nov 2026: a reported fill Zerodha's positions do not show yet is looked at again in 2 s (a few times: [fillLagging]).
-        if (next == ManualCoverRule.FollowUp.FILL_LAG) { if (placing) lookNow(ManualCoverRule.FILL_RETRY_MS); return }
+        // 23 Nov 2026: a reported fill Zerodha's positions do not show yet is looked at again in 2 s (a few times: [fillLagging]); round 2:
+        // one still in its grace ([ManualCoverRule.FILL_GRACE_MS]) is looked at once its grace is over.
+        val graceLeft = synchronized(mem) { graceLeftMs() }
+        if (next == ManualCoverRule.FollowUp.FILL_LAG || graceLeft > 0) {
+            lookNow(if (next == ManualCoverRule.FollowUp.FILL_LAG) minOf(ManualCoverRule.FILL_RETRY_MS, graceLeft.takeIf { it > 0 } ?: Long.MAX_VALUE) else graceLeft)
+            return
+        }
         if (mayFollow && placing) followUp(next)
     }
 
@@ -283,60 +291,140 @@ object ManualCover {
 
     /**
      * A fill Zerodha reported done on the stream ([onOrderUpdate]), by look key ("EXCHANGE:SYMBOL:PRODUCT"): the orders' filled
-     * quantities (one update per order kept, the latest), when the last came, and the looks that found Zerodha's positions short of
-     * it ([ManualCoverRule.FILL_TRIES] at most). Memory only, under [mem]; forgotten [ManualCoverRule.FILL_KEEP_MS] after it came.
+     * quantities (one update per order kept, the latest), when the last came (the market's clock; [atNanos]: a steady clock, for its
+     * grace), and the looks that found Zerodha's positions short of it ([ManualCoverRule.FILL_TRIES] at most). Memory only, under [mem];
+     * forgotten [ManualCoverRule.FILL_KEEP_MS] after it came.
      */
-    private data class Fill(val orders: Map<String, Int>, val atMs: Long, val lagged: Int = 0) {
+    private data class Fill(val orders: Map<String, Int>, val atMs: Long, val atNanos: Long, val lagged: Int = 0) {
         val qty: Int get() = orders.values.sum()
     }
     private val fills = HashMap<String, Fill>()
-    /** The stream's thread only adds here (lock-free); the look moves them into [fills]. */
-    private val inbox = java.util.concurrent.ConcurrentLinkedQueue<Pair<com.optionslab.ira.OrderUpdate.Update, Long>>()
+    /** 23 Nov 2026: what the stream reported ([onOrderUpdate]), with when (the market's clock, and a steady one). */
+    private data class Reported(val u: com.optionslab.ira.OrderUpdate.Update, val atMs: Long, val atNanos: Long)
+    /** The stream's thread only adds here (lock-free); the look moves them into [fills] and [sellsSeen]. */
+    private val inbox = java.util.concurrent.ConcurrentLinkedQueue<Reported>()
+    /**
+     * 23 Nov 2026 (B6-I round 2): the underlyings Boss sold an option on (a sale reported on the stream, working or filled) beside an
+     * automatic protection on another contract of it - a spread's short leg after its wing was covered - with when and the looks that did
+     * not find it yet. Under [mem]; forgotten as [fills] are.
+     */
+    private data class SellSeen(val atMs: Long, val lagged: Int = 0, val keys: Set<String> = emptySet())
+    private val sellsSeen = HashMap<String, SellSeen>()
     /** A look an update asked for is waiting (at most one; one that starts lets the next update queue another). */
     private val nowQueued = java.util.concurrent.atomic.AtomicBoolean(false)
     @Volatile private var nowJob: kotlinx.coroutines.Job? = null
+    /**
+     * The looks an update asked for that are running (past their wait; two can overlap - one waits on [passLock]): [clearMemory] lets them
+     * finish (as [followLooking]). Moved under [mem] with [memGen]'s check, so an erase either sees it or stops the look before it starts.
+     */
+    private val nowLooking = java.util.concurrent.atomic.AtomicInteger(0)
+    /** 23 Nov 2026 (B6-I round 2): Boss's own sales Zerodha refused that he was told of (order ids, once each). Memory. */
+    private val rejectTold: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    /** TEST ONLY: a reported fill's grace ([ManualCoverRule.FILL_GRACE_MS]) in place of 3 s. Null in the app. */
+    @Volatile internal var fillGraceMsForTest: Long? = null
+    private fun graceMs(): Long = fillGraceMsForTest ?: ManualCoverRule.FILL_GRACE_MS
 
     /**
-     * 23 Nov 2026: Zerodha's order update from the stream ([KiteStream], its socket thread - the order path): an untagged option BUY
-     * done filling ([ManualCoverRule.fillTriggers]) is queued and a look asked for at once ([lookNow]). Nothing else happens here: no
-     * disk, no network, no lock held, no wait. Switched off (or not read), nothing at all. Never throws.
+     * 23 Nov 2026: Zerodha's order update from the stream ([KiteStream], its socket thread - the order path). Nothing heavy happens here:
+     * no disk, no network, no lock held, no wait - a queue add, a flag, a job started. Never throws. Boss's own order is any whose tag is
+     * not the app's ([ManualCoverRule.bossTag], round 2).
+     *  - An option BUY of his done filling ([ManualCoverRule.fillTriggers]): queued, and a look asked for once its grace is over
+     *    ([ManualCoverRule.FILL_GRACE_MS]: a stop he sets at once himself wins). Switched off (or not read): nothing.
+     *  - Round 2, a SELL of his on a contract with an automatic protection ([Protections.autoKeysHint]): working or filled, a regular look of
+     *    the protections at once ([Protections.bossSaleReported]: never two exits; a closed position's stop out); refused, he is told once how
+     *    to exit while the app's stop rests ([ManualCoverRule.OWN_EXIT_HELP]).
+     *  - Round 2, a SELL of his on another option of an underlying with an automatic protection (a spread's short leg): queued, and a look
+     *    asked for at once - it takes the wing's protection off on a fresh read, without the two looks ([unhedge]).
      */
     fun onOrderUpdate(u: com.optionslab.ira.OrderUpdate.Update) {
         runCatching {
-            if (com.optionslab.app.BuildConfig.GOLD || !(loaded && on)) return
+            if (com.optionslab.app.BuildConfig.GOLD || !loaded) return
+            if (u.side.equals("SELL", ignoreCase = true) && ManualCoverRule.bossTag(u.tag)) { bossSale(u); return }
+            if (!on) return
             if (!ManualCoverRule.fillTriggers(u.side, u.exchange, u.product, u.symbol, u.status, u.filled, u.tag)) return
-            inbox.add(u to Market.now().toInstant().toEpochMilli())
-            lookNow(0L)
+            inbox.add(Reported(u, Market.now().toInstant().toEpochMilli(), System.nanoTime()))
+            lookNow(graceMs())
         }
+    }
+
+    /** 23 Nov 2026 (B6-I round 2): [onOrderUpdate]'s sale of Boss's (memory only, on the stream's thread). */
+    private fun bossSale(u: com.optionslab.ira.OrderUpdate.Update) {
+        val autos = Protections.autoKeysHint
+        if (autos.isEmpty()) return
+        val key = "${u.exchange}:${u.symbol}"
+        val status = u.status.uppercase()
+        val working = status !in com.optionslab.ira.OrderUpdate.TERMINAL
+        if (key in autos) {
+            when {
+                working || status == "COMPLETE" -> Protections.bossSaleReported(u.exchange, u.symbol, u.product, filled = status == "COMPLETE")
+                status == "REJECTED" -> if (rejectTold.also { if (it.size > 200) it.clear() }.add(u.orderId)) {
+                    // (Said from this object's own job: the banner and the diary are not the stream thread's work.)
+                    val said = "${u.symbol}: Zerodha refused your own sell order${u.message.takeIf { it.isNotBlank() }?.let { " ($it)" } ?: ""} - the " +
+                        "app's stop already rests on the position. ${ManualCoverRule.OWN_EXIT_HELP}"
+                    runCatching { scope.launch { Alerts.post(said, Alerts.Kind.ERROR, "Protection"); runCatching { Diag.record("protection", said) } } }
+                }
+            }
+            return
+        }
+        if (!(working || status == "COMPLETE") || u.exchange !in ManualCoverRule.EXCHANGES || !ManualCoverRule.isOption(u.symbol)) return
+        val under = ManualCoverRule.underlying(u.symbol)
+        if (autos.none { ManualCoverRule.underlying(it.substringAfter(':')) == under }) return
+        inbox.add(Reported(u, Market.now().toInstant().toEpochMilli(), System.nanoTime()))
+        lookNow(0L)
     }
 
     /**
      * 23 Nov 2026: a look in this object's own job (never on the stream's thread, the order path or the tick path), after [delayMs],
-     * with the settings read there; at most one waiting. It runs as the watch's look does ([runLook], under [passLock]).
+     * with the settings read there; at most one waiting. It runs as the watch's look does ([runLook], under [passLock]). Round 2 (as
+     * [followUp]): one asked before an erase ([memGen]) does nothing, and from its start the look runs to its end - an erase never cuts it
+     * between a stop sent and its record.
      */
     private fun lookNow(delayMs: Long) {
         if (!nowQueued.compareAndSet(false, true)) return
+        val gen = memGen
         runCatching {
             // (Review: started ATOMIC, so a cancel before it runs - an erase - still reaches the finally below and never leaves it "waiting"
             // for good; the yield is where such a cancel ends it.)
             nowJob = scope.launch(start = kotlinx.coroutines.CoroutineStart.ATOMIC) {
                 try { if (delayMs > 0) kotlinx.coroutines.delay(delayMs) else kotlinx.coroutines.yield() } finally { nowQueued.set(false) }
-                runCatching { runLook(AppSettings.load(), mayFollow = true, immediate = true) }
+                if (synchronized(mem) { (gen != memGen).also { if (!it) nowLooking.incrementAndGet() } }) return@launch
+                try { runCatching { runLook(AppSettings.load(), mayFollow = true, immediate = true) } } finally { nowLooking.decrementAndGet() }
             }
             nowAsked.incrementAndGet()
         }.onFailure { nowQueued.set(false) }
     }
 
-    /** The queued updates moved into [fills], and those too old or retried enough dropped (under [mem]). */
-    private fun takeFills(now: Long) {
+    /**
+     * The queued updates moved into [fills] (buys, only while [placing]) and [sellsSeen] (sales: also switched off, its own protections
+     * are still taken off a spread), and those too old or retried enough dropped (under [mem]).
+     */
+    private fun takeFills(now: Long, placing: Boolean) {
         while (true) {
-            val (u, at) = inbox.poll() ?: break
+            val r = inbox.poll() ?: break
+            val u = r.u
+            if (u.side.equals("SELL", ignoreCase = true)) {
+                val under = ManualCoverRule.underlying(u.symbol)
+                val was = sellsSeen[under]
+                sellsSeen[under] = SellSeen(maxOf(was?.atMs ?: r.atMs, r.atMs), was?.lagged ?: 0, (was?.keys ?: emptySet()) + "${u.exchange}:${u.symbol}")
+                continue
+            }
+            if (!placing) continue
             val k = "${u.exchange}:${u.symbol}:${u.product}"
             val was = fills[k]
-            fills[k] = Fill((was?.orders ?: emptyMap()) + (u.orderId to u.filled), maxOf(was?.atMs ?: at, at), was?.lagged ?: 0)
+            fills[k] = Fill((was?.orders ?: emptyMap()) + (u.orderId to u.filled), maxOf(was?.atMs ?: r.atMs, r.atMs),
+                maxOf(was?.atNanos ?: r.atNanos, r.atNanos), was?.lagged ?: 0)
         }
+        if (!placing) fills.clear()
         fills.entries.removeIf { now - it.value.atMs !in 0..ManualCoverRule.FILL_KEEP_MS || it.value.lagged >= ManualCoverRule.FILL_TRIES }
+        sellsSeen.entries.removeIf { now - it.value.atMs !in 0..ManualCoverRule.FILL_KEEP_MS || it.value.lagged >= ManualCoverRule.FILL_TRIES }
     }
+
+    /** 23 Nov 2026 (B6-I round 2): whether [f]'s grace is over ([ManualCoverRule.FILL_GRACE_MS], a steady clock). */
+    private fun graceOver(f: Fill): Boolean = System.nanoTime() - f.atNanos >= graceMs() * 1_000_000L
+
+    /** 23 Nov 2026 (B6-I round 2): how long until the youngest reported fill's grace is over (0: none waiting). Under [mem]. */
+    private fun graceLeftMs(): Long = fills.values.maxOfOrNull { graceMs() - (System.nanoTime() - it.atNanos) / 1_000_000L }?.coerceAtLeast(0L) ?: 0L
 
     /**
      * The order ids of the fills the stream reported done ([fills]): an order book read that still shows one working trails Zerodha's
@@ -396,7 +484,8 @@ object ManualCover {
 
     /** The follow-up look waiting ([followUp]); [memGen] counts erases and test resets (a follow-up from before one does nothing). */
     private var followJob: kotlinx.coroutines.Job? = null
-    private var memGen = 0
+    // (23 Nov 2026, B6-I round 2: volatile - [lookNow] reads it on the stream's thread, without the lock.)
+    @Volatile private var memGen = 0
     /** True while a follow-up's look runs (past its wait): [clearMemory] lets it finish. */
     @Volatile private var followLooking = false
     /** TEST ONLY: a follow-up waits for this after its delay ([followUpsForTest] with a gate). Null in the app. */
@@ -449,8 +538,8 @@ object ManualCover {
             toldLow.removeAll { !it.startsWith("$d|") }; leftAlone.removeAll { !it.startsWith("$d|") }
             untracked.removeAll { !it.startsWith("$d|") }; unhedged.removeAll { !it.startsWith("$d|") }
             tally = tally.on(day)
-            // 23 Nov 2026: the fills the stream reported since the last look.
-            if (placing) takeFills(now00) else { inbox.clear(); fills.clear() }
+            // 23 Nov 2026: the fills the stream reported since the last look (round 2: and Boss's own sales beside an automatic protection).
+            takeFills(now00, placing)
             fills.isNotEmpty()
         }
         // The pass's one shared read finds the candidates; a fresh read is made before anything is placed (below). 23 Nov 2026: with a
@@ -459,7 +548,7 @@ object ManualCover {
             ?: return ManualCoverRule.FollowUp.READ_FAILED
         val all = posOf(book)
         // 23 Nov 2026: a reported fill Zerodha's positions do not show in full yet is looked at again soon ([runLook]); nothing waits here.
-        val quiet = if (reported && synchronized(mem) { fillLagging(all) }) ManualCoverRule.FollowUp.FILL_LAG else ManualCoverRule.FollowUp.NONE
+        var quiet = if (reported && synchronized(mem) { fillLagging(all) }) ManualCoverRule.FollowUp.FILL_LAG else ManualCoverRule.FollowUp.NONE
         val candidates = all.filter { ManualCoverRule.covered(it) }
         val today0 = day.atStartOfDay(com.optionslab.engine.IST).toInstant().toEpochMilli()
         // 7 Nov, second review: what ended in the last week, by when it ENDED ([Protections.Item.endedAt]), not when it was set.
@@ -481,15 +570,21 @@ object ManualCover {
         val tracked = trackedIds(prot.first)
         val shorts = ManualCoverRule.shortUnderlyings(allNow, sellsOf(orders, tracked), heldTodayOf(now0), names)
         val hedges = ManualCoverRule.hedgeUnderlyings(allNow, equity, names)
-        unhedge(d, autos, shorts, hedges, names)
+        // (23 Nov 2026, B6-I round 2: a sale of Boss's reported on its underlying that this read does not show as a spread yet: looked at again soon.)
+        if (unhedge(d, autos, shorts, hedges, names, heldTodayOf(now0))) quiet = ManualCoverRule.FollowUp.FILL_LAG
         if (!placing || candidates.isEmpty()) { synchronized(mem) { looks.clear() }; return quiet }
         // What the app follows (arms, Pine, arms' live trades, protections). A book not read in time: nothing this look.
         val beliefs = ZerodhaSync.beliefs() ?: return ManualCoverRule.FollowUp.READ_FAILED
         // The Strategy Module's live runs' legs too (not in the sync's beliefs): never a manual position.
         val legs = withTimeoutOrNull(3_000) { runCatching { Strategies.liveLegSymbols() }.getOrNull() } ?: return ManualCoverRule.FollowUp.READ_FAILED
+        // 23 Nov 2026 (B6-I round 2): a reported fill on a contract whose only protection is the app's own automatic one: the lots added are
+        // covered too ([grow]) - the "it has a protection" rule is not applied to it (every other rule is).
+        val grows = growable(candidates, prot.first)
+        val growSymbols = grows.keys.map { it.split(':')[1] }.toSet()
         val first = ManualCoverRule.Facts(
-            followed = beliefs.map { it.symbol }.toSet() + legs,
-            protectedNow = prot.first.filter { it.live }.map { it.symbol }.toSet(),
+            // (Round 2: for lots added, the app's own automatic protection is not "something that follows it" - any arm or Pine still is.)
+            followed = beliefs.filter { it.who != "Protection" || it.symbol !in growSymbols }.map { it.symbol }.toSet() + legs,
+            protectedNow = prot.first.filter { it.live }.map { it.symbol }.toSet() - growSymbols,
             // 7 Nov, third review: one this switch took off as a spread's or hedge's leg never blocks (even if its cancel was
             // confirmed only later, under the protections' own "removed").
             endedToday = prot.second.filter { it.live && synchronized(mem) { it.id !in unhedgedIds } }
@@ -517,7 +612,8 @@ object ManualCover {
         val owners = withTimeoutOrNull(3_000) { runCatching { Strategies.owners() }.getOrNull() } ?: return ManualCoverRule.FollowUp.READ_FAILED
         val facts = first.copy(
             // (23 Nov 2026: never Boss's own buy the stream already reported done - an order book read can trail it for a moment.)
-            workingOrders = workingKeys(orders.filter { it.id !in reportedDone() }),
+            // (Round 2: nor the app's own protections' orders - a contract with one is left alone as protected above, unless lots are added.)
+            workingOrders = workingKeys(orders.filter { it.id !in reportedDone() && it.id !in tracked }),
             activeGtts = gtts.filter { it.active }.map { "${it.exchange}:${it.symbol}" }.toSet(),
             // A fill today from an order the app placed for an arm or a strategy (its label or its Zerodha tag): not Boss's.
             appOrders = orders.filter { it.side == "BUY" && it.filled > 0 && Origins.of(owners, "kite:${it.id}", it.tag).second }
@@ -537,10 +633,12 @@ object ManualCover {
             looks.keepOnly(uncovered.map { it.lookKey }.toSet())
             // 23 Nov 2026: a fill reported done on the stream is due at once when Zerodha's positions show at least its quantity (its
             // two looks are still counted, for the backstop).
-            val ready = uncovered.filter { p -> fills[p.lookKey]?.let { ManualCoverRule.fillHeld(p.qty, it.qty) } == true }.map { it.lookKey }.toSet()
-            val seen = uncovered.filter { looks.see(it.lookKey, it.qty, now) || it.lookKey in ready }
+            // (Round 2: once its grace is over - a stop Boss sets at once himself wins. Lots added to a protected contract: only so.)
+            val ready = uncovered.filter { p -> fills[p.lookKey]?.let { graceOver(it) && ManualCoverRule.fillHeld(p.qty, it.qty) } == true }.map { it.lookKey }.toSet()
+            val seen = uncovered.filter { val two = looks.see(it.lookKey, it.qty, now); if (it.lookKey in grows) it.lookKey in ready else two || it.lookKey in ready }
             waiting = seen.size < uncovered.size
-            seen.filter { ManualCoverRule.mayAttempt(attempts["$d|${it.lookKey}"] ?: 0, lastAttempt["$d|${it.lookKey}"], now) }
+            // (Lots added: one try per reported buy - [grow] - never held back by the cover's own minute between attempts.)
+            seen.filter { it.lookKey in grows || ManualCoverRule.mayAttempt(attempts["$d|${it.lookKey}"] ?: 0, lastAttempt["$d|${it.lookKey}"], now) }
         }
         val after = if (quiet == ManualCoverRule.FollowUp.FILL_LAG) quiet else if (waiting) ManualCoverRule.FollowUp.SIGHTED else ManualCoverRule.FollowUp.NONE
         if (due.isEmpty()) return after
@@ -561,6 +659,8 @@ object ManualCover {
                 continue
             }
             if (ArmLive.noStopBeside(p.exchange, p.symbol)) continue
+            val g = grows[p.lookKey]
+            if (g != null) { if (grow(d, p.copy(qty = qty, avg = row.avg, last = row.last), g, names)) next = ManualCoverRule.FollowUp.READ_FAILED; continue }
             if (cover(d, p.copy(qty = qty, avg = row.avg, last = row.last), now, names)) next = ManualCoverRule.FollowUp.READ_FAILED
         }
         return next
@@ -609,13 +709,32 @@ object ManualCover {
      * underlying, or a sell of one is working) or a hedge (its future or stock is held) is taken off - its stop and target
      * cancelled ([Protections.remove]) - so Boss's own hedge is whole again (lowers risk). Said loudly once. Never any other one.
      */
-    private suspend fun unhedge(d: String, autos: List<Protections.Item>, shorts: Set<String>, hedges: Set<String>, names: Map<String, String>) {
+    private suspend fun unhedge(d: String, autos: List<Protections.Item>, shorts: Set<String>, hedges: Set<String>, names: Map<String, String>,
+                                heldToday: Set<String> = emptySet()): Boolean {
         val flagged = autos.mapNotNull { a -> ManualCoverRule.spreadOrHedge(a.symbol, shorts, hedges, names)?.let { a to it } }
-        // 7 Nov, third review: seen in two looks at least 20 s apart first (a read caught between two fills never takes one off).
+        // 7 Nov, third review: seen in two looks at least 20 s apart first (a read caught between two fills never takes one off). 23 Nov 2026
+        // (B6-I round 2): or at once when Boss's own sale on the underlying was reported on the stream ([sellsSeen]: his short leg after the
+        // covered wing) - on the read made after the orders (fresh); one this read does not show as a spread yet is looked at again soon.
         val now = Market.now().toInstant().toEpochMilli()
+        fun under(a: Protections.Item) = ManualCoverRule.underlying(a.symbol, names)
+        var lag = false
         val due = synchronized(mem) {
             hedgeLooks.keepOnly(flagged.map { "auto:${it.first.id}" }.toSet())
-            flagged.filter { hedgeLooks.see("auto:${it.first.id}", 0, now) }
+            val urgent = sellsSeen.keys
+            // (Review: the stream's key is the symbol's own underlying, without the contract lists' names - both are matched.)
+            fun urgentFor(a: Protections.Item) = under(a) in urgent || ManualCoverRule.underlying(a.symbol) in urgent
+            val d0 = flagged.filter { val two = hedgeLooks.see("auto:${it.first.id}", 0, now); two || urgentFor(it.first) }
+            for ((u, ss) in sellsSeen.entries.toList()) {
+                if (flagged.any { under(it.first) == u || ManualCoverRule.underlying(it.first.symbol) == u }) { sellsSeen.remove(u); continue }
+                // (Review: a sale on contracts held long today closes a long - no short, no spread: never looked for again.)
+                if (autos.none { under(it) == u || ManualCoverRule.underlying(it.symbol) == u } || (ss.keys.isNotEmpty() && ss.keys.all { it in heldToday })) {
+                    sellsSeen.remove(u); continue
+                }
+                val n = ss.lagged + 1
+                sellsSeen[u] = ss.copy(lagged = n)
+                if (n < ManualCoverRule.FILL_TRIES) lag = true
+            }
+            d0
         }
         for ((p, why) in due) {
             synchronized(mem) { unhedgedIds.add(p.id) }
@@ -625,6 +744,7 @@ object ManualCover {
                 loud(NOTICE_UNHEDGED, ManualCoverRule.saidUnhedged(p.symbol, why) +
                     if (result.startsWith("Protection removed")) "" else " $result")
         }
+        return lag
     }
 
     /**
@@ -769,10 +889,96 @@ object ManualCover {
     }
 
     /**
+     * 23 Nov 2026 (B6-I round 2, Boss adds lots seconds after a cover, or a large buy's freeze slices fill one by one): the candidates with a
+     * reported fill past its grace whose contract's only protection is the app's own automatic one (every active one on it automatic, the
+     * same exchange and product, a long resting as orders with its stop, nothing of it being removed, waiting or looked for), with what that
+     * covers and its stop: those whose position, as read now, holds more than that. Under [mem].
+     */
+    private fun growable(candidates: List<ManualCoverRule.Pos>, active: List<Protections.Item>): Map<String, Pair<Int, Double?>> = synchronized(mem) {
+        candidates.mapNotNull { p ->
+            val f = fills[p.lookKey]?.takeIf { graceOver(it) } ?: return@mapNotNull null
+            val on = active.filter { it.live && it.symbol == p.symbol }
+            if (on.isEmpty() || on.any { !it.auto || it.exchange != p.exchange || it.product != p.product || it.qty <= 0 || it.gttId != null ||
+                    it.stopOrderId == null || (it.note.isNotEmpty() && it.note != "placed again for today") }) return@mapNotNull null
+            val covered = on.sumOf { it.qty }
+            if (p.qty <= covered || !ManualCoverRule.fillHeld(p.qty, f.qty)) return@mapNotNull null
+            p.lookKey to (covered to on.first().stop)
+        }.toMap()
+    }
+
+    /**
+     * 23 Nov 2026 (B6-I round 2): the lots Boss added ([p0]: what is held now, read just before) beside the app's own automatic protection
+     * covering [g] (its units and its stop) - covered too, as slices of their own at the same stop and target ([Protections.addAutoSlices]),
+     * never more than is held less what is covered ([recheck] with it as working). One try per reported buy; a definite refusal is said
+     * loudly (those lots have no stop from the app). True when a read it needed failed.
+     */
+    private suspend fun grow(d: String, p0: ManualCoverRule.Pos, g: Pair<Int, Double?>, names: Map<String, String>): Boolean {
+        val key = p0.key
+        val (covered, stop) = g
+        val extra = p0.qty - covered
+        if (extra <= 0) { synchronized(mem) { fills.remove(p0.lookKey) }; return false }
+        val spec = Broker.within(8_000) { Broker.spec(p0.exchange, p0.symbol) } ?: return true
+        val last = Broker.within(5_000) { Broker.quotesFresh(listOf(key)) }?.get(key)?.last?.takeIf { it > 0 } ?: return true
+        val p = p0.copy(qty = extra, last = last)
+        // At or just over the stop already: nothing added (a stop there would trigger, or be refused, at once).
+        if (stop != null && last < stop + ManualCoverRule.room(p0.avg, spec.tickSize.takeIf { it > 0 } ?: 0.05, stop) - 1e-9) {
+            synchronized(mem) { fills.remove(p0.lookKey) }
+            val said = "${p.symbol}: you bought $extra more yourself, but the price (%.2f) is at or close to the app's stop (%.2f), so no stop was added for them. Set one yourself."
+                .format(java.util.Locale.ENGLISH, last, stop)
+            Alerts.post(said, Alerts.Kind.ERROR, "Protection")
+            runCatching { Diag.record("protection", "Manual position: $said") }
+            noteLast("NOT covered: ${p.symbol}, $extra of ${p0.qty} held (at or close to its stop)")
+            return false
+        }
+        val outside = recheck(p, spec.lotSize, names, working = covered)
+        if (outside != null) {
+            outside.first?.let { countLeftAlone(d, p0, it) }
+            runCatching { Diag.record("protection", "Manual position ${p.symbol}: the $extra added not covered: ${outside.second}") }
+            // (Review: a read that failed is tried again soon - its reported buy kept - never left to expire with those lots bare.)
+            return outside.first == null && outside.second.contains("could not be read")
+        }
+        var left: ManualCoverRule.Skip? = null
+        var pass: com.optionslab.ira.ExitTurns.Pass? = null
+        val result = try {
+            runCatching {
+                Protections.addAutoSlices(p.symbol, p.exchange, p.product, extra, last) { own ->
+                    lastCheck(p, reportedDone() + own) { pass = it }?.let { (why, words) -> left = why; words }
+                }
+            }.getOrElse { "Not protected: ${it.message}" }
+        } finally { pass?.leave() }
+        left?.let { countLeftAlone(d, p0, it) }
+        // (Review: a read that failed inside - the lot and tick, the books in the exit turn, the turn busy - keeps its reported buy and is tried
+        // again soon; anything else is its one try.)
+        val again = ManualCoverRule.CHECKED_AGAIN
+        if (left == null && (result.startsWith("Could not read") || (result.contains(again) &&
+                (result.contains("not read") || result.contains("could not be read") || result.contains("busy") || result.contains("failed"))))) {
+            runCatching { Diag.record("protection", "Manual position ${p.symbol}: the $extra added not covered yet: $result") }
+            return true
+        }
+        synchronized(mem) { fills.remove(p0.lookKey) }
+        if (result.startsWith("Protected ")) {
+            synchronized(mem) { tally = tally.copy(protectedN = tally.protectedN + 1) }
+            val said = "${p.symbol}: you bought $extra more yourself, so the app's automatic stop and target now cover all ${p0.qty} held. $result " +
+                ManualCoverRule.OWN_EXIT_HELP
+            Alerts.post(said, Alerts.Kind.SUCCESS, "Protection")
+            runCatching { Diag.record("protection", said) }
+            val levels = runCatching { Protections.forSymbol(true, p.symbol)?.describe() }.getOrNull() ?: ""
+            noteLast("Protected: ${p.symbol} (${p0.qty} of ${p0.qty} held, $extra added), $levels")
+            return false
+        }
+        runCatching { Diag.record("protection", "Manual position ${p.symbol}: the $extra added not covered: $result") }
+        if (left == null && ManualCoverRule.definiteRefusal(result))
+            loud(NOTICE_GAVE_UP, "${p.symbol}: the $extra you bought more are NOT covered by the app's stop (${result.removePrefix("Not protected: ").trim()}). " +
+                "Set a stop for them yourself.")
+        noteLast("NOT covered: ${p.symbol}, $extra of ${p0.qty} held added (${result.removePrefix("Not protected: ").take(120)})")
+        return false
+    }
+
+    /**
      * 7 Nov, second and third review: the check just before placing, OUTSIDE the protections' lock (bounded reads). Null: go on;
      * else the reason (and the rule it falls under, when it is one Boss is told of).
      */
-    private suspend fun recheck(p: ManualCoverRule.Pos, lot: Int, names: Map<String, String>): Pair<ManualCoverRule.Skip?, String>? {
+    private suspend fun recheck(p: ManualCoverRule.Pos, lot: Int, names: Map<String, String>, working: Int = 0): Pair<ManualCoverRule.Skip?, String>? {
         val again = ManualCoverRule.CHECKED_AGAIN
         val orders = Broker.within(8_000) { Broker.orders() } ?: return null to "$again: Zerodha's orders could not be read"
         val positions = Broker.within(8_000) { Broker.positionBook() } ?: return null to "$again: Zerodha's positions could not be read"
@@ -781,7 +987,8 @@ object ManualCover {
             ?: return null to "$again: the protections could not be read"
         val heldNow = Broker.within(8_000) { ExitCoordinator.held(p.exchange, p.symbol, p.product, WHO, orders, positions) }
             ?: return null to "$again: what is held could not be read"
-        val sendable = com.optionslab.engine.risk.ExitQty.sendable(heldNow, 0, p.qty, lot)
+        // (23 Nov 2026, B6-I round 2: [working] - what the app's own protection already covers, for lots added: never more than held.)
+        val sendable = com.optionslab.engine.risk.ExitQty.sendable(heldNow, working, p.qty, lot)
         return ManualCoverRule.precheck(p, posOf(positions), sellsOf(orders, tracked), heldTodayOf(positions), equity, sendable, p.qty, names)
     }
 
@@ -842,15 +1049,16 @@ object ManualCover {
         looks.clear(); tries.clear(); attempts.clear(); lastAttempt.clear(); gaveUp.clear(); toldLow.clear(); leftAlone.clear()
         untracked.clear(); unhedged.clear(); hedgeLooks.clear(); unhedgedIds.clear()
         tally = ManualCoverRule.Tally()
-        // 23 Nov 2026: the stream's reported fills, and a look one asked for still waiting (one already looking finishes that look).
-        inbox.clear(); fills.clear(); lastSaid = ""
-        if (nowQueued.get()) nowJob?.cancel()
+        // 23 Nov 2026: the stream's reported fills, and a look one asked for still waiting (one already looking finishes that look: round 2,
+        // [nowLooking], with [memGen] moved so one that has not started does nothing).
+        inbox.clear(); fills.clear(); sellsSeen.clear(); rejectTold.clear(); lastSaid = ""
+        if (nowLooking.get() == 0) nowJob?.cancel()
     }
 
     /** Whether anything is still in memory beyond the defaults (the erase's tests). Memory only. */
     internal fun holdsForErase(): Boolean = !on || stopPts != ManualCoverRule.DEFAULT_STOP_POINTS || targetPts != ManualCoverRule.DEFAULT_TARGET_POINTS ||
-        lastSaid.isNotEmpty() || inbox.isNotEmpty() || synchronized(mem) {
-        fills.isNotEmpty() || looks.size > 0 || tries.isNotEmpty() || attempts.isNotEmpty() || lastAttempt.isNotEmpty() || gaveUp.isNotEmpty() ||
+        lastSaid.isNotEmpty() || inbox.isNotEmpty() || rejectTold.isNotEmpty() || synchronized(mem) {
+        fills.isNotEmpty() || sellsSeen.isNotEmpty() || looks.size > 0 || tries.isNotEmpty() || attempts.isNotEmpty() || lastAttempt.isNotEmpty() || gaveUp.isNotEmpty() ||
             toldLow.isNotEmpty() || leftAlone.isNotEmpty() || untracked.isNotEmpty() || unhedged.isNotEmpty() || hedgeLooks.size > 0 || unhedgedIds.isNotEmpty() || tally.protectedN + tally.leftAlone + tally.failed > 0
     }
 
@@ -860,6 +1068,7 @@ object ManualCover {
         this.on = on; this.loaded = loaded; switched = false
         followUpsOn = false; followMsForTest = null; followGate = null
         stopPts = ManualCoverRule.DEFAULT_STOP_POINTS; targetPts = ManualCoverRule.DEFAULT_TARGET_POINTS; pointsSet = false
+        fillGraceMsForTest = null
         clearMemory()
         publish()
     }
@@ -874,7 +1083,7 @@ object ManualCover {
         val follow = synchronized(mem) { followJob?.also { if (!followLooking) it.cancel() } }
         val kicked = kickJob
         // (23 Nov 2026: and a look an order update asked for - one still waiting is cancelled, one looking finishes.)
-        val now = nowJob?.also { if (nowQueued.get()) it.cancel() }
+        val now = synchronized(mem) { nowJob?.also { if (nowLooking.get() == 0) it.cancel() } }
         kotlinx.coroutines.runBlocking {
             kotlinx.coroutines.withTimeoutOrNull(timeoutMs) { follow?.join(); kicked?.join(); now?.join() }
         }
