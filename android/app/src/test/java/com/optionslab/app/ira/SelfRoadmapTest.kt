@@ -60,6 +60,9 @@ class SelfRoadmapTest : RobolectricTest() {
         at(LocalTime.of(16, 0))
         SmartWorkers.resetForTest(); TradeManagerHost.resetForTest()
         Autopilot.init(context); SelfJobs.init(context)
+        // 23 Nov 2026 (B6-E): the start's own background timeline entries (Liquidity's no-twin rule, the commodities' own limits) land
+        // first, then the timeline is empty - else one lands inside a test that counts the entries (Jarvis builds).
+        if (Autopilot.enabled()) AutomationSupport.settleStartTimeline(context)
         Autopilot.testLive = false
         LearningFreeze.resetForTest(); BossTradeLog.resetForTest(); SelfJobs.resetForTest(); BackgroundBudget.resetForTest()
     }

@@ -209,6 +209,8 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.HiddenArms.init(this)
         // 25 Oct: the removed Telegram feature's data deleted once, in the background, after the positions step above.
         if (!com.optionslab.app.BuildConfig.GOLD) com.optionslab.app.data.RemovedFeatureCleanup.init(this)
+        // 22 Nov 2026 (B6 review): a shared settings file the process died before deleting goes now, in the background, after the positions step.
+        com.optionslab.app.data.SettingsShare.init(this)
         com.optionslab.app.data.LiveRecorder.init(this)
         // The OI-wall shadow log (14 Oct, Boss approved; R26): names its encrypted file only (a record, never an order).
         com.optionslab.app.data.OiWallShadowHost.init(this)

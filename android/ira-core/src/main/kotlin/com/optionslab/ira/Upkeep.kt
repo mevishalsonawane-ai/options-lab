@@ -73,10 +73,63 @@ object Upkeep {
         "github.",
         // 20 Nov 2026 (Boss's exception, the cheaper strike): its switch adds live trades (on takes the PIN, so a file must never switch
         // it on), its record is this phone's, and its one-time timeline mark must never come back from a backup.
-        "cheaperStrike.")
+        "cheaperStrike.",
+        // 22 Nov 2026 (B6 review): the arms' live copies' second copy of each arm's Trade live / Shadow switch (ArmLive; a file must never
+        // switch an arm's live copy on or take it out of shadow), and the order flow's modes (FlowGate: its CONFIRM skips live entries,
+        // and a file must never put one back to SHADOW).
+        "armlive.", "flow.modes",
+        // 22 Nov 2026 (B6 review): the day the self-review last ran on this phone (SmartWorkers): a backup made after today's review would
+        // skip this phone's own review today, and with it a park to paper.
+        "brain.reviewedOn",
+        // 22 Nov 2026 (B6 review): the change timeline's one-time marks ("switched on by the update", logged once per phone): a backup's
+        // would hold back this phone's own first entry, and the timeline itself never leaves the phone.
+        TIMELINE_ONCE)
+
+    /** 22 Nov 2026 (B6 review): the prefix of the change timeline's one-time marks (one key per "switched on by the update" entry). */
+    const val TIMELINE_ONCE = "timeline.once."
 
     /** May the setting [key] go into a backup, or be taken from one? */
     fun carried(key: String): Boolean = PRIVATE.none { key.startsWith(it) }
+
+    // ---- what a restore merges with this phone's own (22 Nov 2026, B6 review) ----------------------------------------------------
+
+    /**
+     * The guard's live drawdown peak after a restore: the higher of this phone's ([here]) and the backup's ([theirs]) - a restore
+     * never lowers it (a lower peak measures a smaller drawdown, so the kill switch would come later). Null: neither is a figure.
+     */
+    fun higherPeak(here: Double?, theirs: Double?): Double? =
+        listOfNotNull(here?.takeIf { it.isFinite() && it > 0 }, theirs?.takeIf { it.isFinite() && it > 0 }).maxOrNull()
+
+    /**
+     * A comma-separated set (the self-review's parks or pauses) after a restore: this phone's and the backup's together, never fewer.
+     * 22 Nov 2026 (B6 review): an item [hereOnly] says is this phone's alone keeps this phone's membership (the backup's never adds it) -
+     * R51, R72 and Liquidity while Boss's 19 Nov choice keeps the self-review's park and pause off them.
+     */
+    fun union(here: String?, theirs: String?, hereOnly: (String) -> Boolean = { false }): String {
+        fun items(s: String?) = s.orEmpty().split(',').map { it.trim() }.filter { it.isNotEmpty() }
+        return (items(here) + items(theirs).filterNot(hereOnly)).toSortedSet().joinToString(",")
+    }
+
+    /** The brain's entry pause ([MarketBrain.Policy]) after a restore: for each cause the stricter of the two (OFF < SHADOW < ON). */
+    fun stricterPause(here: String?, theirs: String?): String {
+        val a = MarketBrain.decode(here); val b = MarketBrain.decode(theirs)
+        return MarketBrain.encode(MarketBrain.Policy(MarketBrain.Cause.entries.associateWith { c -> maxOf(a.mode(c), b.mode(c)) }))
+    }
+
+    /**
+     * The findings' reactions ([Findings.Policy]) after a restore: every mode the stricter of the two (OFF < SHADOW < ACT), globally and
+     * for each strategy either names, so no strategy's reaction is milder than it was on this phone or in the backup.
+     */
+    fun stricterReactions(here: String?, theirs: String?): String {
+        val a = Findings.decode(here); val b = Findings.decode(theirs)
+        val global = Findings.Reaction.entries.filter { it in a.global || it in b.global }
+            .associateWith { r -> maxOf(a.global[r] ?: r.default, b.global[r] ?: r.default) }
+        val per = (a.perStrategy.keys + b.perStrategy.keys).associateWith { k ->
+            Findings.Reaction.entries.filter { r -> a.perStrategy[k]?.containsKey(r) == true || b.perStrategy[k]?.containsKey(r) == true }
+                .associateWith { r -> maxOf(a.mode(k, r), b.mode(k, r)) }
+        }
+        return Findings.encode(Findings.Policy(global, per))
+    }
 
     // ---- per-day keys and day-keyed entries -----------------------------------------------------------------------
 

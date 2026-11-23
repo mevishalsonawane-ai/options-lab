@@ -148,9 +148,11 @@ object ArmAutoStopsHost {
         // Review: never written over a vault that could not be read (Boss's saved choices are unknown).
         if (!loaded) return "Could not read the automatic stops' switches just now. Nothing changed."
         // The paper account stop reached now, kept as it goes off (it still holds the three until Boss restarts its count).
-        val held = if (!on && rule == Rule.PAPER_ACCOUNT) runCatching { BossRiskHost.refreshView(); BossRiskHost.accountKeyNow() }.getOrNull() else null
+        // 22 Nov 2026 (B6 review, item 9a): whether it is reached must be known - a read that failed (or a settings vault that cannot be
+        // read now) refuses the switch-off, never takes it as "not reached" and loses a stop already reached.
+        val held = if (!on && rule == Rule.PAPER_ACCOUNT) (heldAccountNow() ?: return HELD_UNREAD) else null
         val out = synchronized(lock) {
-            val o = ArmAutoStops.set(state, rule, on, System.currentTimeMillis(), pinConfirmed, byVoice, held)
+            val o = ArmAutoStops.set(state, rule, on, System.currentTimeMillis(), pinConfirmed, byVoice, held?.getOrNull())
             if (o.changed) { state = o.state; switched += rule; notApplied = null }
             o
         }
@@ -203,13 +205,17 @@ object ArmAutoStopsHost {
         }
         // What each rule holds stopped now, read before it goes off (each in its own try; null: could not be read).
         val stopped = Rule.entries.associateWith { r -> runCatching { stoppedByNow(r) }.getOrNull() }
-        val held = runCatching { BossRiskHost.refreshView(); BossRiskHost.accountKeyNow() }.getOrNull()
+        // 22 Nov 2026 (B6 review, item 9a): the paper account stop reached now must be known before its switch goes off - not read, the
+        // choice waits for a later pass (every stop stays on meanwhile), never runs on a guess that loses a reached stop.
+        val held = (heldAccountNow() ?: return false).getOrNull()
         val next = synchronized(lock) {
             val m = ArmAutoStops.migrate(state, nowMs, held) ?: return false
             // (A rule Boss switched himself in this process before the choice ran stays as he set it.)
-            merged(m, state).copy(migrated = true, cutoffMigrated = true).also { state = it }
+            // 22 Nov 2026 (B6 review, item 9b): kept and written under the lock, so a switch Boss sets at this moment is written after it
+            // (his own keys last), never over-written by the choice's older copy of his rule.
+            merged(m, state).copy(migrated = true, cutoffMigrated = true).also { state = it; save(it) }
         }
-        save(next)
+        testAfterChoice?.invoke()
         publish()
         runCatching { Diag.record("autostops", "${ArmAutoStops.CHOICE}: ${ArmAutoStops.line(next, true)}") }
         for (r in Rule.entries) if (!next.isOn(r))
@@ -233,9 +239,10 @@ object ArmAutoStopsHost {
                 publish()
                 return false
             }
-            ArmAutoStops.migrateCutoff(state, nowMs)?.also { state = it }
+            // (22 Nov 2026, B6 review, item 9b: written under the lock too, never over a switch of Boss's made at the same moment.)
+            ArmAutoStops.migrateCutoff(state, nowMs)?.also { state = it
+                runCatching { SecurePrefs.putAllSoon(ArmAutoStops.encodeRule(it, Rule.JARVIS_CUTOFF) + (ArmAutoStops.CUTOFF_MIGRATION_KEY to true)) } }
         } ?: return false
-        runCatching { SecurePrefs.putAllSoon(ArmAutoStops.encodeRule(next, Rule.JARVIS_CUTOFF) + (ArmAutoStops.CUTOFF_MIGRATION_KEY to true)) }
         publish()
         if (next.isOn(Rule.JARVIS_CUTOFF)) return false
         runCatching { Diag.record("autostops", "${ArmAutoStops.CHOICE}: ${Rule.JARVIS_CUTOFF.switch} off too") }
@@ -309,6 +316,34 @@ object ArmAutoStopsHost {
     /** TEST ONLY: the settings vault cannot be read. */
     @Volatile internal var testReadFails = false
 
+    /** TEST ONLY: the paper account stop's reach cannot be read (as a failed read of it). Debug builds only. */
+    @Volatile internal var testHeldFails = false
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+
+    /** TEST ONLY: runs right after Boss's one-time choice is kept and written, before it is said (a switch of his made then lands after it). */
+    @Volatile internal var testAfterChoice: (() -> Unit)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+
+    /**
+     * 22 Nov 2026 (B6 review, item 9a): the paper account stop as reached now ([BossRiskHost.accountKeyNow]: its key, or null when not
+     * reached), or null when that cannot be told - its saved marks were not read (a start's read that failed is tried once more here,
+     * [BossRiskHost.readOk]), a read failed, or the settings vault cannot be read now. A worker thread only.
+     */
+    private fun heldAccountNow(): Result<String?>? {
+        val r = runCatching {
+            check(!testHeldFails) { "test: the paper account stop could not be read" }
+            BossRiskHost.refreshView()
+            if (!BossRiskHost.readOk) BossRiskHost.load()
+            check(BossRiskHost.readOk) { "the paper account stop's saved marks could not be read" }
+            BossRiskHost.accountKeyNow()
+        }
+        return if (r.isFailure || SecurePrefs.unreadable) null else r
+    }
+
+    /** 22 Nov 2026 (B6 review, item 9a): what Boss is told when the paper account stop's reach cannot be read as it would go off. */
+    internal const val HELD_UNREAD = "Could not read whether the paper account stop is reached just now, so it stays on (a stop already reached " +
+        "must never be lost). Nothing changed; try again in a minute."
+
     /** What [rule] holds stopped now, in words (the timeline's list); null when it cannot be read. A worker thread only. */
     private fun stoppedBy(rule: Rule): List<String>? = runCatching { kotlinx.coroutines.runBlocking { stoppedByNow(rule) } }.getOrNull()
 
@@ -373,7 +408,7 @@ object ArmAutoStopsHost {
     /** TEST ONLY: as a fresh start would have it ([state] read, the one-time choice run unless the test says so), nothing switched. */
     internal fun resetForTest(state: ArmAutoStops.State = ArmAutoStops.State(migrated = true), loaded: Boolean = true) {
         synchronized(lock) { this.state = state; this.loaded = loaded; switched.clear(); notApplied = null; readFailed = false }
-        testReadFails = false
+        testReadFails = false; testHeldFails = false; testAfterChoice = null
         publish()
     }
 }

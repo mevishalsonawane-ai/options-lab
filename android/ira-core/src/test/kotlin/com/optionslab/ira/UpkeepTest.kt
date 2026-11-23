@@ -72,6 +72,56 @@ class UpkeepTest {
             .forEach { assertTrue(Upkeep.carried(it), it) }
     }
 
+    /**
+     * 22 Nov 2026 (B6 review, item 1): the arms' live copies' second copy of their switches, the order flow's modes, the day the
+     * self-review ran and the change timeline's one-time marks never travel; the self-review's parks and pauses, the brain's pause and
+     * the guard's live peak do (a restore merges them, never milder: below), and so do the settings around them.
+     */
+    @Test fun liveCopySwitchesFlowModesTheReviewDayAndTimelineMarksNeverTravel() {
+        listOf("armlive.switches", "armlive.shadow", "flow.modes", "brain.reviewedOn", "timeline.once.stepTrail", Upkeep.TIMELINE_ONCE + "x")
+            .forEach { assertFalse(Upkeep.carried(it), it) }
+        listOf("brain.parked", "brain.paused", "brain.pause", "brain.reactions", "brain.paperDrift", "brain.netFlatSec", "guard.peak.live",
+            "flowmodes.other", "armlives").forEach { assertTrue(Upkeep.carried(it), it) }
+    }
+
+    @Test fun aRestoreNeverLowersThePeakNorDropsAParkAndOnlyTightensTheBrain() {
+        // The peak: the higher; nothing on one side takes the other; no figure on either: none.
+        assertEquals(120_000.0, Upkeep.higherPeak(120_000.0, 90_000.0))
+        assertEquals(120_000.0, Upkeep.higherPeak(90_000.0, 120_000.0))
+        assertEquals(90_000.0, Upkeep.higherPeak(null, 90_000.0))
+        assertEquals(90_000.0, Upkeep.higherPeak(90_000.0, Double.NaN))
+        assertNull(Upkeep.higherPeak(null, null))
+        assertNull(Upkeep.higherPeak(Double.NaN, -5.0))
+        // Parks and pauses: both sets together, never fewer.
+        assertEquals("hero,liquidity,solo", Upkeep.union("liquidity, hero", "solo,liquidity"))
+        assertEquals("liquidity", Upkeep.union("liquidity", null))
+        assertEquals("liquidity", Upkeep.union("", "liquidity"))
+        assertEquals("", Upkeep.union(null, ""))
+        // 22 Nov 2026 (B6 review): an item this phone keeps as its own - the backup's never adds it; this phone's stays.
+        val covered = { k: String -> ArmAutoStops.covers(k) }
+        assertEquals("hero,solo", Upkeep.union("hero", "solo,liquidity", hereOnly = covered))
+        assertEquals("hero,liquidity,solo", Upkeep.union("liquidity,hero", "solo", hereOnly = covered))
+        assertEquals("", Upkeep.union(null, "liquidity", hereOnly = covered))
+        // The brain's pause: each cause the stricter (a missing one counts as its default: news ON).
+        val p = MarketBrain.decode(Upkeep.stricterPause("news=OFF;traps=ON;feed=OFF", "news=SHADOW;traps=OFF;bigmove=ON"))
+        assertEquals(MarketBrain.Mode.SHADOW, p.mode(MarketBrain.Cause.NEWS))
+        assertEquals(MarketBrain.Mode.ON, p.mode(MarketBrain.Cause.TRAPS))
+        assertEquals(MarketBrain.Mode.SHADOW, p.mode(MarketBrain.Cause.FEED))      // the backup's missing one: its default (SHADOW)
+        assertEquals(MarketBrain.Mode.ON, p.mode(MarketBrain.Cause.BIG_MOVE))
+        assertEquals(MarketBrain.Mode.ON, MarketBrain.decode(Upkeep.stricterPause(null, "news=OFF")).mode(MarketBrain.Cause.NEWS))
+        // The reactions: never milder than either side, globally and for each strategy either names.
+        val r = Findings.decode(Upkeep.stricterReactions("*:data=OFF;orb:stops=ACT", "*:stops=OFF;liquidity:consensus=ACT;orb:stops=OFF"))
+        assertEquals(Findings.Mode.ACT, r.mode("orb", Findings.Reaction.STOPS_CLUSTER))
+        assertEquals(Findings.Mode.ACT, r.mode("liquidity", Findings.Reaction.OPPOSITE_CONSENSUS))
+        assertEquals(Findings.Mode.ACT, r.mode("pine", Findings.Reaction.DATA_UNRELIABLE), "the default (ACT) beats the phone's OFF")
+        assertEquals(Findings.Mode.SHADOW, r.mode("pine", Findings.Reaction.STOPS_CLUSTER), "the default (SHADOW) beats the backup's OFF")
+        for (s in listOf("orb", "liquidity", "pine", "x")) for (re in Findings.Reaction.entries) {
+            val a = Findings.decode("*:data=OFF;orb:stops=ACT").mode(s, re); val b = Findings.decode("*:stops=OFF;liquidity:consensus=ACT;orb:stops=OFF").mode(s, re)
+            assertEquals(maxOf(a, b), r.mode(s, re), "$s $re")
+        }
+        assertEquals(Findings.Policy(), Findings.decode(Upkeep.stricterReactions(null, "")))
+    }
+
     // ---- days in keys -------------------------------------------------------------------------------------------------
 
     @Test fun dayOfReadsEveryShapeOfKey() {

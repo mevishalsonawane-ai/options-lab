@@ -68,6 +68,11 @@ object CheaperStrike {
     internal const val K_OFF_CARRIED = "armsCheaperStrikeOff"
     /** Set once the update's "switched on for Boss" entry was decided on this phone (logged or not): never decided again. */
     internal const val K_ONCE = "cheaperStrike.onceLogged"
+    /**
+     * 22 Nov 2026 (B6 review, item 9c): a backup was restored on this phone ([Backup.restore] writes it; never carried itself): the 19 Nov
+     * choice's mark and the arms' book on disk may be the restore's, so neither says this phone ran an earlier build ([ranBefore]).
+     */
+    internal const val K_RESTORED = "cheaperStrike.restoredHere"
     private const val KEPT = 300
 
     /** At most this many strikes further out (Boss, 20 Nov). */
@@ -133,22 +138,27 @@ object CheaperStrike {
 
     /**
      * Whether this phone ran an earlier build before this start: the 19 Nov automatic-stops choice marked run, or a live book of the arms on
-     * disk. A worker thread only (a settings read and two file checks).
+     * disk. A worker thread only (a settings read and two file checks). 22 Nov 2026 (B6 review, item 9c): after a restore on this phone
+     * ([K_RESTORED]) the choice's mark and the arms' book may be the restore's own (it writes both), so only the arms' live copies' book -
+     * never in a backup - counts: a fresh phone restored from a backup is never told "the update switched it on".
      */
-    private fun ranBefore(context: Context): Boolean = runCatching {
-        SecurePrefs.getBoolean(com.optionslab.ira.ArmAutoStops.MIGRATION_KEY, false) ||
-            java.io.File(context.filesDir, "orb.vault").exists() || java.io.File(context.noBackupFilesDir, "arm_live.vault").exists()
+    internal fun ranBefore(context: Context): Boolean = runCatching {
+        val restored = SecurePrefs.getBoolean(K_RESTORED, false)
+        (!restored && (SecurePrefs.getBoolean(com.optionslab.ira.ArmAutoStops.MIGRATION_KEY, false) || java.io.File(context.filesDir, "orb.vault").exists())) ||
+            java.io.File(context.noBackupFilesDir, "arm_live.vault").exists()
     }.getOrDefault(false)
 
     /**
      * The one-time timeline entry's decision: due when the switch was [never] set, Boss has not switched it in this process, it was never
-     * decided on this phone ([K_ONCE]) and the phone [ranBefore] this build. Decided either way, the mark is written, so it is never asked
-     * again. A worker thread only.
+     * decided on this phone ([K_ONCE]) and the phone [ranBefore] this build. Not due (a fresh install), the mark is written now, so it is
+     * never asked again. 22 Nov 2026 (B6-E, round 3): due, the mark is written only once the entry is in the saved timeline (Autopilot's
+     * logCheaperStrikeOnOnce marks it after the save) - a timeline that could not be read then no longer loses the entry for good. A worker
+     * thread only.
      */
     internal fun onceDue(never: Boolean, ranBefore: Boolean): Boolean {
         val decided = runCatching { SecurePrefs.getBoolean(K_ONCE, false) }.getOrDefault(true)
         if (decided || !never || switched) return false
-        runCatching { SecurePrefs.putAllSoon(mapOf(K_ONCE to true)) }
+        if (!ranBefore) runCatching { SecurePrefs.putAllSoon(mapOf(K_ONCE to true)) }
         return ranBefore
     }
 

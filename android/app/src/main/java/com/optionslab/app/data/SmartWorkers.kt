@@ -64,12 +64,14 @@ object SmartWorkers {
 
     // ---- Boss's settings (memory; read once off the hot paths) -------------------------------------------------------------
 
-    private const val K_PAUSE = "brain.pause"
-    private const val K_REACT = "brain.reactions"
+    // (22 Nov 2026, B6 review: the pause, the reactions, the parks and the pauses are read by a restore too, [Backup]: it merges them,
+    // never milder.)
+    internal const val K_PAUSE = "brain.pause"
+    internal const val K_REACT = "brain.reactions"
     private const val K_NET = "brain.netFlatSec"
     private const val K_PAPER = "brain.paperDrift"
-    private const val K_PARKED = "brain.parked"
-    private const val K_PAUSED = "brain.paused"
+    internal const val K_PARKED = "brain.parked"
+    internal const val K_PAUSED = "brain.paused"
     private const val K_REVIEWED = "brain.reviewedOn"
 
     /** What the Brain sheet shows and sets. */
@@ -688,7 +690,7 @@ object SmartWorkers {
         }
         lastPost.clear()
         synchronized(settingsLock) { _settings.value = Settings(); loaded = true }
-        _reviews.value = emptyList(); reviewedOn = null
+        _reviews.value = emptyList(); reviewedOn = null; actedOn = null; waitedAtMs = 0L; waitSaid = null
         synchronized(closedSeen) { closedSeen.clear() }
     }
 
@@ -761,6 +763,9 @@ object SmartWorkers {
         val today = Market.today()
         if (!Market.isTradingDay(today) || Market.minuteNow() < 15 * 60 + 45) return
         val day = today.toString()
+        // 22 Nov 2026 (B6 review, item 3): a pass that left a park or pause waiting on Boss's automatic-stop switches is tried again a minute
+        // later, not at every look of this worker (each pass reads the books).
+        if (System.currentTimeMillis() - waitedAtMs in 0 until WAIT_AGAIN_MS) return
         if (!reviewGuard.claim(day)) return
         val gen = wipes
         try {
@@ -770,24 +775,61 @@ object SmartWorkers {
             // 26 Oct: the books were read before an erase ([wipe]): nothing is kept or acted on (the next pass reviews again).
             if (gen != wipes) return
             // 19 Nov (review, [ArmAutoStopsHost]): Boss's automatic-stop switches read now if the start could not, and his one-time
-            // choice run if it is due (this worker, off every hot path), so Liquidity's review acts on what he set. Still unreadable: the
-            // switches count as on (their default, the side that lowers risk) - the park or pause is done, never held back on a guess.
+            // choice run if it is due (this worker, off every hot path), so Liquidity's review acts on what he set.
             if (ArmAutoStopsHost.deferring()) try { ArmAutoStopsHost.readyNow() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Throwable) {}
-            // The books were read: the day is reviewed (the steps below are memory and posts; none waits).
-            reviewGuard.done(day)
-            reviewedOn = day
-            runCatching { SecurePrefs.putAllSoon(mapOf(K_REVIEWED to day)) }
-            act(context, list)
+            // 22 Nov 2026 (B6 review, item 3): still not read (or his choice not run yet), a park or pause of R51, R72 or Liquidity WAITS
+            // ([ArmAutoStopsHost.mayLatch]) - his saved "off" is never beaten by a read that has not landed - and the day is not marked
+            // reviewed, so the next pass (a minute on) takes it once they are read. Every other review acts now, once a day ([actedOn]).
+            val waiting = if (ArmAutoStopsHost.deferring()) latchWaits(list, _settings.value) else emptyList()
+            val acted = actedOn?.takeIf { it.first == day }?.second.orEmpty()
+            val now = list.filter { r -> reviewId(r) !in acted && r !in waiting }
+            actedOn = day to (acted + now.map(::reviewId))
+            if (waiting.isEmpty()) {
+                // The books were read: the day is reviewed (the steps below are memory and posts; none waits).
+                reviewGuard.done(day)
+                reviewedOn = day
+                runCatching { SecurePrefs.putAllSoon(mapOf(K_REVIEWED to day)) }
+            } else {
+                waitedAtMs = System.currentTimeMillis()
+                if (waitSaid != day) { waitSaid = day; runCatching { Diag.record("brain", "${waiting.joinToString { "${it.name} (${it.venue})" }}: " +
+                    "drifting from its backtest; its park or pause waits until your automatic-stop switches are read (tried again each minute)") } }
+            }
+            act(context, list, now)
         } finally { reviewGuard.release() }
+    }
+
+    /** 22 Nov 2026 (B6 review, item 3): a review's id in [actedOn] (its key and venue). */
+    private fun reviewId(r: DriftReview.Review): String = "${r.key}|${r.live}"
+
+    /** 22 Nov 2026 (B6 review, item 3): the day's reviews already acted on (a pass that waited on the switches acts on the rest later). */
+    @Volatile private var actedOn: Pair<String, Set<String>>? = null
+    /** 22 Nov 2026 (B6 review, item 3): when a pass last left a park or pause waiting ([WAIT_AGAIN_MS] before the next), and the day it was said. */
+    @Volatile private var waitedAtMs = 0L
+    @Volatile private var waitSaid: String? = null
+    private const val WAIT_AGAIN_MS = 60_000L
+
+    /**
+     * 22 Nov 2026 (B6 review, item 3): of [list], the reviews whose action now ([s]) would park or pause one of R51, R72 or Liquidity - they
+     * wait while Boss's automatic-stop switches are not read ([ArmAutoStopsHost.deferring]). Pure.
+     */
+    internal fun latchWaits(list: List<DriftReview.Review>, s: Settings): List<DriftReview.Review> = list.filter { r ->
+        com.optionslab.ira.ArmAutoStops.covers(r.key) &&
+            DriftReview.action(r, s.paperDrift, alreadyParked = if (r.live) r.key in s.parked else r.key in s.paused).let {
+                it == DriftReview.Action.PARK_TO_PAPER || it == DriftReview.Action.PAUSE }
     }
 
     /** TEST ONLY: the review's steps on [list] (as [reviewIfDue] takes them once the books were read), with no notification. */
     internal fun actForTest(list: List<DriftReview.Review>) = act(null, list)
 
-    private fun act(context: Context?, list: List<DriftReview.Review>) {
+    /** TEST ONLY: a pass that waited on the switches may be tried again at once (not a minute later). */
+    internal fun reviewAgainNowForTest() { waitedAtMs = 0L }
+
+    /** [list] shown (Home's chips, Jarvis); [only] of it acted on (22 Nov 2026: one waiting on the switches is not, [reviewIfDue]). */
+    private fun act(context: Context?, list: List<DriftReview.Review>, only: List<DriftReview.Review> = list) {
         _reviews.value = list
         val ctx = context ?: appContext
         for ((i, r) in list.withIndex()) {
+            if (r !in only) continue
             val key = r.key
             var a = DriftReview.Action.NONE
             var kept = false
@@ -795,9 +837,10 @@ object SmartWorkers {
                 val already = if (r.live) key in s.parked else key in s.paused
                 a = DriftReview.action(r, s.paperDrift, alreadyParked = already)
                 // 19 Nov (Boss's choice, [ArmAutoStopsHost]): with its switch off Liquidity's review parks and pauses nothing ("run until
-                // i stop them"): it only warns, and asks. Every other strategy as before.
+                // i stop them"): it only warns, and asks. Every other strategy as before. 22 Nov 2026 (B6 review, item 3): asked as a stop
+                // that latches ([ArmAutoStopsHost.mayLatch]) - never before his saved switches are read ([reviewIfDue] holds those back).
                 if ((a == DriftReview.Action.PARK_TO_PAPER || a == DriftReview.Action.PAUSE) &&
-                    !ArmAutoStopsHost.acts(com.optionslab.ira.ArmAutoStops.Rule.SELF_REVIEW, key)) {
+                    !ArmAutoStopsHost.mayLatch(com.optionslab.ira.ArmAutoStops.Rule.SELF_REVIEW, key)) {
                     a = DriftReview.Action.WARN; kept = true
                 }
                 when (a) {
@@ -953,6 +996,7 @@ object SmartWorkers {
         bus.clear(); health.reset(); sched.resetCounts(); lastPost.clear()
         _brain.value = MarketBrain.Context(); _settings.value = Settings(); loaded = true
         _reviews.value = emptyList(); reviewedOn = null; nearUntil = 0L; reviewGuard.reset(); testReadsFail = false
+        actedOn = null; waitedAtMs = 0L; waitSaid = null
         testReviews = null; testDoorThrows = null; testRelayThrows = null
         synchronized(trapsSeen) { trapsSeen.clear() }; synchronized(sideSeen) { sideSeen.clear() }
         activeWindowsSeen.clear(); synchronized(closedSeen) { closedSeen.clear() }

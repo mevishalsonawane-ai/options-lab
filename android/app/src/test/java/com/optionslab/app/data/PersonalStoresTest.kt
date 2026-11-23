@@ -347,7 +347,7 @@ class PersonalStoresTest {
             com.optionslab.app.ira.Autopilot.setForTest(com.optionslab.ira.AutoChange.record(com.optionslab.ira.AutoChange.Book(),
                 com.optionslab.ira.AutoChange.passedLock(true), com.optionslab.ira.AutoChange.Status.KEPT, System.currentTimeMillis(),
                 java.time.LocalDate.of(2026, 10, 26)).first)
-            com.optionslab.app.ira.Autopilot.saveNow()      // noBackupFilesDir/autopilot/log.txt and knobs.txt
+            com.optionslab.app.ira.Autopilot.saveNow()      // noBackupFilesDir/autopilot/log.vault and knobs.txt
         },
         s("IraBots") {
             com.optionslab.app.security.SecurePrefs.put("jarvis.bots.switches",

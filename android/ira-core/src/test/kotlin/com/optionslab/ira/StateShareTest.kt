@@ -29,11 +29,63 @@ class StateShareTest {
         """.trimIndent()
         val out = StateShare.redact(sample)
         for (s in listOf(token, apiKey, "AB1234", "QX4321", "relay.example.net", "8443", "13.234.56.78", "10.0.0.12", "2406:da1a",
-                "fe80::1", "boss.trader@example.com", "98765 43210", "9876543210", "482913", "eyJhbGciOiJIUzI1NiJ9", "250120000123456",
-                "0123456789abcdef0123"))
+                "fe80::1", "boss.trader@example.com", "98765 43210", "9876543210", "482913", "eyJhbGciOiJIUzI1NiJ9", "0123456789abcdef0123"))
             assertFalse(out.contains(s), "$s leaked:\n$out")
         assertTrue(out.contains(StateShare.LOGGED_IN_MASK), out)
         assertTrue(out.contains(StateShare.MASK), out)
+        // 22 Nov 2026 (B6 review): Zerodha's order id is not a secret and is kept, to match the line against Kite.
+        assertTrue(out.contains("order 250120000123456"), out)
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review, item 8): order ids, option sides with their strikes and the arms' own dotted words stay; a host with an
+     * ending no list named is masked; tokens, keys, ids, addresses, phones and e-mails still are.
+     */
+    @Test fun orderIdsAndTradingWordsStayWhileRealSecretsAndHostsGo() {
+        val kept = listOf(
+            "11-22 10:15:02 [armlive] R51 Donchian 20: entry 250122000123456 filled at 120.50 (SL 250122000123457 resting, GTT 268431245)",
+            "11-22 10:16:00 [orders] exchange order 1100000012345678 · Kite order 2501220001234567",
+            "Liquidity 15+5: bought CE24500 · then PE52000 at 98.20 · NFO1234 lots",
+            "R72.live mirrored · R51.paper held · OrbArms.view read · StepTrailExits.line · orb.vault · log.txt · NIFTY.IN · MIDCPNIFTY.NFO",
+            "run wg-relay-setup.sh · Liquidity.run · Arms.page · kite.zerodha.com up · api.kite.trade timed out",
+        )
+        for (l in kept) assertEquals(l, StateShare.redact(l))
+        val line = "relay relay.mybox.zone:2222 and vps.example.it, box.tail1234.ts.net, home.example.io/tunnel · ip 13.234.56.78:22 · " +
+            "relay.mybox.top:2223/ssh, vps.example.pl, wg.myhome.live, Relay.MyBox.net and Box.lan:22 · bank a/c 50100123456789 · " +
+            "demat 1208160000123456 · access_token=$token · api_key=$apiKey · client AB1234 · +91 98765 43210 · boss.trader@example.com · " +
+            "hash 0123456789abcdef0123"
+        val out = StateShare.redact(line)
+        for (s in listOf("relay.mybox.zone", "2222", "vps.example.it", "box.tail1234.ts.net", "home.example.io", "tunnel", "13.234.56.78",
+                "relay.mybox.top", "2223", "vps.example.pl", "wg.myhome.live", "Relay.MyBox.net", "Box.lan", "50100123456789", "1208160000123456",
+                token, apiKey, "AB1234", "98765 43210", "boss.trader@example.com", "0123456789abcdef0123"))
+            assertFalse(out.contains(s), "$s leaked:\n$out")
+        // A client id is still masked when it is not a side and a strike; a known value in any case.
+        assertEquals("client ${StateShare.LOGGED_IN_MASK}", StateShare.redact("client ZY7788"))
+        assertEquals("user ${StateShare.MASK}", StateShare.redact("user CE1234", listOf("CE1234")))
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review, second look): a client id that only starts like an option's side ("PE4821": not a strike's shape), a phone
+     * number after the word "order", a host with a '-' after it, a capitalised two-part host ("MyRelay.com") and a "dated" id of an older
+     * year with no order word are masked; a strike, this year's and last year's order ids and the arms' own words stay.
+     */
+    @Test fun theSecondLooksGapsAreMasked() {
+        assertEquals("client ${StateShare.LOGGED_IN_MASK}", StateShare.redact("client PE4821", year = 2026))
+        assertEquals("order ${StateShare.MASK}", StateShare.redact("order 919876543210", year = 2026))
+        assertEquals("ssh to ${StateShare.MASK}-2 failed", StateShare.redact("ssh to vps.example.com-2 failed", year = 2026))
+        assertEquals("relay ${StateShare.MASK} up · box ${StateShare.MASK} down", StateShare.redact("relay MyRelay.com up · box MyBox.in down", year = 2026))
+        assertEquals("ref ${StateShare.MASK}", StateShare.redact("ref 230115000123456", year = 2026))
+        val kept = "bought CE24500, PE4850 and PE12825 · ref 260115000123456 · ref 251231000123456 · R72.live · NIFTY.IN · MIDCPNIFTY.NFO · " +
+            "OrbArms.view · Liquidity.run"
+        assertEquals(kept, StateShare.redact(kept, year = 2026))
+        // The same "dated" id a year on is an old one: masked (the order's word keeps any).
+        assertEquals("ref ${StateShare.MASK} · order 250115000123456", StateShare.redact("ref 250115000123456 · order 250115000123456", year = 2027))
+        assertEquals("ref ${StateShare.MASK}", StateShare.build(listOf(StateShare.Section("x", listOf("ref 230115000123456"))), year = 2026)
+            .lines().first { it.startsWith("ref") })
+        // Kite's own field names keep their ids (round 3).
+        for (l in listOf("exchange_order_id=1300000012345678", "order_id: 1300000012345679", "\"parent_order_id\": \"1300000012345670\""))
+            assertEquals(l, StateShare.redact(l, year = 2026))
+        assertFalse(StateShare.redact("bank_id=1300000012345678 · demat_id 1300000012345678", year = 2026).contains("1300000012345678"))
     }
 
     @Test fun shortIdsHostsWithNoSchemeTopicsAndPassphrasesAreMasked() {

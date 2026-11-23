@@ -70,6 +70,8 @@ class AutopilotTest : RobolectricTest() {
         at(LocalTime.of(16, 0))
         Autopilot.resetForTest(); JarvisLearning.resetForTest(); SmartWorkers.resetForTest(); TradeManagerHost.resetForTest()
         Autopilot.init(context)
+        // 22 Nov 2026 (B6 review): the start's own background timeline entry (logged once per phone) lands first, then the timeline is empty.
+        AutomationSupport.settleStartTimeline(context)
         Autopilot.testLive = false
         runBlocking { IraHub.forgetAll() }
     }
@@ -91,10 +93,10 @@ class AutopilotTest : RobolectricTest() {
         assertEquals(AutoChange.Scope.PAPER, e.change.scope)
         // Once a day.
         assertFalse(Autopilot.runIfDue(context))
-        // Kept in noBackupFilesDir and read back the same.
-        val f = File(context.noBackupFilesDir, "autopilot/log.txt")
+        // Kept in noBackupFilesDir (encrypted, 22 Nov 2026) and read back the same.
+        val f = File(context.noBackupFilesDir, "autopilot/log.vault")
         assertTrue(f.isFile)
-        assertEquals(Autopilot.book.value.entries.map { it.id }, AutoChange.decode(f.readText()).entries.map { it.id })
+        assertEquals(Autopilot.book.value.entries.map { it.id }, AutoChange.decode(logText(f)).entries.map { it.id })
         // Jarvis's answers come from the log.
         assertTrue(Autopilot.answer(AutoChange.Ask(AutoChange.AskKind.TODAY)).contains("Night (R3)'s new paper entries: on → paused"))
         assertTrue(Autopilot.answer(AutoChange.Ask(AutoChange.AskKind.HOW)).contains("1 on probation"))
@@ -196,8 +198,8 @@ class AutopilotTest : RobolectricTest() {
         assertTrue(e.note, e.note.startsWith("pre-flight failed: 10 cases replayed"))
         assertFalse(e.applied); assertEquals(0, Autopilot.book.value.trials)
         // Kept in the log file with its note.
-        val f = File(context.noBackupFilesDir, "autopilot/log.txt")
-        assertEquals(AutoChange.Status.SKIPPED, AutoChange.decode(f.readText()).entries.single().status)
+        val f = File(context.noBackupFilesDir, "autopilot/log.vault")
+        assertEquals(AutoChange.Status.SKIPPED, AutoChange.decode(logText(f)).entries.single().status)
     }
 
     @Test fun aPassedPreflightIsKeptBesideTheChangeAndCountsATrial() = runBlocking<Unit> {
@@ -321,12 +323,250 @@ class AutopilotTest : RobolectricTest() {
 
     @Test fun thePassDayIsKeptOnDiskBeforeAnythingElse() = runBlocking<Unit> {
         // Review 2 #11: a pass that dies half-way never runs again the same day after a restart.
-        val f = File(context.noBackupFilesDir, "autopilot/log.txt")
+        val f = File(context.noBackupFilesDir, "autopilot/log.vault")
         f.delete()
         Autopilot.testInputs = { _ -> error("the agents' stores could not be read") }
         assertNull(Autopilot.run(day, healthOnly = false))
         assertTrue(f.isFile)
-        assertEquals(day, AutoChange.decode(f.readText()).lastRun)
+        assertEquals(day, AutoChange.decode(logText(f)).lastRun)
+    }
+
+    /** The change timeline's text as the app reads it (22 Nov 2026: encrypted). */
+    private fun logText(f: File): String = String(com.optionslab.app.security.Vault.readFile(f)!!, Charsets.UTF_8)
+
+    /**
+     * 22 Nov 2026 (B6 review, item 5): the change timeline holds rupee figures, so it is kept encrypted (as the diagnostics' diary): a write
+     * leaves no plain text, and a phone's plain log of before is read once, written again encrypted and deleted - nothing of it lost.
+     */
+    @Test fun theTimelineIsKeptEncryptedAndAPlainOneOfBeforeIsMovedOnce() {
+        val reason = "its record says it loses -Rs 12,345 over 30 trades"
+        val (b, e) = AutoChange.record(AutoChange.Book(), AutoChange.armAutoStop(com.optionslab.ira.ArmAutoStops.Rule.FORWARD_BAR, false, reason),
+            AutoChange.Status.KEPT, ms(day), day, by = "your choice")
+        // A phone of before: the plain file only.
+        val dir = File(context.noBackupFilesDir, "autopilot").apply { mkdirs() }
+        val plain = File(dir, "log.txt")
+        val enc = File(dir, "log.vault")
+        enc.delete()
+        plain.writeText(AutoChange.encode(b))
+        Autopilot.unloadForTest()
+        Autopilot.ensureLoaded()
+        assertEquals(listOf(e.id), Autopilot.book.value.entries.map { it.id })
+        assertEquals(reason, Autopilot.book.value.entries.single().change.reason)
+        assertFalse("the plain file is gone", plain.exists())
+        assertTrue(enc.isFile)
+        assertFalse("no figure in the clear", String(enc.readBytes(), Charsets.ISO_8859_1).contains("12,345"))
+        assertEquals(listOf(e.id), AutoChange.decode(logText(enc)).entries.map { it.id })
+        // Read back after a restart: the same book, from the encrypted file.
+        Autopilot.unloadForTest()
+        Autopilot.ensureLoaded()
+        assertEquals(listOf(e.id), Autopilot.book.value.entries.map { it.id })
+        // A save writes no plain text either.
+        Autopilot.saveNow()
+        assertFalse(plain.exists())
+        assertFalse(String(enc.readBytes(), Charsets.ISO_8859_1).contains("Rs 12,345"))
+    }
+
+    /** 22 Nov 2026 (B6 review, item 5): an encrypted timeline that cannot be read is set aside, never written over, and starts afresh. */
+    @Test fun anUnreadableTimelineIsSetAsideNeverWrittenOver() {
+        val dir = File(context.noBackupFilesDir, "autopilot").apply { mkdirs() }
+        val enc = File(dir, "log.vault")
+        enc.writeBytes(ByteArray(48) { 3 })
+        Autopilot.unloadForTest()
+        Autopilot.ensureLoaded()
+        assertTrue(Autopilot.book.value.entries.isEmpty())
+        assertTrue("kept aside", dir.listFiles()!!.any { it.name.startsWith("log.vault.unreadable.") })
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review, second look): a timeline that could not be read just now (a Keystore hiccup, not a tampered file) is never set
+     * aside nor written over, and no pass runs on it; a later read loads it, with what memory recorded meanwhile on top.
+     */
+    @Test fun aTimelineThatCannotBeReadJustNowIsKeptAndReadLater() = runBlocking<Unit> {
+        val (b, e) = AutoChange.record(AutoChange.Book(lastRun = day.minusDays(1)), paperMute(), AutoChange.Status.PROBATION, ms(day.minusDays(1)),
+            day.minusDays(1))
+        Autopilot.setForTest(b)
+        Autopilot.saveNow()
+        val dir = File(context.noBackupFilesDir, "autopilot")
+        val enc = File(dir, "log.vault")
+        val before = enc.readBytes()
+        Autopilot.testReadLog = { throw java.security.KeyStoreException("the key was not returned; try again") }
+        Autopilot.unloadForTest()
+        Autopilot.ensureLoaded()
+        assertTrue(Autopilot.book.value.entries.isEmpty())
+        assertFalse("nothing set aside", dir.listFiles()!!.any { it.name.contains(".unreadable.") })
+        assertTrue(Autopilot.diagLine(), Autopilot.diagLine().startsWith("Autopilot learning: the change timeline could not be read yet"))
+        Autopilot.saveNow()
+        assertTrue("never written over", before.contentEquals(enc.readBytes()))
+        // (A shadow change: its notice's words are no other test's, so the banners' 20 s throttle never hides one of theirs.)
+        Autopilot.testInputs = { d -> AutoChange.Inputs(d, listOf(lesson("trap:stop_hunt", "Trades taken with the trap guard's \"possible stop hunt\" flag up", -1, 30))) }
+        assertFalse("no pass on a timeline not read", Autopilot.runIfDue(context))
+        assertTrue(Autopilot.book.value.entries.isEmpty())
+        // Readable again (the next look after the wait): the file's timeline; then the pass runs and saves on top of it.
+        Autopilot.testReadLog = null
+        Autopilot.ensureLoaded()
+        assertTrue("not before the wait", Autopilot.book.value.entries.isEmpty())
+        Autopilot.readAgainNowForTest()
+        Autopilot.ensureLoaded()
+        assertEquals(listOf(e.id), Autopilot.book.value.entries.map { it.id })
+        assertTrue(Autopilot.runIfDue(context))
+        assertEquals(2, AutoChange.decode(logText(enc)).entries.size)
+        // A tampered file is still set aside (its check failed), as before.
+        Autopilot.testReadLog = { throw com.optionslab.app.security.Vault.Tampered() }
+        Autopilot.unloadForTest()
+        Autopilot.ensureLoaded()
+        assertTrue(dir.listFiles()!!.any { it.name.startsWith("log.vault.unreadable.") })
+    }
+
+    /**
+     * 22 Nov 2026 (B6-E with B6-F merged): the dead order limits' note waits for a timeline that could not be read just now - not decided,
+     * not saved over the file - and is logged once it is read; its mark never travels in a backup.
+     */
+    @Test fun theDeadLimitsNoteWaitsForTheTimelineToBeRead() {
+        assertFalse("never in a backup", com.optionslab.ira.Upkeep.carried(Autopilot.K_DEAD_LIMITS))
+        // (The start's own decision landed in up(): nothing set on a fresh phone. Now this phone has the limits set.)
+        com.optionslab.app.security.SecurePrefs.putAll(mapOf(Autopilot.K_DEAD_LIMITS to null))
+        com.optionslab.app.data.AppSettings.save(com.optionslab.app.data.AppSettings.load().copy(maxLotsPerOrder = 1, guardMaxLots = 5))
+        Autopilot.setForTest(AutoChange.record(AutoChange.Book(), paperMute(), AutoChange.Status.KEPT, ms(day), day).first)
+        Autopilot.saveNow()
+        val enc = File(File(context.noBackupFilesDir, "autopilot"), "log.vault")
+        val before = enc.readBytes()
+        Autopilot.testReadLog = { throw java.security.KeyStoreException("the key was not returned; try again") }
+        Autopilot.unloadForTest()
+        assertFalse(Autopilot.logDeadOrderLimitsOnce())
+        assertFalse("not decided", com.optionslab.app.security.SecurePrefs.getBoolean(Autopilot.K_DEAD_LIMITS, false))
+        assertTrue("never written over", before.contentEquals(enc.readBytes()))
+        Autopilot.testReadLog = null
+        Autopilot.readAgainNowForTest()
+        assertTrue(Autopilot.logDeadOrderLimitsOnce())
+        assertTrue(com.optionslab.app.security.SecurePrefs.getBoolean(Autopilot.K_DEAD_LIMITS, false))
+        assertEquals(listOf(AutoChange.Kind.SPECIALIST_MUTE, AutoChange.Kind.SETTING_NOTE), AutoChange.decode(logText(enc)).entries.map { it.change.kind })
+        // A timeline set aside (its file failed its check) forgets the mark: the note is said again in the fresh one.
+        com.optionslab.app.data.TimelineOnce.forgetAll()
+        assertFalse(com.optionslab.app.security.SecurePrefs.getBoolean(Autopilot.K_DEAD_LIMITS, false))
+    }
+
+    /** A saved timeline on disk (one entry), then as at a cold start: nothing read yet. */
+    private fun savedThenUnloaded(): File {
+        Autopilot.setForTest(AutoChange.record(AutoChange.Book(), paperMute(), AutoChange.Status.KEPT, ms(day), day).first)
+        Autopilot.saveNow()
+        return File(File(context.noBackupFilesDir, "autopilot"), "log.vault")
+    }
+
+    private fun waitUntil(what: String, ms: Long = 10_000, ok: () -> Boolean) {
+        val end = System.currentTimeMillis() + ms
+        while (!ok()) { if (System.currentTimeMillis() > end) throw AssertionError("timed out waiting for $what"); Thread.sleep(20) }
+    }
+
+    /**
+     * 22 Nov 2026 (B6-E, round 3): a change made while the timeline cannot be read waits for the read however long it takes - here 15
+     * failed looks, past the old cap of 11 (about five minutes in the app) - and is logged then, never dropped.
+     */
+    @Test fun aChangeIsLoggedWhenTheTimelineIsReadEvenPastFiveMinutes() {
+        savedThenUnloaded()
+        val fails = java.util.concurrent.atomic.AtomicInteger(15)
+        Autopilot.waitAgainMs = 20
+        Autopilot.testReadLog = { f -> if (fails.getAndDecrement() > 0) throw java.security.KeyStoreException("not returned") else com.optionslab.app.security.Vault.readFile(f) }
+        Autopilot.unloadForTest()
+        Autopilot.logDayStop(com.optionslab.ira.DayStop.Side.INDEX, stopped = true, by = "by you", at = "10:00")
+        waitUntil("the day stop's entry") { Autopilot.book.value.entries.any { it.change.kind == AutoChange.Kind.DAY_STOP } }
+        assertTrue("more than the old cap's looks failed first", fails.get() < 0)
+        assertTrue(Autopilot.timelineRead)
+        assertEquals("the file's entry kept, the stop on top", listOf(AutoChange.Kind.SPECIALIST_MUTE, AutoChange.Kind.DAY_STOP),
+            Autopilot.book.value.entries.map { it.change.kind })
+    }
+
+    /**
+     * 22 Nov 2026 (B6-E, round 3): the writers keep their order across a long wait - a "start again" asked after a "stop" (the read coming
+     * good in between) never lands first, so the newest entry is the one that undoes.
+     */
+    @Test fun theWritersKeepTheirOrderAcrossALongWait() {
+        savedThenUnloaded()
+        Autopilot.waitAgainMs = 500
+        Autopilot.testReadLog = { throw java.security.KeyStoreException("not returned") }
+        Autopilot.unloadForTest()
+        Autopilot.logDayStop(com.optionslab.ira.DayStop.Side.INDEX, stopped = true, by = "by you", at = "10:00")
+        // (The stop has looked once and waits; the read comes good; the start is asked at once - it waits its turn.)
+        waitUntil("the first look") { Autopilot.timelineUnread.value }
+        Autopilot.testReadLog = null
+        Autopilot.readAgainNowForTest()
+        Autopilot.logDayStop(com.optionslab.ira.DayStop.Side.INDEX, stopped = false, by = "by you", at = "10:05")
+        waitUntil("both entries") { Autopilot.book.value.entries.count { it.change.kind == AutoChange.Kind.DAY_STOP } == 2 }
+        val stops = Autopilot.book.value.entries.filter { it.change.kind == AutoChange.Kind.DAY_STOP }
+        val index = com.optionslab.ira.DayStop.Side.INDEX
+        assertEquals(listOf(AutoChange.dayStop(index, true, "by you", "10:00").to, AutoChange.dayStop(index, false, "by you", "10:05").to),
+            stops.map { it.change.to })
+        assertEquals("the stop closed by the start", AutoChange.Status.KEPT, stops[1].status)
+        assertTrue(stops[0].status != AutoChange.Status.KEPT)
+    }
+
+    /** 22 Nov 2026 (B6-E, round 3): the cheaper strike's one-time mark is written only once its entry is in the saved timeline. */
+    @Test fun theCheaperStrikesOnceMarkWaitsForItsEntrysSave() {
+        val enc = savedThenUnloaded()
+        com.optionslab.app.security.SecurePrefs.putAll(mapOf(com.optionslab.app.data.CheaperStrike.K_ONCE to null))
+        Autopilot.waitAgainMs = 50
+        Autopilot.testReadLog = { throw java.security.KeyStoreException("not returned") }
+        Autopilot.unloadForTest()
+        Autopilot.logCheaperStrikeOnOnce()
+        waitUntil("a failed look") { Autopilot.timelineUnread.value }
+        Thread.sleep(200)
+        assertFalse("not marked before its entry is saved", com.optionslab.app.security.SecurePrefs.getBoolean(com.optionslab.app.data.CheaperStrike.K_ONCE, false))
+        Autopilot.testReadLog = null
+        waitUntil("the mark") { com.optionslab.app.security.SecurePrefs.getBoolean(com.optionslab.app.data.CheaperStrike.K_ONCE, false) }
+        assertTrue("its entry in the saved timeline", AutoChange.decode(logText(enc)).entries.any { it.change.target == AutoChange.cheaperStrike(true).target })
+    }
+
+    /**
+     * 22 Nov 2026 (B6-E, round 3): while the timeline is unread the specialists' nightly tuning and the learning freeze's refresh wait - a
+     * freeze already on stays on.
+     */
+    @Test fun anUnreadTimelinePausesTheTuningAndTheFreezesRefresh() {
+        savedThenUnloaded()
+        val frozen = com.optionslab.ira.FreezeRule.State(frozen = true, why = "a test's freeze")
+        LearningFreeze.setForTest(frozen)
+        Autopilot.testReadLog = { throw java.security.KeyStoreException("not returned") }
+        Autopilot.unloadForTest()
+        Autopilot.ensureLoaded()
+        assertFalse(Autopilot.timelineRead)
+        LearningFreeze.refresh(day)
+        assertTrue("nothing worked out", LearningFreeze.verdicts.value.isEmpty())
+        assertEquals("a freeze on stays on", frozen, LearningFreeze.state.value)
+        assertTrue(LearningFreeze.holds())
+        // No freeze recorded: still held as frozen while the timeline is unread (no verdict can be worked out).
+        LearningFreeze.resetForTest()
+        assertTrue(LearningFreeze.holds())
+        // The specialists' tuning: not tonight while unread - not even marked reviewed.
+        ManagerSpecialists.reviewIfDue()
+        assertTrue("not reviewed tonight", ManagerSpecialists.book.value.reviewedOn != day.toString())
+        // Read: both run.
+        Autopilot.testReadLog = null
+        Autopilot.readAgainNowForTest()
+        ManagerSpecialists.reviewIfDue()
+        assertEquals(day.toString(), ManagerSpecialists.book.value.reviewedOn)
+        assertFalse("read: the freeze's own state again", LearningFreeze.holds())
+        LearningFreeze.resetForTest()
+        LearningFreeze.refresh(day)
+        assertEquals(2, LearningFreeze.verdicts.value.size)
+        LearningFreeze.resetForTest()
+    }
+
+    /** 22 Nov 2026 (B6 review, second look): what memory recorded before the read goes on top of the file's timeline - nothing lost. */
+    @Test fun theMemorysEntriesGoOnTopOfTheFilesTimeline() {
+        val d = day.minusDays(1)
+        val (disk, e1) = AutoChange.record(AutoChange.Book(lastRun = d.minusDays(1), trials = 3, blacklist = mapOf("x" to d)), paperMute(),
+            AutoChange.Status.KEPT, ms(d), d)
+        val (mem, e2) = AutoChange.record(AutoChange.Book(lastRun = d, trials = 1, blacklist = mapOf("x" to d.minusDays(9), "y" to d)),
+            paperMute("orb"), AutoChange.Status.PROBATION, ms(d, 12), d)
+        assertEquals("the same first id", e1.id, e2.id)
+        val m = Autopilot.withEarlier(disk, mem)
+        assertEquals(2, m.entries.size)
+        assertEquals(e1, m.entries[0])
+        assertEquals(e2.copy(id = m.entries[1].id), m.entries[1])
+        assertTrue(m.entries[1].id != e1.id)
+        assertEquals(d, m.lastRun)
+        assertEquals(disk.trials + mem.trials, m.trials)
+        assertEquals(mapOf("x" to d, "y" to d), m.blacklist)
+        // An entry already in the file is not added twice.
+        assertEquals(1, Autopilot.withEarlier(disk, disk).entries.size)
     }
 
     @Test fun undoingAPaperMuteWhereTheManagerActsLiveTakesThePin() {
@@ -405,6 +645,8 @@ class AutopilotTest : RobolectricTest() {
     @Test fun theEveningsChangesAreToldAfterAMiddayNotice() = runBlocking<Unit> {
         // Review G5-7: the 12:30 pass made one change and told it; the evening's change is told too (the notice replaced).
         com.optionslab.app.work.Alerts.forgetPosted()
+        // (22 Nov 2026: the banners' 20 s repeat filter emptied too - an earlier test's same words would hide the midday notice.)
+        com.optionslab.app.testing.Background.clearAlerts()
         Autopilot.testInputs = { d -> AutoChange.Inputs(d, listOf(lesson("strat:night (r3)", "Night (R3)", -1, 30))) }
         Autopilot.run(day, healthOnly = true)
         Autopilot.testInputs = { d -> AutoChange.Inputs(d, listOf(lesson("trap:stop_hunt", "Trades taken with the trap guard's \"possible stop hunt\" flag up", -1, 30))) }

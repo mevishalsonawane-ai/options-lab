@@ -225,6 +225,8 @@ object Broker {
         // The kill switch kept in memory and read again only when a kept-elsewhere setting changed (g.kill is one of them):
         // the door reads nothing from the settings store on the order path (round 2's rule), yet sees a flip at once.
         if (killOn()) return "refused: the kill switch is on"
+        // 22 Nov 2026 (B6 review): no entry while a backup is being restored (until the restart) - memory only. Exits never come here.
+        Backup.restoringRefusal()?.let { return it }
         // 18 Oct (review): the paper-only period read again inside the door too (memory only), so a period set while this entry
         // waited its turn still refuses it. [placeOrder] asks it first; this is the door's own look.
         PaperOnly.entryRefusal()?.let { return it }
@@ -1101,7 +1103,7 @@ object Broker {
 
     /** TEST ONLY: nothing kept in memory from an earlier test (the session, the kept reads, today's count). */
     internal fun resetForTest() { dropCreds(); dropKept(); sentKept = null; sentIds.clear(); paperOnlyNoticeDay = null
-        entryIds.clear(); exitIds.clear(); sendMarks.clear(); serverOffset = null; killSweepAgainMs = 3_000L; relayConnect = null
+        entryIds.clear(); exitIds.clear(); sendMarks.clear(); serverOffset = null; killSweepAgainMs = 3_000L; relayConnect = null; lastEntrySentAt = 0L
         killJob?.cancel(); killJob = null; killJobActs = false; killRequestsForTest.clear(); killSweepOn = false
         cancelLostSearches(); lostWrites.clear(); claimedIds.clear(); lostSearchMsForTest = null; lostLookGapMsForTest = null; lostSearchInlineForTest = false
         // (22 Nov 2026, B6 review: no test's instruments list in memory left for the next test's entries, [instrumentsInMemory], nor a
@@ -2011,6 +2013,8 @@ object Broker {
         }
         return when (val r = entryGate.enter("${o.exchange}:${o.tradingSymbol}", recheck = { entryRecheck(o, arm, intended, stop) }) {
             com.optionslab.app.work.TradingBusy.during {
+                // (22 Nov 2026, B6-E: marked before it goes - sent, refused or its reply lost - so a restore waits for its booking: [entriesQuiet].)
+                lastEntrySentAt = System.currentTimeMillis()
                 // (20 Nov 2026, audit B5: its POST in the lane below the exits' ([EntrySend]); its id kept as an entry's for the kill switch.)
                 try { kotlinx.coroutines.withContext(EntrySend(bounded = counted)) { sendChecked(o, false, arm, intended) }.also { noteKind(it, entry = true); if (counted) count() } }
                 catch (e: Exception) { if (counted && e !is kotlinx.coroutines.CancellationException && !definite(e)) runCatching { count() }; throw e }
@@ -2105,6 +2109,27 @@ object Broker {
      */
     private val entryIds = java.util.concurrent.ConcurrentHashMap<String, Long>()
     private val exitIds = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /**
+     * 22 Nov 2026 (B6-E, round 3): no entry inside the door now, and none went out of it to Zerodha in the last [settleMs] - sent, refused
+     * or its reply lost (its arm may still be waiting for the fill, searching for it, or booking it) - a backup restore waits for this before
+     * it reads which live positions are open ([Backup.restore]). Memory only.
+     */
+    internal fun entriesQuiet(nowMs: Long = System.currentTimeMillis(), settleMs: Long = ENTRY_SETTLE_MS): Boolean =
+        entriesQuiet(entryGate.busy, lastEntrySentAt, nowMs, settleMs)
+
+    /** [entriesQuiet] from its parts: the door not [busy] and no entry sent (the last at [sentAt]; 0: none) in the [settleMs] before [nowMs]. */
+    internal fun entriesQuiet(busy: Boolean, sentAt: Long, nowMs: Long, settleMs: Long): Boolean =
+        !busy && (sentAt <= 0L || nowMs - sentAt !in 0 until settleMs)
+
+    /**
+     * (An entry's fill is waited for at most 20 s - a hand order's, 15 s an arm's or Pine's - then the rest cancelled and confirmed, a lost
+     * reply searched for about 6 s, and only then booked: 25 s covers them.)
+     */
+    internal const val ENTRY_SETTLE_MS = 25_000L
+
+    /** 22 Nov 2026 (B6-E, round 3): when the last entry went out of the door to Zerodha ([entriesQuiet]); 0: none in this process. */
+    @Volatile private var lastEntrySentAt = 0L
 
     private fun noteKind(id: String, entry: Boolean) {
         val now = System.currentTimeMillis()

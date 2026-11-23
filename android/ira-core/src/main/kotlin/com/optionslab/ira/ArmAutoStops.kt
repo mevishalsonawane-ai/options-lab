@@ -12,6 +12,8 @@ import java.time.LocalDate
  *
  *  - [Rule.FORWARD_BAR]: R51 and R72 switching themselves off after 40 paper trades (net below ₹0 or below twice the spread);
  *  - [Rule.LIVE_STOP]: Liquidity's live stop rule ([LiquidityStopRule]: -₹40,000 from its best or -₹13,000 a month on its own live trades);
+ *    since 20 Nov (Boss: "Yes, make it follow switch") also the arms' live-copies account stop for R51 and R72 (the same figures over the
+ *    arms' whole live record; the app's ArmLive);
  *  - [Rule.SELF_REVIEW]: Liquidity's self-review park to paper and pause (and Autopilot's own park or pause of it);
  *  - [Rule.PAPER_ACCOUNT]: the paper account stop ("no new paper entries until you restart it with your PIN"), for these arms only;
  *  - [Rule.JARVIS_CUTOFF] (Boss, 19 Nov: "Yes, Jarvis cutoff should leave them alone too"): Jarvis's losing-arm cutoff ([ArmCutoff]),
@@ -31,7 +33,9 @@ object ArmAutoStops {
         FORWARD_BAR("fwd", "autostop:forward_bar", "Forward-test switch-off applies to R51, R72 and Liquidity",
             "the forward-test switch-off (R51 and R72 switch themselves off after 40 paper trades if the net is below ₹0 or below twice the spread)"),
         LIVE_STOP("livestop", "autostop:liq_live_stop", "Liquidity live stop rule applies to R51, R72 and Liquidity",
-            "Liquidity's live stop rule (no new live entry once its own live trades are -₹40,000 from their best or -₹13,000 in a month)"),
+            // 22 Nov 2026 (B6 review): since 20 Nov the same switch lifts the arms' live-copies account stop for R51 and R72 - said so.
+            "Liquidity's live stop rule (no new live entry once its own live trades are -₹40,000 from their best or -₹13,000 in a month), " +
+                "and for R51 and R72 the arms' live-copies account stop (the same -₹40,000 / -₹13,000 a month over the arms' whole live record)"),
         SELF_REVIEW("review", "autostop:liq_self_review", "Self-review park and pause applies to R51, R72 and Liquidity",
             "Liquidity's self-review park to paper and pause (and Autopilot's own park or pause of it)"),
         PAPER_ACCOUNT("acct", "autostop:paper_account_stop", "Paper account stop applies to R51, R72 and Liquidity",
@@ -73,6 +77,9 @@ object ArmAutoStops {
     enum class NotApplied(val key: String, val why: String) {
         NEW_PHONE("new", "this phone had no trade of R51, R72 or Liquidity before 19 Nov (a new phone, or erased since)"),
         RESTORE("restore", "a backup was restored, and a restore never switches an automatic stop off"),
+        /** 22 Nov 2026 (B6 review): the first choice ran (four off) but a restore came before its last step, Jarvis's cutoff. */
+        CUT_SHORT("restoreCutoff", "a backup was restored before its last step (Jarvis's losing-arm cutoff) ran, and a restore never switches " +
+            "an automatic stop off"),
         UNREAD("unread", "the switches or the arms' trades have not been read yet (or could not be); it is tried again every minute");
 
         companion object { fun ofKey(k: String?): NotApplied? = entries.firstOrNull { it.key == k && it != UNREAD } }
@@ -89,9 +96,18 @@ object ArmAutoStops {
         if (why == null || s.off.size == Rule.entries.size) return null
         // (Review: while the switches or the choice wait on a read, the stops that latch - the forward-test switch-off, the self-review's
         // park and pause - wait too on the three ([com.optionslab.ira.ArmAutoStops] callers' mayLatch); the others act.)
-        val meanwhile = if (why == NotApplied.UNREAD) "Until then the forward-test switch-off and the self-review's park and pause wait on " +
-            "R51, R72 and Liquidity; the other stops act as before." else "The stops stay on."
-        return "Your 19 Nov choice (all of these off) was not applied on this phone: ${why.why}. $meanwhile " +
+        // 22 Nov 2026 (B6 review): said exactly - the first choice ran and a restore cut its last step short ([NotApplied.CUT_SHORT]): applied
+        // in part; and with some already off (Boss's own, or that first step's), which are still on.
+        val on = Rule.entries.filter { s.isOn(it) }
+        val lead = if (why == NotApplied.CUT_SHORT) "Your 19 Nov choice (all of these off) was applied on this phone only in part: ${why.why}."
+            else "Your 19 Nov choice (all of these off) was not applied on this phone: ${why.why}."
+        val meanwhile = when {
+            why == NotApplied.UNREAD -> "Until then the forward-test switch-off and the self-review's park and pause wait on " +
+                "R51, R72 and Liquidity; the other stops act as before."
+            s.off.isEmpty() -> "The stops stay on."
+            else -> "${on.joinToString(", ") { short(it) }.replaceFirstChar { it.uppercase() }} ${if (on.size == 1) "stays" else "stay"} on."
+        }
+        return "$lead $meanwhile " +
             (if (switchesShown) "To switch one off, tap its switch below and enter your PIN."
             else "Once they are read, you can switch one off here with your PIN.")
     }
@@ -190,18 +206,23 @@ object ArmAutoStops {
         if (!covers(source)) return null
         // Liquidity: its self-review, the paper account stop and Jarvis's cutoff, and its live stop rule on its switch's row and its
         // BANKNIFTY books only (the rule never covered FINNIFTY or MIDCPNIFTY); R51 / R72: the forward bar and the paper account stop
-        // (Jarvis's cutoff only ever judged the ORB family's rows, Liquidity's among them - never R51 or R72).
+        // (Jarvis's cutoff only ever judged the ORB family's rows, Liquidity's among them - never R51 or R72), and - 22 Nov 2026 (B6
+        // review) - the live stop rule's switch, which since 20 Nov lifts their arms' live-copies account stop (named as that).
+        val r5172 = source !in LIQUIDITY_SOURCES
         val off = s.off.filter {
             when {
-                source !in LIQUIDITY_SOURCES -> it == Rule.FORWARD_BAR || it == Rule.PAPER_ACCOUNT
+                r5172 -> it == Rule.FORWARD_BAR || it == Rule.LIVE_STOP || it == Rule.PAPER_ACCOUNT
                 it == Rule.LIVE_STOP -> source == LiquidityRules.ARM.source || source in BN_SOURCES
                 else -> it != Rule.FORWARD_BAR
             }
         }
         if (off.isEmpty()) return null
-        return "${ROW.replaceFirstChar { it.uppercase() }} (19 Nov): ${off.joinToString(", ") { short(it) }} no longer stop${if (off.size == 1) "s" else ""} it; " +
-            "it runs until you stop it (Bot settings to switch them back on)"
+        return "${ROW.replaceFirstChar { it.uppercase() }} (19 Nov): ${off.joinToString(", ") { if (r5172 && it == Rule.LIVE_STOP) LIVE_COPIES_STOP else short(it) }} " +
+            "no longer stop${if (off.size == 1) "s" else ""} it; it runs until you stop it (Bot settings to switch them back on)"
     }
+
+    /** 22 Nov 2026 (B6 review): what the live stop rule's switch lifts on R51 and R72 (their rows' name for it). */
+    const val LIVE_COPIES_STOP = "the arms' live-copies account stop"
 
     private val LIQUIDITY_SOURCES: Set<String> = setOf(LiquidityRules.ARM.source) + LiquidityRules.BOOKS.map { it.source }
     /** Liquidity's BANKNIFTY books (the live stop rule's own). */

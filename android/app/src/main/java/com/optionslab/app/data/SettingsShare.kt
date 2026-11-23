@@ -6,6 +6,7 @@ import com.optionslab.engine.orb.LiveMirror
 import com.optionslab.ira.ArmAutoStops
 import com.optionslab.ira.StateShare
 import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 import java.io.File
 import java.time.Instant
 import java.time.LocalDate
@@ -272,9 +273,19 @@ object SettingsShare {
         out += "Paper-only period: ${line("Paper-only period") { PaperOnly.entryRefusal() ?: "none now" }}"
         out += "Live lots per arm trade: ${s?.armLiveLots ?: "not read"} · indices the arms trade live: ${s?.liveMarkets?.sorted()?.joinToString() ?: "not read"}"
         out += "The app settings (every value the app keeps in AppSettings: Settings, Bot settings and Zerodha's limits):"
-        out += s?.let { StateShare.fields(it.toString())?.map { f -> "- $f" } } ?: listOf("- the settings could not be read")
+        out += s?.let { StateShare.fields(it.toString())?.map { f -> "- $f" + notEnforced(f) } } ?: listOf("- the settings could not be read")
         return out
     }
+
+    /**
+     * 22 Nov 2026 (B6 review): AppSettings' old order limits, still saved but enforced nowhere. Since B6-F (22 Nov 2026) voice no longer
+     * sets them either: "lots per order" sets the guard's max lots, "manual orders per day" its max orders per day.
+     */
+    internal val NOT_ENFORCED = setOf("maxOrdersPerDay", "maxLotsPerOrder", "maxOrderValue")
+
+    /** The note a settings dump's line [f] ("name: value") carries when its setting is one of [NOT_ENFORCED]; "" otherwise. */
+    internal fun notEnforced(f: String): String = if (f.substringBefore(':') in NOT_ENFORCED)
+        " (kept, not enforced: the guard's max orders per day and max lots per instrument are)" else ""
 
     // ---- 4. stops and limits -----------------------------------------------------------------------------------------------------
 
@@ -293,9 +304,11 @@ object SettingsShare {
         line("Liquidity paper stop rule") { com.optionslab.ira.LiquidityStopRule.line(OrbArms.liquidityStopPaperHint, live = false) },
         "Paper account stop and weekly stop (Boss's risk rules):",
     ) + runCatching { BossRiskHost.lines().take(2) }.getOrElse { listOf("could not read") } + listOf(
-        "Guard limits: max open ${s?.guardMaxOpen}, max trades ${s?.guardMaxTrades}, max lots ${s?.guardMaxLots}, max value ${s?.guardMaxValue}, " +
-            "max exposure ${s?.guardMaxExposure}, drawdown ${s?.guardDrawdownPct}%, cutoff minute ${s?.guardCutoff}, orders a day ${s?.maxOrdersPerDay}, " +
-            "lots an order ${s?.maxLotsPerOrder}",
+        // 22 Nov 2026 (B6 review): the guard's limits by their own names - the ones every entry is checked against. The old order limits
+        // ("orders a day", "lots an order") are enforced nowhere and are no longer said here ([NOT_ENFORCED]).
+        "Guard limits (every entry is checked against these): max open ${s?.guardMaxOpen}, max orders per day ${s?.guardMaxTrades}, " +
+            "max lots per instrument ${s?.guardMaxLots}, max value ${s?.guardMaxValue}, max exposure ${s?.guardMaxExposure}, " +
+            "drawdown ${s?.guardDrawdownPct}%, cutoff minute ${s?.guardCutoff}",
         "Paper-only period: ${c.paperOnly ?: "none now"}",
         "Zerodha logged in: ${yes(c.loggedIn)}",
     )
@@ -377,6 +390,40 @@ object SettingsShare {
 
     /** [f] deleted unless a later share wrote it again since [written] (its own sweep deletes that one). */
     internal fun sweep(f: File, written: Long) { if (f.lastModified() == written) runCatching { f.delete() } }
+
+    /** The start's sweep of old share files (22 Nov 2026: guarded as B6-D guards every background scope - a failure noted, never a crash). */
+    private val startScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO +
+        ScopeGuard.handler("SettingsShare.startScope"))
+
+    /**
+     * 22 Nov 2026 (B6 review, item 7): at the app's start, the files a share left in the cache's exports/state/ - the process may have died
+     * before their [KEEP_MS] delete ran ([write]'s sweep lives in memory) - are swept ([sweepOld]). In the background, after the open
+     * positions are restored and watched (CLAUDE.md); never the main thread.
+     */
+    fun init(context: Context) {
+        val app = context.applicationContext
+        startScope.launch {
+            runCatching { PositionsFirst.awaitPositions() }
+            // (The cache folder found here, not on the start's main thread: finding it may create it.)
+            runCatching { val root = app.cacheDir; if (cacheRoot == null) cacheRoot = root; sweepOld(File(root, SUB), System.currentTimeMillis()) }
+        }
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review, item 7): of [dir]'s files, each written [KEEP_MS] or more before [nowMs] - or more than [KEEP_MS] after it (a
+     * clock that moved) - is deleted now; any other is deleted when its [KEEP_MS] are up (unless a later share wrote it again), so a file a
+     * share is writing at this very moment is never taken. How many went now.
+     */
+    internal fun sweepOld(dir: File, nowMs: Long): Int {
+        var gone = 0
+        dir.listFiles()?.forEach { f ->
+            val written = f.lastModified()
+            val age = nowMs - written
+            if (age >= KEEP_MS || age < -KEEP_MS) { if (runCatching { f.deleteRecursively() }.getOrDefault(false)) gone++ }
+            else runCatching { sweeper.schedule(Runnable { sweep(f, written) }, KEEP_MS - age, java.util.concurrent.TimeUnit.MILLISECONDS) }
+        }
+        return gone
+    }
 
     /** TEST ONLY: the sweeps waiting now (each written file's delete [KEEP_MS] after it). */
     internal fun sweepsWaiting(): Int = sweeper.queue.size

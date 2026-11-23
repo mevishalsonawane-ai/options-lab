@@ -112,7 +112,8 @@ class ArmAutoStopsCardTest {
         }
         compose.waitForIdle()
         assertEquals(1, compose.onAllNodesWithText("Auto-stop off by Boss's choice (19 Nov)", substring = true).fetchSemanticsNodes().size)
-        assertTrue(shows("the forward-test switch-off, the paper account stop no longer stop it", sub = true))
+        // 22 Nov 2026 (B6 review): the live stop rule's switch lifts R51's arms' live-copies account stop too - its row says so.
+        assertTrue(shows("the forward-test switch-off, the arms' live-copies account stop, the paper account stop no longer stop it", sub = true))
     }
 
     @Test fun liquiditysRowSaysItsAutoStopsAreOffAndNoOtherOrbRowDoes() {
@@ -139,6 +140,16 @@ class ArmAutoStopsCardTest {
         compose.waitForIdle()
         assertTrue(shows("was not applied on this phone: a backup was restored", sub = true))
         assertTrue(shows("tap its switch below and enter your PIN", sub = true))
+    }
+
+    /** 22 Nov 2026 (B6 review, item 9d): four of five off when a restore cut the choice short - the card says exactly which one is still on. */
+    @Test fun aChoiceCutShortByARestoreSaysWhichStopIsStillOn() {
+        val fourOff = allOff.copy(on = allOff.on + (Rule.JARVIS_CUTOFF to true))
+        show(ArmAutoStopsHost.View(loaded = true, state = fourOff, notApplied = ArmAutoStops.NotApplied.CUT_SHORT), {}, {})
+        compose.waitForIdle()
+        assertTrue(shows("was applied on this phone only in part: a backup was restored before its last step", sub = true))
+        assertTrue(shows("Jarvis's losing-arm cutoff stays on.", sub = true))
+        assertFalse(shows("not applied on this phone", sub = true))
     }
 
     @Test fun anUnreadableVaultSaysSoInsteadOfReadingForEver() {

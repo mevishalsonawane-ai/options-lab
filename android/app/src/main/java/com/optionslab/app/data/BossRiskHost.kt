@@ -77,6 +77,12 @@ object BossRiskHost {
     private val paperOn = java.util.concurrent.ConcurrentHashMap<Rule, Boolean>().apply { PAPER_RULES.forEach { put(it, true) } }
     private val liveOn = java.util.concurrent.ConcurrentHashMap<Rule, Boolean>().apply { LIVE_RULES.forEach { put(it, false) } }
     @Volatile private var loaded = false
+    /**
+     * 22 Nov 2026 (B6 review, item 9a): the last read of the saved switches and marks got through (false: not read yet, or it failed - the
+     * paper account stop's reach then unknown, never "not reached" to a switch that would drop a reached stop: [ArmAutoStopsHost]).
+     */
+    @Volatile internal var readOk = false
+        private set
 
     // ---- the paper figures (the watch pass) ----
     private val lock = Any()
@@ -138,7 +144,7 @@ object BossRiskHost {
     /** The switches, the kept marks and the record from the settings (a worker thread). */
     internal fun load() {
         val gen = wipeGen
-        runCatching {
+        val read = runCatching {
             for (r in PAPER_RULES) paperOn[r] = SecurePrefs.getBoolean(r.paperKey, true)
             for (r in LIVE_RULES) liveOn[r] = SecurePrefs.getBoolean(r.liveKey, false)
             acctSince = SecurePrefs.getString(K_ACCT_SINCE)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
@@ -155,6 +161,7 @@ object BossRiskHost {
                 log = (saved + log).distinct().sortedBy { it.atMs }.takeLast(LOG_KEPT); recompute(today())
             }
         }
+        readOk = read.isSuccess && !SecurePrefs.unreadable
         loaded = true
         publish()
     }
@@ -605,7 +612,7 @@ object BossRiskHost {
             paperDays = emptyList(); log = emptyList(); ivs = emptyList()
             PAPER_RULES.forEach { paperOn[it] = true }
             LIVE_RULES.forEach { liveOn[it] = false }
-            loaded = false; daysReadAt = 0L
+            loaded = false; readOk = false; daysReadAt = 0L
             acctSince = null; acctReached = null; weekReachedOn = null; weekLimit = BossRisk.PAPER_WEEKLY_DEFAULT; liveCapital = null
             val d = today()
             acctStatus = AccountStop.status(emptyList(), d); week = BossRisk.weekly(emptyList(), d, weekLimit)
@@ -632,7 +639,7 @@ object BossRiskHost {
         PAPER_RULES.forEach { this.paperOn[it] = paperOn }
         LIVE_RULES.forEach { liveOn[it] = false }
         testDoorThrows = null; testPartThrows = null
-        loaded = true; daysReadAt = Long.MAX_VALUE / 2
+        loaded = true; readOk = true; daysReadAt = Long.MAX_VALUE / 2
         acctSince = null; acctReached = null; weekReachedOn = null; weekLimit = BossRisk.PAPER_WEEKLY_DEFAULT; liveCapital = null
         synchronized(lock) { paperDays = emptyList(); log = emptyList(); ivs = emptyList() }
         acctStatus = AccountStop.status(emptyList(), today()); week = BossRisk.weekly(emptyList(), today(), weekLimit)

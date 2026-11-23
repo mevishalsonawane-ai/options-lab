@@ -166,9 +166,10 @@ object Backup {
     /**
      * What [restore] did. [changePin]: the file was an old PIN-sealed (v1) backup. Anyone holding
      * a copy of that file can guess its 6-digit PIN offline - and it may well be this phone's PIN -
-     * so the owner should choose a new app PIN now.
+     * so the owner should choose a new app PIN now. [notes] (22 Nov 2026, B6 review): what the restore kept from this phone or left
+     * out of the backup, in Boss's words - also posted as a notification and kept in the diagnostics (the app closes at once).
      */
-    data class Restored(val changePin: Boolean)
+    data class Restored(val changePin: Boolean, val notes: List<String> = emptyList())
 
     /**
      * Open a backup with its passphrase (v2) or, for an old v1 file, the PIN it was made
@@ -194,6 +195,23 @@ object Backup {
      * pinned certificates on this phone are kept as they are. The app must restart after.
      */
     fun restore(ctx: Context, c: Contents): Restored {
+        // 22 Nov 2026 (B6 review): from here until the restart no new entry goes to Zerodha ([restoringRefusal], asked inside the entry
+        // door): one sent in these seconds would be booked into a book the restore then replaces (or one frozen for it), and forgotten.
+        // Exits always go. A restore refused, or failed before any file was frozen for it, lets entries go again; one that failed after
+        // keeps them held (the books are frozen, and both callers close the app after a failure).
+        restoring = true
+        var done = false
+        var frozen = false
+        try {
+            return restoreNow(ctx, c) { frozen = true }.also { done = true }
+        } finally { if (!done && !frozen) restoring = false }
+    }
+
+    private fun restoreNow(ctx: Context, c: Contents, onFrozen: () -> Unit): Restored {
+        // 22 Nov 2026 (B6-E, round 3): an entry that passed the door a moment before the flag above may still be on its way to Zerodha, or
+        // sent and not yet booked by its arm - [liveHeld] cannot see it, and the freeze would drop its booking. Waited for (at most
+        // [entryWaitMs], 30 s: past [Broker.ENTRY_SETTLE_MS]; no new one starts meanwhile); still going: refused, nothing written.
+        if (!entriesSettled()) throw EntryInFlight()
         // 20 Nov 2026 (audit, B5 item 2): never while a live position is open - the restore replaces the books that record it (the
         // ORB and Liquidity book, the strategies' runs, the paper trades a live copy follows, the Zerodha trade record). Refused
         // before anything is written (not even the disarm flag): this phone's data stays exactly as it is.
@@ -201,6 +219,15 @@ object Backup {
         // 20 Nov 2026 (B5 item 3, review P4): this phone's account-stop days, read before anything is written. Unreadable, the restore is
         // refused: they are never taken as empty, and never written over.
         val stopDaysHere = accountStopDaysHere() ?: throw AccountStopUnread()
+        // 22 Nov 2026 (B6 review, item 2): this phone's arms' book, read before anything is written: its closed LIVE trades are kept in the
+        // restored book ([orbRestored]) - Liquidity's live stop rule and the arms' live-copies account stop are worked out from them, so an
+        // older backup must never erase a losing trade and read a stop already reached as "not reached". Unreadable: refused, as above.
+        val orbHere = orbBookHere(ctx)
+        // 22 Nov 2026 (B6 review): this phone's strategies' book too - its Stop for today (each side's) is kept when it is later than the
+        // backup's ([strategiesRestored]): a restore never lifts today's stop. Unreadable: refused; none on this phone: nothing to keep.
+        val strategiesHere = strategiesBookHere(ctx)
+        // What the restore kept from this phone or left out of the backup, told to Boss (22 Nov 2026, B6 review).
+        val notes = ArrayList<String>()
         // FIRST, before any file is touched: every restored strategy, ORB arm and Pine script starts
         // disarmed, paper only, on the next start (IraAlgoApp). Should the restore stop half-way,
         // the flag is already there.
@@ -208,19 +235,28 @@ object Backup {
         if (SecurePrefs.unreadable) throw IllegalStateException("The settings vault is unreadable; nothing was restored.")
         val files = c.json.getJSONObject("files")
         // Liquidity 15+5's size in this phone's book now (before it is replaced): a restore never raises it ([liquidityLots]).
-        val lotsHere = currentLiquidityLots(ctx)
+        val lotsHere = orbHere?.let { if (it.has("liqLots")) it.optInt("liqLots") else null }
         // 20 Oct, review: the live stores keep saving their old books until the restart; from here only this restore writes
         // the vault files it replaces ([Vault.freezeForRestore]), so none of them is written over in those seconds.
         Vault.freezeForRestore(FILES.filter { it.second.endsWith(".vault") }.map { (dir, name) -> file(ctx, dir, name) })
+        onFrozen()
         // A restore that stops half-way (no restart follows) lets the stores save again, as before.
         try {
         for ((dir, name) in FILES) {
             val f = file(ctx, dir, name)
             val b64 = files.optString("$dir/$name").ifEmpty { null }
+            // 22 Nov 2026 (B6 review, item 2): the arms' book with this phone's closed live trades kept - even when the backup has no book.
+            val bytes = when (name) {
+                ORB -> orbRestored(b64?.let { Base64.decode(it, Base64.NO_WRAP) }, lotsHere, orbHere, notes)
+                // (With a stop made since the book was read - its save dropped by the freeze - from Strategies' memory.)
+                STRATEGIES -> strategiesRestored(b64?.let { Base64.decode(it, Base64.NO_WRAP) }, withStopsInMemory(strategiesHere,
+                    runCatching { Strategies.stopKeptHint() }.getOrNull(), runCatching { Strategies.mcxStopHint() }.getOrNull(),
+                    runCatching { Strategies.mcxStopSellsHint() }.getOrDefault(true)), notes)
+                else -> b64?.let { disarmed(name, Base64.decode(it, Base64.NO_WRAP)) }
+            }
             // An older backup without Jarvis's learning leaves the phone's own in place. So with the weekly reviews: an
             // older backup has them under the old preferences key (IraWeekly.KEY), and IraWeekly.migrate merges the two.
-            if (b64 == null) { if (!name.startsWith("ira-") && name != WEEKLY_REVIEWS) f.delete(); continue }
-            val bytes = disarmed(name, Base64.decode(b64, Base64.NO_WRAP), lotsHere)
+            if (bytes == null) { if (!name.startsWith("ira-") && name != WEEKLY_REVIEWS) f.delete(); continue }
             try {
                 if (name.endsWith(".vault")) Vault.writeRestored(f, bytes) else f.writeBytes(bytes)
             } finally { bytes.fill(0) }
@@ -237,20 +273,28 @@ object Backup {
             // (Review P4: nothing to keep leaves this phone's value as it is - never a null written over it.)
             if (kept.isEmpty()) values.remove(ACCOUNT_STOP_DAYS) else values[ACCOUNT_STOP_DAYS] = com.optionslab.ira.AccountStop.encode(kept)
         }
+        // 22 Nov 2026 (B6 review, item 1): the other carried settings that hold live entries back, merged with this phone's own so a restore
+        // only ever tightens them ([mergeGuards]); the ones that must never come from a file are this phone's alone (Upkeep.PRIVATE).
+        mergeGuards(values, notes)
+        // 22 Nov 2026 (B6 review, item 9c): the cheaper strike's "switched on by the update" entry is decided by this phone's own past, never
+        // by the books and marks a restore writes ([CheaperStrike.ranBefore]).
+        values[CheaperStrike.K_RESTORED] = true
         // 19 Nov (review): Boss's one-time automatic-stops choice is never run by a restore's books (it would switch his stops off with
         // no PIN): marked done, whatever the backup held. His switches stay as this phone has them.
         // 20 Nov 2026 (minor fixes, item 3): on a phone where it had not run yet, the card says it was not applied because of the restore.
         // (Review: both steps - a phone that ran the first choice but not yet Jarvis's cutoff step had it cut short by the restore too.)
-        val choiceWasRun = runCatching { SecurePrefs.getBoolean(com.optionslab.ira.ArmAutoStops.MIGRATION_KEY, false) &&
-            SecurePrefs.getBoolean(com.optionslab.ira.ArmAutoStops.CUTOFF_MIGRATION_KEY, false) }.getOrDefault(false)
+        val firstRan = runCatching { SecurePrefs.getBoolean(com.optionslab.ira.ArmAutoStops.MIGRATION_KEY, false) }.getOrDefault(false)
+        val choiceWasRun = firstRan && runCatching { SecurePrefs.getBoolean(com.optionslab.ira.ArmAutoStops.CUTOFF_MIGRATION_KEY, false) }.getOrDefault(false)
+        // 22 Nov 2026 (B6 review, item 9d): the first choice ran and only its last step (Jarvis's cutoff) was cut short - said as that.
+        val why = if (firstRan) com.optionslab.ira.ArmAutoStops.NotApplied.CUT_SHORT else com.optionslab.ira.ArmAutoStops.NotApplied.RESTORE
         values[com.optionslab.ira.ArmAutoStops.MIGRATION_KEY] = true
         values[com.optionslab.ira.ArmAutoStops.CUTOFF_MIGRATION_KEY] = true
         // (Never the backup's own reason: it was another phone's, or another time's.)
-        if (!choiceWasRun) values[com.optionslab.ira.ArmAutoStops.NOT_APPLIED_KEY] = com.optionslab.ira.ArmAutoStops.NotApplied.RESTORE.key
+        if (!choiceWasRun) values[com.optionslab.ira.ArmAutoStops.NOT_APPLIED_KEY] = why.key
         else values.remove(com.optionslab.ira.ArmAutoStops.NOT_APPLIED_KEY)
         SecurePrefs.putAll(values)
         // ...and in memory, so a retry before the restart cannot run it either (a later read keeps the mark: [ArmAutoStopsHost.load]).
-        runCatching { ArmAutoStopsHost.markChoiceRun(if (choiceWasRun) null else com.optionslab.ira.ArmAutoStops.NotApplied.RESTORE) }
+        runCatching { ArmAutoStopsHost.markChoiceRun(if (choiceWasRun) null else why) }
         // The danger meter's switch as restored, in the entry path's memory copy at once (the restart loads it again).
         runCatching { AppSettings.syncDangerHalf() }
         } catch (e: Throwable) {
@@ -258,11 +302,95 @@ object Backup {
             // live stores write their old books over the files already restored, and the restart read a mix of the two.
             throw e
         }
-        return Restored(changePin = c.pinSealed)
+        // 22 Nov 2026 (B6 review): what was kept or left out, told where Boss will see it after the restart (the app closes at once).
+        if (notes.isNotEmpty()) {
+            runCatching { Diag.record("backup", "restore: " + notes.joinToString(" ")) }
+            runCatching { com.optionslab.app.work.Notifier.post(ctx, RESTORE_NOTICE, com.optionslab.app.work.Notifier.APPROVAL,
+                "Restored: what was kept from this phone", notes.joinToString(" "), "almanac") }
+        }
+        return Restored(changePin = c.pinSealed, notes = notes)
     }
 
     /** The account stop rule's recorded days ([AccountStopHost]): carried, and merged on a restore so its figures never drop. */
     internal const val ACCOUNT_STOP_DAYS = "accountStop.days"
+
+    /** 22 Nov 2026 (B6 review): the guard's live drawdown peak, as [Guard] keeps it (carried; a restore never lowers it, [mergeGuards]). */
+    internal const val LIVE_PEAK = "guard.peak.live"
+
+    /** 22 Nov 2026 (B6 review): the restore's notice (what it kept from this phone or left out of the backup). */
+    private const val RESTORE_NOTICE = 2019
+
+    /** 22 Nov 2026 (B6 review): a restore is running - from its start until the app restarts (cleared when it is refused or fails). */
+    @Volatile private var restoring = false
+
+    /**
+     * 22 Nov 2026 (B6 review): the entry door's refusal while a restore runs ([Broker.entryRecheck]): a new entry sent then would be booked
+     * into a book the restore replaces, and forgotten. Memory only (the order path); exits never ask it. Null: none running.
+     */
+    fun restoringRefusal(): String? = if (restoring) RESTORING else null
+
+    internal const val RESTORING = "refused: a backup is being restored (the app restarts when it is done); exits still go"
+
+    /** TEST ONLY: no restore running (a test's restore is never followed by the restart that would clear it); entries' seams back. */
+    internal fun restoreEndedForTest() { restoring = false; testEntriesQuiet = null; if (com.optionslab.app.BuildConfig.DEBUG) entryWaitMs = 30_000L }
+
+    /**
+     * 22 Nov 2026 (B6-E, round 3): a restore refused because an entry was still being sent to Zerodha (or booked by its arm) when it
+     * started, past [entryWaitMs]. Nothing was written.
+     */
+    class EntryInFlight : Refused(ENTRY_IN_FLIGHT)
+
+    internal const val ENTRY_IN_FLIGHT = "Not restored: an entry was still being sent to Zerodha, and a restore must never lose the record of a " +
+        "live position. Nothing on this phone was changed. Try again in a minute."
+
+    /** How long a restore waits for an entry already on its way ([Broker.entriesQuiet]). */
+    @Volatile internal var entryWaitMs = 30_000L
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+
+    /** TEST ONLY (debug builds): the entries' state instead of [Broker.entriesQuiet]. */
+    @Volatile internal var testEntriesQuiet: (() -> Boolean)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG || v == null) { "the test seam exists only in debug builds" }; field = v }
+
+    /** No entry in flight, waited for at most [entryWaitMs] (a worker thread: a restore never runs on the main thread). */
+    private fun entriesSettled(): Boolean {
+        val until = System.currentTimeMillis() + entryWaitMs
+        while (true) {
+            if (testEntriesQuiet?.invoke() ?: Broker.entriesQuiet()) return true
+            if (System.currentTimeMillis() >= until) return false
+            // (Interrupted: refused as still busy - nothing was written - with the thread's interrupt kept.)
+            try { Thread.sleep(100) } catch (e: InterruptedException) { Thread.currentThread().interrupt(); return false }
+        }
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review, item 1): the carried settings in [values] (the backup's) that hold live entries back, merged with this phone's
+     * own (read from the settings vault, which was found readable) so a restore never loosens one: the guard's live drawdown peak (the
+     * higher), the self-review's parks to paper and pauses (both sets: a restore only ever adds one), and the brain's entry pause and the
+     * findings' reactions (each the stricter). A setting the backup does not have is left as this phone has it. The paper peak is not
+     * merged: it goes with the paper account the restore puts back (as a paper reset starts it again).
+     */
+    private fun mergeGuards(values: MutableMap<String, Any?>, notes: MutableList<String>) {
+        if (values.containsKey(LIVE_PEAK)) {
+            val here = SecurePrefs.getDouble(LIVE_PEAK, Double.NaN)
+            val kept = com.optionslab.ira.Upkeep.higherPeak(here, (values[LIVE_PEAK] as? Number)?.toDouble())
+            if (kept == null) values.remove(LIVE_PEAK) else values[LIVE_PEAK] = kept
+            // (Raised above this phone's own - a peak lowered here by the payouts, with the PIN, among them: said, so Boss can lower it again.)
+            if (kept != null && here.isFinite() && here > 0 && kept > here) notes += "The live account's drawdown peak was raised to the backup's " +
+                "(${com.optionslab.engine.orb.LiveMirror.rs(kept)}, this phone had ${com.optionslab.engine.orb.LiveMirror.rs(here)}): a restore never lowers it. If this phone's was lowered for " +
+                "payouts, lower it again on the Account guard page with your PIN."
+        }
+        // 22 Nov 2026 (B6 review): a park or pause of R51, R72 or Liquidity while their self-review stop is off on this phone (Boss's 19 Nov
+        // choice: they run until he stops them; the switch is this phone's alone, never in a backup) stays as this phone has it - a backup
+        // never adds one, and this phone's own are kept. Every other key: both.
+        val reviewOff = !runCatching { SecurePrefs.getBoolean(com.optionslab.ira.ArmAutoStops.Rule.SELF_REVIEW.prefKey, true) }.getOrDefault(true)
+        for (k in listOf(SmartWorkers.K_PARKED, SmartWorkers.K_PAUSED))
+            if (values.containsKey(k)) values[k] = com.optionslab.ira.Upkeep.union(SecurePrefs.getString(k), values[k] as? String,
+                hereOnly = { reviewOff && com.optionslab.ira.ArmAutoStops.covers(it) })
+        if (values.containsKey(SmartWorkers.K_PAUSE))
+            values[SmartWorkers.K_PAUSE] = com.optionslab.ira.Upkeep.stricterPause(SecurePrefs.getString(SmartWorkers.K_PAUSE), values[SmartWorkers.K_PAUSE] as? String)
+        if (values.containsKey(SmartWorkers.K_REACT))
+            values[SmartWorkers.K_REACT] = com.optionslab.ira.Upkeep.stricterReactions(SecurePrefs.getString(SmartWorkers.K_REACT), values[SmartWorkers.K_REACT] as? String)
+    }
 
     /**
      * 20 Nov 2026 (audit, B5 item 2): a restore refused because live positions are open, or a live book cannot tell yet ([books]: each
@@ -334,17 +462,227 @@ object Backup {
         held(HELD_ZERODHA) { Reconciler.heldHint() }
     }
 
+    private const val ORB = "orb.vault"
+    private const val STRATEGIES = "strategies.vault"
+
     /**
-     * The file's contents with everything that could trade by itself switched off, in the
-     * form each store writes it (Strategies, OrbArms, PineScripts). Belt and braces with
-     * [DISARM]: if a file is not in the expected shape it is kept as it is and the flag alone
-     * disarms it at the next start.
+     * 22 Nov 2026 (B6 review): a restore refused because this phone's strategies' book is there but could not be read: its Stop for today
+     * (kept there) would be lost. Nothing was written.
      */
-    /** Liquidity 15+5's size in this phone's arms' book (null: no book, or none saved, or it cannot be read). */
-    private fun currentLiquidityLots(ctx: Context): Int? = runCatching {
-        val o = JSONObject(String(Vault.readFileSteady(file(ctx, "f", "orb.vault")) ?: return@runCatching null, Charsets.UTF_8))
-        if (o.has("liqLots")) o.optInt("liqLots") else null
-    }.getOrNull()
+    class StrategiesBookUnread : Refused(STRATEGIES_UNREAD)
+
+    internal const val STRATEGIES_UNREAD = "Not restored: this phone's strategies' book could not be read, and a restore must never lift " +
+        "today's Stop for today (it is kept there). Nothing on this phone was changed. Try again in a minute, or after opening the app again."
+
+    /** This phone's strategies' book as saved (null: none, or not a book); [StrategiesBookUnread] when it is there but cannot be read now. */
+    private fun strategiesBookHere(ctx: Context): JSONObject? {
+        val raw = try { Vault.readFileSteady(file(ctx, "f", STRATEGIES)) } catch (e: Exception) { throw StrategiesBookUnread() } ?: return null
+        return try { runCatching { JSONObject(String(raw, Charsets.UTF_8)) }.getOrNull() } finally { raw.fill(0) }
+    }
+
+    /** 22 Nov 2026 (B6 review): one side's Stop for today as a strategies' book keeps it - its day, reason and time, and (MCX) whether it sells. */
+    internal data class SideStop(val day: String, val why: String?, val at: String?, val sells: Boolean = true)
+
+    private fun JSONObject.text(k: String): String? = optString(k).takeIf { it.isNotBlank() }
+
+    /** The index side's stop in the strategies' book [o] (as Strategies reads it). */
+    internal fun indexStop(o: JSONObject?): SideStop? = o?.text("stoppedDay")?.let { SideStop(it, o.text("stoppedWhy"), o.text("stoppedAt")) }
+
+    /** The commodity side's stop in [o] (as Strategies reads it: an older book's one stop counts for both, unless it was the loss stop). */
+    internal fun mcxStop(o: JSONObject?): SideStop? {
+        o ?: return null
+        val split = o.optInt("stopSides", 0) >= 1
+        val (day, why) = com.optionslab.ira.DayStop.migratedMcx(split, o.text("stoppedDay"), o.text("stoppedWhy"), o.text("mcxStoppedDay"),
+            o.text("mcxStoppedWhy")) ?: return null
+        return SideStop(day, why, if (split) o.text("mcxStoppedAt") else o.text("stoppedAt"), o.optBoolean("mcxStopSells", true))
+    }
+
+    /** Of [here] (this phone's) and [theirs] (the backup's), the later stop; this phone's on the same day (its own is the newer). */
+    private fun later(here: SideStop?, theirs: SideStop?): SideStop? = when {
+        here == null -> theirs
+        theirs == null -> here
+        theirs.day > here.day -> theirs
+        else -> here
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review): this phone's strategies' book as read ([here], its stop fields and counters) with today's stops Strategies
+     * holds in memory now ([index], [mcx] and its [mcxSells]): one made while the restore ran is never saved (the book is frozen for it),
+     * so it is taken from there - the newer on the same day. Null [here] and none in memory: null.
+     */
+    internal fun withStopsInMemory(here: JSONObject?, index: com.optionslab.ira.DayStop.Kept?, mcx: com.optionslab.ira.DayStop.Kept?,
+                                   mcxSells: Boolean): JSONObject? {
+        if (index == null && mcx == null) return here
+        val today = runCatching { Market.today() }.getOrElse { java.time.LocalDate.now() }.toString()
+        val i = later(index?.let { SideStop(today, it.why.wire, it.at) }, indexStop(here))
+        val m = later(mcx?.let { SideStop(today, it.why.wire, it.at, mcxSells) }, mcxStop(here))
+        val o = JSONObject().put("stopSides", 1).put("nextRunId", here?.optLong("nextRunId", 1) ?: 1L)
+            .put("nextStrategyId", here?.optLong("nextStrategyId", 1) ?: 1L)
+        i?.let { s -> o.put("stoppedDay", s.day); s.why?.let { o.put("stoppedWhy", it) }; s.at?.let { o.put("stoppedAt", it) } }
+        m?.let { s -> o.put("mcxStoppedDay", s.day); s.why?.let { o.put("mcxStoppedWhy", it) }; s.at?.let { o.put("mcxStoppedAt", it) }; o.put("mcxStopSells", s.sells) }
+        return o
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review): the restored strategies' book [o] with each side's Stop for today the later of this phone's ([here]) and the
+     * backup's, with its reason and time (and the MCX side's sale): a restore never lifts today's stop. Kept in this build's form (both
+     * sides apart). One kept from this phone over the backup's today is told in [notes].
+     */
+    internal fun withDayStops(o: JSONObject, here: JSONObject?, notes: MutableList<String>): JSONObject {
+        val theirsIndex = indexStop(o); val theirsMcx = mcxStop(o)
+        val index = later(indexStop(here), theirsIndex); val mcx = later(mcxStop(here), theirsMcx)
+        for (k in listOf("stoppedDay", "stoppedWhy", "stoppedAt", "mcxStoppedDay", "mcxStoppedWhy", "mcxStoppedAt")) o.remove(k)
+        index?.let { s -> o.put("stoppedDay", s.day); s.why?.let { o.put("stoppedWhy", it) }; s.at?.let { o.put("stoppedAt", it) } }
+        o.put("stopSides", 1)
+        mcx?.let { s -> o.put("mcxStoppedDay", s.day); o.put("mcxStoppedWhy", s.why ?: com.optionslab.ira.DayStop.Why.BOSS.wire); s.at?.let { o.put("mcxStoppedAt", it) } }
+        o.put("mcxStopSells", mcx?.sells ?: true)
+        val today = runCatching { Market.today() }.getOrElse { java.time.LocalDate.now() }.toString()
+        for ((side, kept, theirs) in listOf(Triple("index", index, theirsIndex), Triple("commodity (MCX)", mcx, theirsMcx)))
+            if (kept != null && kept.day == today && kept != theirs) notes += "Today's Stop for today on the $side side is kept as this phone had " +
+                "it${kept.at?.let { " (since $it)" }.orEmpty()}: a restore never lifts it."
+        return o
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review): the strategies' book to write on a restore ([bytes]: the backup's, null when it has none; [here]: this
+     * phone's, read before anything was written): the backup's, disarmed ([disarmed]), with each side's Stop for today never earlier than
+     * this phone's ([withDayStops]). No book in the backup (or one not in a book's shape) while this phone is stopped today: an empty book
+     * that keeps the stop. Null: no book to write (none in the backup and no stop today here - removed, as before).
+     */
+    internal fun strategiesRestored(bytes: ByteArray?, here: JSONObject?, notes: MutableList<String> = ArrayList()): ByteArray? {
+        val theirs = bytes?.let { b -> runCatching { JSONObject(String(disarmed(STRATEGIES, b), Charsets.UTF_8)) }.getOrNull() }
+        val today = runCatching { Market.today() }.getOrElse { java.time.LocalDate.now() }.toString()
+        val out = when {
+            theirs != null -> withDayStops(theirs, here, notes)
+            listOfNotNull(indexStop(here), mcxStop(here)).any { it.day == today } -> withDayStops(JSONObject().put("defs", org.json.JSONArray())
+                .put("runs", JSONObject()).put("history", org.json.JSONArray()).put("brokerIds", JSONObject()).put("log", org.json.JSONArray())
+                .put("nextRunId", here?.optLong("nextRunId", 1) ?: 1L).put("nextStrategyId", here?.optLong("nextStrategyId", 1) ?: 1L), here, notes)
+            else -> return bytes?.let { disarmed(STRATEGIES, it) }
+        }
+        return out.toString().toByteArray(Charsets.UTF_8)
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review, item 2): a restore refused because this phone's arms' book is there but could not be read: its closed live
+     * trades (the live stop rules' record) would be lost. Nothing was written.
+     */
+    class OrbBookUnread : Refused(ORB_UNREAD)
+
+    internal const val ORB_UNREAD = "Not restored: this phone's arms' book could not be read, and a restore must never drop its closed live " +
+        "trades (Liquidity's live stop rule and the arms' live-copies account stop read them). Nothing on this phone was changed. Try again " +
+        "in a minute, or after opening the app again."
+
+    /**
+     * This phone's arms' book as saved (null: none, or not a book the arms could read either - nothing of it stands); [OrbBookUnread]
+     * when the file is there but cannot be decrypted now. Read before anything is written.
+     */
+    private fun orbBookHere(ctx: Context): JSONObject? {
+        val raw = try { Vault.readFileSteady(file(ctx, "f", ORB)) } catch (e: Exception) { throw OrbBookUnread() } ?: return null
+        return try { runCatching { JSONObject(String(raw, Charsets.UTF_8)) }.getOrNull() } finally { raw.fill(0) }
+    }
+
+    /** The closed LIVE trades (rows as OrbArms writes them: "live" true, an "exit") in the arms' book [book]. */
+    internal fun closedLive(book: JSONObject?): List<JSONObject> {
+        val rows = book?.optJSONArray("positions") ?: return emptyList()
+        return (0 until rows.length()).mapNotNull { rows.optJSONObject(it) }.filter { it.optBoolean("live", false) && it.has("exit") }
+    }
+
+    /** One trade in two books: [b] (the backup's row) a live one, with the same entry order id, or the same arm, option and entry time. */
+    private fun sameTrade(a: JSONObject, b: JSONObject): Boolean {
+        if (!b.optBoolean("live", false)) return false
+        val id = a.optString("entryOrderId")
+        if (id.isNotEmpty() && id == b.optString("entryOrderId")) return true
+        return a.optString("arm") == b.optString("arm") && a.optString("symbol") == b.optString("symbol") &&
+            a.optString("entryTime") == b.optString("entryTime")
+    }
+
+    private fun entryTimeOf(o: Any?): java.time.LocalDateTime? =
+        (o as? JSONObject)?.optString("entryTime")?.let { runCatching { java.time.LocalDateTime.parse(it) }.getOrNull() }
+
+    /**
+     * 22 Nov 2026 (B6 review, item 2): the restored arms' book [o] with this phone's closed live trades [live] in it - a trade in both keeps
+     * this phone's row (by entry order id, or arm, option and entry time), one the backup lacks is put in by its entry time - so the live
+     * record a stop rule reads is never milder than this phone's. Every other row is the backup's, as it was.
+     */
+    internal fun withClosedLive(o: JSONObject, live: List<JSONObject>): JSONObject {
+        if (live.isEmpty()) return o
+        val rows = o.optJSONArray("positions")
+        val out = ArrayList<Any?>()
+        val rest = live.toMutableList()
+        for (i in 0 until (rows?.length() ?: 0)) {
+            val row = rows!!.opt(i)
+            val mine = (row as? JSONObject)?.let { r -> rest.firstOrNull { sameTrade(it, r) } }
+            if (mine != null) rest.remove(mine)
+            out += mine ?: row
+        }
+        for (p in rest) {
+            // (After the last row that entered at or before it; one with no readable entry time goes at the end.)
+            val t = entryTimeOf(p)
+            out.add(if (t == null) out.size else out.indexOfLast { r -> entryTimeOf(r)?.let { !it.isAfter(t) } == true } + 1, p)
+        }
+        return o.put("positions", org.json.JSONArray(out))
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review): the restored arms' book [o] without the backup's OPEN live trades that match nothing on this phone (this
+     * phone's own open ones cannot be there: a restore is refused while one is open, [liveHeld]). Restored, one would be booked closed at
+     * a made-up price dated today (softening the live stop rules' month), hold up every later restore, or claim a lot Boss bought by
+     * hand. Each one left out is named in [notes].
+     */
+    internal fun withoutOpenLive(o: JSONObject, notes: MutableList<String>): JSONObject {
+        val rows = o.optJSONArray("positions") ?: return o
+        val kept = org.json.JSONArray()
+        val gone = ArrayList<String>()
+        for (i in 0 until rows.length()) {
+            val r = rows.opt(i)
+            if (r is JSONObject && r.optBoolean("live", false) && !r.has("exit"))
+                gone += "${r.optString("symbol")} (${r.optString("arm")}, entered ${r.optString("entryTime").replace('T', ' ')})"
+            else kept.put(r)
+        }
+        if (gone.isEmpty()) return o
+        notes += "Left out of the backup: ${gone.size} live trade(s) it still had open, which this phone has no record of - ${gone.joinToString("; ")}. " +
+            "Check Kite for them; the restored book never books them closed."
+        return o.put("positions", kept)
+    }
+
+    /** The arms' book [o] with nothing armed, automatic, cleared for Zerodha or waiting (as OrbArms.disarmAll clears them). */
+    private fun disarmBook(o: JSONObject): JSONObject =
+        o.put("armed", JSONObject()).put("auto", JSONObject()).put("liveOk", JSONObject()).put("pending", JSONObject())
+
+    /**
+     * 22 Nov 2026 (B6 review, item 2): the arms' book to write on a restore ([bytes]: the backup's, null when it has none; [here]: this
+     * phone's, read before anything was written). The backup's, disarmed, Liquidity's size never raised ([liquidityLots]) and this phone's
+     * closed live trades kept in it ([withClosedLive]). A backup with no book (or one not in a book's shape) while this phone has closed
+     * live trades: this phone's own book with only those, disarmed (its parkings and one-time changes as they are). Null: no book to write
+     * (none in the backup, no live trade here - removed, as before); a backup's book not in the expected shape with none here is written
+     * as it is (the disarm flag alone disarms it at the next start, as before).
+     * 23 Nov 2026 (B6-E, with B6-A's book): the app's own stop-cancel marks ([STOP_MARKS]: its own cancels, the exits' marks and the found
+     * lost stops' pending cancels) are always this phone's - the backup's are dropped (another time's, or another phone's orders: read as
+     * the app's own, a cancel Boss made in Kite would be put back). This phone's with nothing else to keep: its own book with only those.
+     */
+    internal fun orbRestored(bytes: ByteArray?, lotsHere: Int?, here: JSONObject?, notes: MutableList<String> = ArrayList()): ByteArray? {
+        val live = closedLive(here)
+        val theirs = bytes?.let { runCatching { JSONObject(String(it, Charsets.UTF_8)) }.getOrNull() }
+        val marksHere = STOP_MARKS.any { here?.optJSONObject(it)?.length()?.let { n -> n > 0 } == true }
+        val out = when {
+            theirs != null -> withoutOpenLive(withClosedLive(liquidityLots(disarmBook(theirs), lotsHere), live), notes)
+            live.isNotEmpty() || marksHere -> disarmBook(JSONObject(here.toString())).put("positions", org.json.JSONArray(live))
+            else -> return bytes
+        }
+        return withStopMarksHere(out, here).toString().toByteArray(Charsets.UTF_8)
+    }
+
+    /** 23 Nov 2026 (B6-E): the arms' book's keys for the app's own stop-cancel marks (OrbArms: ownCancels, exitMarks, sweepCancels). */
+    internal val STOP_MARKS = listOf("ownCancels", "exitMarks", "sweepCancels")
+
+    /** [o] (the book to write) with this phone's stop-cancel marks ([here]'s) and none of the backup's. */
+    internal fun withStopMarksHere(o: JSONObject, here: JSONObject?): JSONObject {
+        for (k in STOP_MARKS) {
+            o.remove(k)
+            here?.optJSONObject(k)?.takeIf { it.length() > 0 }?.let { o.put(k, JSONObject(it.toString())) }
+        }
+        return o
+    }
 
     /**
      * Liquidity 15+5's size in a restored arms' book [o]: never above [lotsHere], what this phone's book has (Boss's 06 Oct
@@ -374,7 +712,13 @@ object Backup {
         return a.toString()
     }
 
-    private fun disarmed(name: String, bytes: ByteArray, lotsHere: Int? = null): ByteArray = runCatching {
+    /**
+     * The file's contents with everything that could trade by itself switched off, in the
+     * form each store writes it (Strategies, PineScripts; the arms' book: [orbRestored]). Belt and braces with
+     * [DISARM]: if a file is not in the expected shape it is kept as it is and the flag alone
+     * disarms it at the next start.
+     */
+    private fun disarmed(name: String, bytes: ByteArray): ByteArray = runCatching {
         val text = String(bytes, Charsets.UTF_8)
         val out: String = when (name) {
             // Strategies.save: defs are StrategyCodec strings; runs / autoApprove / pending as in Strategies.disarmAll.
@@ -389,9 +733,6 @@ object Backup {
                 }
                 o.put("defs", clean).put("runs", JSONObject()).put("autoApprove", JSONObject()).put("pending", JSONObject()).toString()
             }
-            // OrbArms.save: maps keyed by arm, as cleared by OrbArms.disarmAll.
-            "orb.vault" -> liquidityLots(JSONObject(text).put("armed", JSONObject()).put("auto", JSONObject()).put("liveOk", JSONObject())
-                .put("pending", JSONObject()), lotsHere).toString()
             // PineScripts.save: an array of scripts, each with an "auto" object whose "on" starts it trading.
             "pine.vault" -> pineRestored(text)
             else -> return@runCatching bytes

@@ -358,4 +358,491 @@ class BackupTest : RobolectricTest() {
         assertTrue(Backup.HELD_ARMS_BOOK.contains("being read or recovered") && Backup.HELD_ARMS_BOOK.contains("log in to Zerodha"))
         assertFalse(Backup.HELD_ARMS_BOOK.contains("are open"))
     }
+
+    // ---- 22 Nov 2026 (B6 review): a restore never loosens a live guard, never switches a live copy on, never lifts a reached stop ----------
+
+    private val today get() = Market.today()
+
+    /** Item 1: through create / open / restore - the peak never lowered, a park never lifted, the brain only tightened, the private ones kept. */
+    @Test fun aRestoreNeverLoosensALiveGuardNorTakesTheLiveCopiesSwitchesOrTheFlowModes() = runBlocking {
+        val pauseOff = "news=OFF;traps=SHADOW;feed=SHADOW;bigmove=SHADOW"
+        SecurePrefs.putAll(mapOf(Backup.LIVE_PEAK to 90_000.0, SmartWorkers.K_PARKED to "liquidity", SmartWorkers.K_PAUSED to "",
+            SmartWorkers.K_PAUSE to pauseOff, SmartWorkers.K_REACT to "*:data=OFF",
+            ArmLive.K_SWITCHES to """{"r51":true}""", ArmLive.K_SHADOW to """{"r51":false}""", "flow.modes" to "orb=SHADOW@55",
+            "brain.reviewedOn" to today.toString()))
+        val bytes = Backup.create(context, pass.copyOf())
+        val carried = Backup.open(bytes, pass.copyOf()).json.getJSONObject("prefs")
+        for (k in listOf(ArmLive.K_SWITCHES, ArmLive.K_SHADOW, "flow.modes", "brain.reviewedOn")) assertFalse("$k was backed up", carried.has(k))
+        assertTrue(carried.has(Backup.LIVE_PEAK) && carried.has(SmartWorkers.K_PARKED))
+        // The phone since: a higher peak; Liquidity's park lifted (Boss, with his PIN) and Hero parked; Solo paused; news windows and the
+        // data reaction back on; R51's live copy switched off and in shadow; the order flow on CONFIRM.
+        SecurePrefs.putAll(mapOf(Backup.LIVE_PEAK to 150_000.0, SmartWorkers.K_PARKED to "hero", SmartWorkers.K_PAUSED to "solo",
+            SmartWorkers.K_PAUSE to "news=ON;traps=SHADOW;feed=SHADOW;bigmove=SHADOW", SmartWorkers.K_REACT to "*:data=ACT",
+            ArmLive.K_SWITCHES to """{"r51":false}""", ArmLive.K_SHADOW to """{"r51":true}""", "flow.modes" to "orb=CONFIRM@55",
+            "brain.reviewedOn" to null))
+        Backup.restore(context, Backup.open(bytes, pass.copyOf()))
+        assertEquals("never lowered", 150_000.0, SecurePrefs.getDouble(Backup.LIVE_PEAK, 0.0), 0.0)
+        assertEquals("only ever added", "hero,liquidity", SecurePrefs.getString(SmartWorkers.K_PARKED))
+        assertEquals("solo", SecurePrefs.getString(SmartWorkers.K_PAUSED))
+        assertEquals(com.optionslab.ira.MarketBrain.Mode.ON,
+            com.optionslab.ira.MarketBrain.decode(SecurePrefs.getString(SmartWorkers.K_PAUSE)).mode(com.optionslab.ira.MarketBrain.Cause.NEWS))
+        assertEquals(com.optionslab.ira.Findings.Mode.ACT,
+            com.optionslab.ira.Findings.decode(SecurePrefs.getString(SmartWorkers.K_REACT)).mode("orb", com.optionslab.ira.Findings.Reaction.DATA_UNRELIABLE))
+        assertEquals("""{"r51":false}""", SecurePrefs.getString(ArmLive.K_SWITCHES))
+        assertEquals("""{"r51":true}""", SecurePrefs.getString(ArmLive.K_SHADOW))
+        assertEquals("orb=CONFIRM@55", SecurePrefs.getString("flow.modes"))
+        assertNull("this phone's review still runs today", SecurePrefs.getString("brain.reviewedOn"))
+        // A phone whose peak is lower (or has none) takes the backup's: never lower than either.
+        SecurePrefs.putAll(mapOf(Backup.LIVE_PEAK to 50_000.0))
+        Backup.restore(context, Backup.open(bytes, pass.copyOf()))
+        assertEquals(90_000.0, SecurePrefs.getDouble(Backup.LIVE_PEAK, 0.0), 0.0)
+        SecurePrefs.putAll(mapOf(Backup.LIVE_PEAK to null))
+        Backup.restore(context, Backup.open(bytes, pass.copyOf()))
+        assertEquals(90_000.0, SecurePrefs.getDouble(Backup.LIVE_PEAK, 0.0), 0.0)
+    }
+
+    /** Item 1: a file made before these keys were private (or crafted) still never brings them back. */
+    @Test fun anOlderOrCraftedFileCannotSwitchALiveCopyOnOrSkipTodaysReview() {
+        SecurePrefs.putAll(mapOf(ArmLive.K_SWITCHES to """{"r72":false}""", "flow.modes" to "orb=CONFIRM@55", Backup.LIVE_PEAK to 120_000.0))
+        val evil = JSONObject().put(ArmLive.K_SWITCHES, """{"r72":true}""").put(ArmLive.K_SHADOW, """{"r72":false}""")
+            .put("flow.modes", "orb=OFF@55").put("brain.reviewedOn", today.toString()).put(Backup.LIVE_PEAK, 1.0)
+            .put(SmartWorkers.K_PARKED, "").put("timeline.once.stepTrail", true)
+        Backup.restore(context, Backup.open(craft("IRABK3", 600_000, "Test-Passphrase-42!", evil), pass.copyOf()))
+        assertEquals("""{"r72":false}""", SecurePrefs.getString(ArmLive.K_SWITCHES))
+        assertNull(SecurePrefs.getString(ArmLive.K_SHADOW))
+        assertEquals("orb=CONFIRM@55", SecurePrefs.getString("flow.modes"))
+        assertNull(SecurePrefs.getString("brain.reviewedOn"))
+        assertFalse(SecurePrefs.getBoolean("timeline.once.stepTrail", false))
+        assertEquals(120_000.0, SecurePrefs.getDouble(Backup.LIVE_PEAK, 0.0), 0.0)
+    }
+
+    /** A closed live trade of the arms' book, as OrbArms writes its row. */
+    private fun liveRow(arm: String, day: java.time.LocalDate, entry: Double, exit: Double, qty: Int, id: String = "", h: Int = 10) = JSONObject()
+        .put("arm", arm).put("symbol", "BANKNIFTY26NOV52000CE").put("right", "CE").put("qty", qty).put("entry", entry)
+        .put("entryTime", day.atTime(h, 0).toString()).put("signalBar", day.atTime(h - 1, 55).toString()).put("entryOrderId", id)
+        .put("exit", exit).put("exitTime", day.atTime(h + 1, 0).toString()).put("why", "stop").put("charges", 0.0).put("live", true)
+
+    private fun book(vararg rows: JSONObject) = JSONObject().put("armed", JSONObject()).put("auto", JSONObject()).put("liveOk", JSONObject())
+        .put("positions", JSONArray().apply { rows.forEach { put(it) } })
+
+    /**
+     * Item 2: a stop already reached stays reached after restoring an older backup - Liquidity's live stop rule and the arms' live-copies
+     * account stop are worked out from the arms' book's closed live trades, and the restore keeps this phone's.
+     */
+    @Test fun aRestoreAfterTheLiveStopIsReachedKeepsItReached() = runBlocking {
+        LiquidityTest.setStateForTest(com.optionslab.ira.LiquidityFreeze.State())
+        ArmAutoStopsHost.resetForTest()
+        try {
+            // The backup: made before the loss (one small paper trade).
+            com.optionslab.app.testing.AutomationSupport.orbState(context, book(liveRow("liquidity15", today.minusDays(3), 100.0, 110.0, 30).put("live", false)))
+            val bytes = Backup.create(context, pass.copyOf())
+            // Since then a live loss of Rs 41,000: both stops reached on this phone.
+            val loss = liveRow("liquidity15", today.minusDays(1), 500.0, 90.0, 100, id = "251121000123456")
+            com.optionslab.app.testing.AutomationSupport.orbState(context, book(liveRow("liquidity15", today.minusDays(3), 100.0, 110.0, 30).put("live", false), loss))
+            OrbArms.view()
+            assertTrue("reached before the restore", OrbArms.liquidityStopHint.stopped)
+            assertNotNull(ArmLive.accountStopNow().second)
+            Backup.restore(context, Backup.open(bytes, pass.copyOf()))
+            // The restart that follows: the restored book read afresh.
+            Vault.thaw(); OrbArms.forgetMemoryForTest()
+            OrbArms.view()
+            assertTrue("Liquidity's live stop rule still reached", OrbArms.liquidityStopHint.stopped)
+            val (words, refusal) = ArmLive.accountStopNow()
+            assertNotNull("the arms' live-copies account stop still reached: $words", refusal)
+            assertTrue(words, words.contains("REACHED"))
+            val rows = JSONObject(String(Vault.readFile(orbFile())!!)).getJSONArray("positions")
+            assertEquals("the backup's row and this phone's live trade", 2, rows.length())
+            assertEquals("251121000123456", rows.getJSONObject(1).getString("entryOrderId"))
+            assertEquals(0, JSONObject(String(Vault.readFile(orbFile())!!)).getJSONObject("armed").length())
+        } finally { LiquidityTest.resetForTest(); OrbArms.forgetMemoryForTest() }
+    }
+
+    /** Item 2: a backup with no arms' book still keeps this phone's closed live trades (its book disarmed, its parkings as they are). */
+    @Test fun aBackupWithNoArmsBookKeepsThePhonesClosedLiveTrades() {
+        val loss = liveRow("liquidity15", today.minusDays(1), 500.0, 90.0, 100, id = "251121000123456")
+        Vault.writeFile(orbFile(), book(liveRow("liquidity15", today.minusDays(2), 100.0, 110.0, 30).put("live", false), loss,
+            liveRow("liquidity5", today, 100.0, 120.0, 30, h = 13).apply { remove("exit"); put("exitTime", "") })
+            .put("armed", JSONObject().put("liquidity", true)).put("liqParked", JSONArray().put("FINNIFTY")).put("liqLots", 2)
+            .toString().toByteArray())
+        Backup.restore(context, Backup.open(craft("IRABK3", 600_000, "Test-Passphrase-42!", JSONObject()), pass.copyOf()))
+        val o = JSONObject(String(Vault.readFile(orbFile())!!))
+        val rows = o.getJSONArray("positions")
+        assertEquals("only the closed live trade", 1, rows.length())
+        assertEquals("251121000123456", rows.getJSONObject(0).getString("entryOrderId"))
+        assertEquals(0, o.getJSONObject("armed").length())
+        assertEquals("FINNIFTY", o.getJSONArray("liqParked").getString(0))
+        assertEquals(2, o.getInt("liqLots"))
+        // No live trade here and none in the backup: the book goes, as before. (The restart that follows a restore: its files thawed.)
+        Vault.thaw()
+        Vault.writeFile(orbFile(), book(liveRow("orb", today, 100.0, 110.0, 30).put("live", false)).toString().toByteArray())
+        Backup.restore(context, Backup.open(craft("IRABK3", 600_000, "Test-Passphrase-42!", JSONObject()), pass.copyOf()))
+        assertFalse(orbFile().exists())
+    }
+
+    /** Item 2: this phone's arms' book there but unreadable - refused, nothing written (not even the disarm flag). */
+    @Test fun anUnreadableArmsBookRefusesTheRestore() {
+        orbFile().writeBytes(ByteArray(64) { 7 })
+        val before = orbFile().readBytes()
+        val e = try { Backup.restore(context, Backup.open(craft("IRABK3", 600_000, "Test-Passphrase-42!", JSONObject().put("s.capital", 1.0),
+            JSONObject().put("f/orb.vault", b64("{}"))), pass.copyOf())); null } catch (x: Backup.OrbBookUnread) { x }
+        assertNotNull("refused", e)
+        assertEquals(Backup.ORB_UNREAD, e!!.message)
+        assertTrue(e is Backup.Refused)
+        assertFalse(SecurePrefs.getBoolean(Backup.DISARM, false))
+        assertTrue("the book untouched", before.contentEquals(orbFile().readBytes()))
+        assertEquals(0.0, SecurePrefs.getDouble("s.capital", 0.0), 0.0)
+    }
+
+    /** Item 2: the merge itself - this phone's row wins a trade in both (by order id, or arm, option and entry time), the rest in entry order. */
+    @Test fun thePhonesClosedLiveTradesAreMergedInEntryOrder() {
+        val d = java.time.LocalDate.of(2026, 11, 18)
+        val theirs = book(liveRow("orb", d, 100.0, 120.0, 30, h = 9).put("live", false),
+            liveRow("liquidity15", d, 100.0, 50.0, 30, id = "A1", h = 11).apply { remove("exit"); put("exitTime", "") },   // open in the backup
+            liveRow("liquidity5", d, 100.0, 50.0, 30, h = 14),
+            liveRow("orb", d.plusDays(1), 100.0, 90.0, 30, h = 10))
+        val here = listOf(liveRow("liquidity15", d, 100.0, 20.0, 30, id = "A1", h = 11),          // closed here at a loss: wins by its id
+            liveRow("liquidity5", d, 100.0, 10.0, 30, h = 14),                                     // same arm, option, entry time: wins
+            liveRow("liquidity15", d, 100.0, 40.0, 30, id = "B2", h = 12),                         // missing in the backup: put at 12:00
+            liveRow("liquidity15", d.minusDays(5), 100.0, 40.0, 30, id = "C3", h = 10))            // older than every row: first
+        val theirsText = theirs.toString()
+        val rows = Backup.withClosedLive(theirs, here).getJSONArray("positions")
+        assertEquals(6, rows.length())
+        assertEquals(listOf("C3", "", "A1", "B2", "", ""), (0 until 6).map { rows.getJSONObject(it).getString("entryOrderId") })
+        assertEquals(20.0, rows.getJSONObject(2).getDouble("exit"), 0.0)
+        assertEquals(10.0, rows.getJSONObject(4).getDouble("exit"), 0.0)
+        assertFalse(rows.getJSONObject(1).getBoolean("live"))
+        // Nothing here: the backup's book as it was. Paper and open rows here are never taken.
+        assertEquals(4, Backup.withClosedLive(JSONObject(theirsText), emptyList()).getJSONArray("positions").length())
+        assertEquals(listOf("A1"), Backup.closedLive(book(here[0], liveRow("orb", d, 1.0, 2.0, 1).put("live", false),
+            liveRow("orb", d, 1.0, 2.0, 1, id = "Z").apply { remove("exit") })).map { it.getString("entryOrderId") })
+    }
+
+    /** Item 9c: a restore never makes a fresh phone look like one that ran an earlier build (the cheaper strike's one-time entry). */
+    @Test fun aRestoredPhoneIsNeverTakenForOneThatRanAnEarlierBuild() = runBlocking {
+        assertFalse("a fresh phone", CheaperStrike.ranBefore(context))
+        seedPhone()
+        assertTrue("an arms' book on a phone never restored: it ran before", CheaperStrike.ranBefore(context))
+        val bytes = Backup.create(context, pass.copyOf())
+        SecurePrefs.wipe(); orbFile().delete(); pineFile().delete()
+        assertFalse(CheaperStrike.ranBefore(context))
+        Backup.restore(context, Backup.open(bytes, pass.copyOf()))
+        // The restore wrote the 19 Nov choice's mark and the arms' book: neither counts now.
+        assertTrue(SecurePrefs.getBoolean(com.optionslab.ira.ArmAutoStops.MIGRATION_KEY, false))
+        assertTrue(orbFile().exists())
+        assertFalse(CheaperStrike.ranBefore(context))
+        assertFalse(CheaperStrike.onceDue(never = true, ranBefore = CheaperStrike.ranBefore(context)))
+        // The arms' live copies' book (never in a backup) still says it ran before; the mark itself never travels.
+        File(context.noBackupFilesDir, "arm_live.vault").writeBytes(byteArrayOf(1))
+        assertTrue(CheaperStrike.ranBefore(context))
+        assertFalse(com.optionslab.ira.Upkeep.carried(CheaperStrike.K_RESTORED))
+    }
+
+    /** Item 9d: the first choice ran (four off) but not its cutoff step - the card says exactly that, never "not applied". */
+    @Test fun aRestoreThatCutTheChoiceShortSaysWhichStopIsStillOn() = runBlocking {
+        seedPhone()
+        val bytes = Backup.create(context, pass.copyOf())
+        val fourOff = com.optionslab.ira.ArmAutoStops.migrate(com.optionslab.ira.ArmAutoStops.State(), 1L, null)!!
+            .let { it.copy(on = it.on + (com.optionslab.ira.ArmAutoStops.Rule.JARVIS_CUTOFF to true), cutoffMigrated = false) }
+        SecurePrefs.putAll(com.optionslab.ira.ArmAutoStops.encode(fourOff))
+        ArmAutoStopsHost.resetForTest(fourOff)
+        try {
+            Backup.restore(context, Backup.open(bytes, pass.copyOf()))
+            val n = ArmAutoStopsHost.view.value.notice()!!
+            assertTrue(n, n.startsWith("Your 19 Nov choice (all of these off) was applied on this phone only in part: a backup was restored before its last step"))
+            assertTrue(n, n.contains("Jarvis's losing-arm cutoff stays on."))
+            assertFalse(n, n.contains("not applied"))
+            assertEquals(com.optionslab.ira.ArmAutoStops.NotApplied.CUT_SHORT.key, SecurePrefs.getString(com.optionslab.ira.ArmAutoStops.NOT_APPLIED_KEY))
+        } finally { ArmAutoStopsHost.resetForTest() }
+    }
+
+    // ---- 22 Nov 2026 (B6 review, second look) ------------------------------------------------------------------------------------------
+
+    private fun stratFile() = File(context.filesDir, "strategies.vault")
+
+    /** A strategies' book as Strategies saves it, with [stops] (its stop fields) on it. */
+    private fun stratBook(vararg stops: Pair<String, Any>) = JSONObject().put("defs", JSONArray()).put("runs", JSONObject())
+        .put("history", JSONArray()).put("brokerIds", JSONObject()).put("log", JSONArray()).put("nextRunId", 4).put("nextStrategyId", 7)
+        .apply { stops.forEach { (k, v) -> put(k, v) } }
+
+    /** This phone's strategies' book [book], on disk and read by Strategies (its memory as the app's would be). */
+    private fun phoneStrategies(book: JSONObject) {
+        Vault.writeFile(stratFile(), book.toString().toByteArray()); Strategies.forgetCacheForTest()
+        runBlocking { Strategies.stoppedKept() }
+    }
+
+    /** A crafted backup holding [strategies] (null: no strategies' book in it) and [prefs]. */
+    private fun backupWith(strategies: JSONObject?, prefs: JSONObject = JSONObject(), orb: JSONObject? = null) = Backup.open(craft("IRABK3", 600_000,
+        "Test-Passphrase-42!", prefs, JSONObject().apply { strategies?.let { put("f/strategies.vault", b64(it.toString())) }
+            orb?.let { put("f/orb.vault", b64(it.toString())) } }), pass.copyOf())
+
+    /** The restart after a restore: the restored files read afresh. */
+    private fun restarted() { Vault.thaw(); Strategies.forgetCacheForTest() }
+
+    /** Item 1: today's Stop for today on each side, with its reason, time and the MCX sale, is never lifted by an older backup. */
+    @Test fun aRestoreNeverLiftsTodaysStopForTodayOnEitherSide() = runBlocking {
+        val t = today.toString()
+        phoneStrategies(stratBook("stoppedDay" to t, "stoppedWhy" to "boss", "stoppedAt" to "10:15", "stopSides" to 1,
+            "mcxStoppedDay" to t, "mcxStoppedWhy" to "tile", "mcxStoppedAt" to "11:00", "mcxStopSells" to false))
+        val r = Backup.restore(context, backupWith(stratBook("stoppedDay" to today.minusDays(1).toString(), "stoppedWhy" to "loss", "stopSides" to 1)))
+        restarted()
+        assertEquals(com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.BOSS, "10:15"), Strategies.stoppedKept())
+        assertEquals(com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.TILE, "11:00"), Strategies.mcxStoppedKept())
+        assertFalse("its sale kept as set", Strategies.mcxStopSells())
+        assertTrue(r.notes.toString(), r.notes.any { it.startsWith("Today's Stop for today on the index side is kept as this phone had it (since 10:15)") })
+        assertTrue(r.notes.toString(), r.notes.any { it.startsWith("Today's Stop for today on the commodity (MCX) side is kept") })
+        // The restored book is the backup's otherwise (its counters).
+        assertEquals(7, JSONObject(String(Vault.readFile(stratFile())!!)).getLong("nextStrategyId"))
+    }
+
+    /** Item 1: the later stop wins on each side - the backup's when it is today's; and an older build's one stop counts for both sides. */
+    @Test fun theLaterStopWinsOnEachSideAndAnOlderBooksOneStopCountsForBoth() = runBlocking {
+        val t = today.toString()
+        phoneStrategies(stratBook("stoppedDay" to today.minusDays(1).toString(), "stoppedWhy" to "boss", "stopSides" to 1))
+        Backup.restore(context, backupWith(stratBook("stoppedDay" to t, "stoppedWhy" to "loss", "stoppedAt" to "09:40", "stopSides" to 1)))
+        restarted()
+        assertEquals(com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.LOSS, "09:40"), Strategies.stoppedKept())
+        assertNull(Strategies.mcxStoppedKept())
+        // An older build's book (no "stopSides"): its one stop is both sides' (a loss stop only the index side's), kept in this build's form.
+        phoneStrategies(stratBook())
+        val r = Backup.restore(context, backupWith(stratBook("stoppedDay" to t, "stoppedWhy" to "boss", "stoppedAt" to "09:30")))
+        restarted()
+        assertEquals(com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.BOSS, "09:30"), Strategies.stoppedKept())
+        assertEquals(com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.BOSS, "09:30"), Strategies.mcxStoppedKept())
+        assertEquals(1, JSONObject(String(Vault.readFile(stratFile())!!)).getInt("stopSides"))
+        assertTrue("the backup's own stop is no news", r.notes.none { it.contains("Stop for today") })
+        // This phone's older-build book stopped today, the backup's not stopped: both sides stay stopped.
+        phoneStrategies(stratBook("stoppedDay" to t, "stoppedWhy" to "tile", "stoppedAt" to "12:05"))
+        Backup.restore(context, backupWith(stratBook("stopSides" to 1)))
+        restarted()
+        assertEquals(com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.TILE, "12:05"), Strategies.stoppedKept())
+        assertEquals(com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.TILE, "12:05"), Strategies.mcxStoppedKept())
+        // Both today: this phone's (the newer - a loss stop Boss lifted with his PIN since the backup stays lifted).
+        phoneStrategies(stratBook("stoppedDay" to t, "stoppedWhy" to "boss", "stoppedAt" to "12:00", "stopSides" to 1))
+        Backup.restore(context, backupWith(stratBook("stoppedDay" to t, "stoppedWhy" to "loss", "stoppedAt" to "09:40", "stopSides" to 1)))
+        restarted()
+        assertEquals(com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.BOSS, "12:00"), Strategies.stoppedKept())
+    }
+
+    /**
+     * A stop made while the restore runs is never saved (the book is frozen for it): it is taken from Strategies' memory, so the restart
+     * still has it - on either side.
+     */
+    @Test fun aStopMadeWhileTheRestoreRunsIsKept() = runBlocking {
+        phoneStrategies(stratBook("stopSides" to 1))
+        Vault.freezeForRestore(listOf(stratFile()))
+        Strategies.stopForToday(stopRunning = false, compromised = false, why = com.optionslab.ira.DayStop.Why.TILE)
+        Strategies.stopCommodities(sell = false)
+        Vault.thaw(); Strategies.forgetCacheForTest()
+        assertNull("its save was dropped", Backup.indexStop(JSONObject(String(Vault.readFile(stratFile())!!))))
+        assertNotNull("memory has it", Strategies.stopKeptHint())
+        Backup.restore(context, backupWith(stratBook("stopSides" to 1)))
+        restarted()
+        assertEquals(com.optionslab.ira.DayStop.Why.TILE, Strategies.stoppedKept()?.why)
+        assertEquals(com.optionslab.ira.DayStop.Why.BOSS, Strategies.mcxStoppedKept()?.why)
+        assertFalse(Strategies.mcxStopSells())
+        // The merge itself: memory's stop the newer on the same day; none in memory: the book as read.
+        val read = stratBook("stoppedDay" to today.toString(), "stoppedWhy" to "boss", "stoppedAt" to "09:00", "stopSides" to 1)
+        assertEquals("10:30", Backup.indexStop(Backup.withStopsInMemory(read, com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.TILE, "10:30"),
+            null, true))?.at)
+        assertEquals(7L, Backup.withStopsInMemory(read, com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.TILE), null, true)!!.getLong("nextStrategyId"))
+        assertTrue(Backup.withStopsInMemory(read, null, null, true) === read)
+    }
+
+    /** Item 1: a backup with no strategies' book still keeps today's stop (an empty book that holds it); none today: removed, as before. */
+    @Test fun aBackupWithNoStrategiesBookStillKeepsTodaysStop() = runBlocking {
+        phoneStrategies(stratBook("stoppedDay" to today.toString(), "stoppedWhy" to "boss", "stoppedAt" to "10:00", "stopSides" to 1))
+        Backup.restore(context, backupWith(null))
+        restarted()
+        assertEquals(com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.BOSS, "10:00"), Strategies.stoppedKept())
+        assertTrue(Strategies.all().isEmpty())
+        assertEquals("this phone's counters", 4, JSONObject(String(Vault.readFile(stratFile())!!)).getLong("nextRunId"))
+        // Stopped only yesterday: nothing to keep, the book goes.
+        phoneStrategies(stratBook("stoppedDay" to today.minusDays(1).toString(), "stopSides" to 1))
+        Backup.restore(context, backupWith(null))
+        assertFalse(stratFile().exists())
+    }
+
+    /** Item 1: this phone's strategies' book there but unreadable - refused, nothing written; one simply absent is no refusal. */
+    @Test fun anUnreadableStrategiesBookRefusesTheRestore() {
+        stratFile().writeBytes(ByteArray(64) { 5 })
+        val before = stratFile().readBytes()
+        val e = try { Backup.restore(context, backupWith(stratBook(), JSONObject().put("s.capital", 1.0))); null } catch (x: Backup.StrategiesBookUnread) { x }
+        assertNotNull("refused", e)
+        assertEquals(Backup.STRATEGIES_UNREAD, e!!.message)
+        assertTrue(e is Backup.Refused)
+        assertFalse(SecurePrefs.getBoolean(Backup.DISARM, false))
+        assertTrue("the book untouched", before.contentEquals(stratFile().readBytes()))
+        assertEquals(0.0, SecurePrefs.getDouble("s.capital", 0.0), 0.0)
+        assertNull("entries go again", Backup.restoringRefusal())
+        stratFile().delete()
+        Backup.restore(context, backupWith(stratBook(), JSONObject().put("s.capital", 1.0)))
+        assertEquals(1.0, SecurePrefs.getDouble("s.capital", 0.0), 0.0)
+    }
+
+    /** Item 2: the backup's open live trades that match nothing here are left out (named in the notice); its paper ones stay. */
+    @Test fun theBackupsOpenLiveTradesThatMatchNothingHereAreLeftOut() {
+        val open = liveRow("liquidity15", today, 100.0, 0.0, 30, id = "260122000123456", h = 11).apply { remove("exit"); put("exitTime", "") }
+        val paperOpen = liveRow("orb", today, 100.0, 0.0, 30, h = 12).put("live", false).apply { remove("exit"); put("exitTime", "") }
+        val closed = liveRow("liquidity5", today.minusDays(1), 100.0, 80.0, 30, id = "251121000999999")
+        val r = Backup.restore(context, backupWith(null, orb = book(open, paperOpen, closed)))
+        val rows = JSONObject(String(Vault.readFile(orbFile())!!)).getJSONArray("positions")
+        assertEquals(listOf("", "251121000999999"), (0 until rows.length()).map { rows.getJSONObject(it).getString("entryOrderId") }.sorted())
+        val note = r.notes.single { it.startsWith("Left out of the backup") }
+        assertTrue(note, note.contains("BANKNIFTY26NOV52000CE (liquidity15, entered ${today} 11:00)"))
+        assertTrue(note, note.contains("Check Kite"))
+        // The same trade closed on this phone: this phone's row stands in for it, nothing left out.
+        Vault.thaw()
+        Vault.writeFile(orbFile(), book(liveRow("liquidity15", today, 100.0, 70.0, 30, id = "260122000123456", h = 11)).toString().toByteArray())
+        val r2 = Backup.restore(context, backupWith(null, orb = book(open)))
+        assertTrue(r2.notes.toString(), r2.notes.none { it.startsWith("Left out") })
+        val kept = JSONObject(String(Vault.readFile(orbFile())!!)).getJSONArray("positions")
+        assertEquals(1, kept.length())
+        assertEquals(70.0, kept.getJSONObject(0).getDouble("exit"), 0.0)
+        // A paper row is never taken for a live trade of this phone's (the backup's row must be live).
+        assertEquals(2, Backup.withClosedLive(book(paperOpen.put("entryOrderId", "X1")), listOf(liveRow("orb", today, 1.0, 2.0, 1, id = "X1")))
+            .getJSONArray("positions").length())
+    }
+
+    /** Item 7: a peak the restore raised above this phone's own is said (a payout-lowered one is lowered again with the PIN). */
+    @Test fun aRaisedLivePeakIsSaid() {
+        SecurePrefs.putAll(mapOf(Backup.LIVE_PEAK to 50_000.0))
+        val r = Backup.restore(context, backupWith(null, JSONObject().put(Backup.LIVE_PEAK, 90_000.0)))
+        assertEquals(90_000.0, SecurePrefs.getDouble(Backup.LIVE_PEAK, 0.0), 0.0)
+        assertTrue(r.notes.toString(), r.notes.any { it.startsWith("The live account's drawdown peak was raised to the backup's (Rs 90,000, this phone had Rs 50,000)") })
+        SecurePrefs.putAll(mapOf(Backup.LIVE_PEAK to 120_000.0))
+        assertTrue(Backup.restore(context, backupWith(null, JSONObject().put(Backup.LIVE_PEAK, 90_000.0))).notes.none { it.contains("peak") })
+    }
+
+    /** Item 4: with the self-review's stop off (Boss's 19 Nov choice), R51 / R72 / Liquidity's parks and pauses stay as this phone has them. */
+    @Test fun aRestoreKeepsBosssChoiceOnTheThreeArmsParksAndPauses() {
+        val review = com.optionslab.ira.ArmAutoStops.Rule.SELF_REVIEW.prefKey
+        val theirs = JSONObject().put(SmartWorkers.K_PARKED, "liquidity,solo").put(SmartWorkers.K_PAUSED, "liquidity")
+        SecurePrefs.putAll(mapOf(review to false, SmartWorkers.K_PARKED to "hero", SmartWorkers.K_PAUSED to ""))
+        Backup.restore(context, backupWith(null, theirs))
+        assertEquals("the backup's other park still added", "hero,solo", SecurePrefs.getString(SmartWorkers.K_PARKED))
+        assertEquals("", SecurePrefs.getString(SmartWorkers.K_PAUSED).orEmpty())
+        // This phone's own park of it is kept (only Boss lifts it).
+        SecurePrefs.putAll(mapOf(SmartWorkers.K_PARKED to "liquidity"))
+        Backup.restore(context, backupWith(null, JSONObject().put(SmartWorkers.K_PARKED, "")))
+        assertEquals("liquidity", SecurePrefs.getString(SmartWorkers.K_PARKED))
+        // The review's stop on here: both sets, as before.
+        SecurePrefs.putAll(mapOf(review to true, SmartWorkers.K_PARKED to "hero"))
+        Backup.restore(context, backupWith(null, theirs))
+        assertEquals("hero,liquidity,solo", SecurePrefs.getString(SmartWorkers.K_PARKED))
+        // The switch itself is this phone's alone: a backup's never comes back.
+        assertFalse(com.optionslab.ira.Upkeep.carried(review))
+        SecurePrefs.putAll(mapOf(review to false, SmartWorkers.K_PARKED to "hero"))
+        Backup.restore(context, backupWith(null, JSONObject(theirs.toString()).put(review, true)))
+        assertEquals("hero,solo", SecurePrefs.getString(SmartWorkers.K_PARKED))
+        assertFalse(SecurePrefs.getBoolean(review, true))
+    }
+
+    /** Item 3: from the restore's start no entry goes through the door (exits never come there); refused or failed, entries go again. */
+    @Test fun noEntryGoesWhileARestoreRunsAndARefusedOneLetsThemGoAgain() {
+        val o = com.optionslab.engine.Kite.Order("NIFTY26NOV25000CE", com.optionslab.engine.Kite.Side.BUY, 65, 65, "MIS", "MARKET", null, exchange = "NFO")
+        assertNull(Backup.restoringRefusal())
+        var atDoor: String? = null
+        try {
+            Backup.testLiveHeld = { atDoor = Broker.entryRecheck(o); listOf(Backup.HELD_ORB) }
+            try { Backup.restore(context, backupWith(null)); fail() } catch (_: Backup.LiveHeld) {}
+            assertEquals(Backup.RESTORING, atDoor)
+            assertNull("refused: entries go again", Backup.restoringRefusal())
+            assertNull(Broker.entryRecheck(o))
+            // One that went through holds them until the restart.
+            Backup.testLiveHeld = { emptyList() }
+            Backup.restore(context, backupWith(null))
+            assertEquals(Backup.RESTORING, Broker.entryRecheck(o))
+            Backup.restoreEndedForTest()
+            // One that failed after the books were frozen for it keeps them held (the app closes after a failure).
+            Vault.thaw()
+            Vault.testFailWrites = setOf("strategies.vault")
+            val late = try { Backup.restore(context, backupWith(stratBook())); null } catch (x: Exception) { x }
+            assertNotNull(late)
+            assertEquals(Backup.RESTORING, Backup.restoringRefusal())
+            Vault.testFailWrites = emptySet(); Vault.thaw(); Backup.restoreEndedForTest()
+            // One that fails before anything was written (the settings vault unreadable) lets them go again.
+            SecurePrefs.put("x", 1)
+            Vault.destroy()
+            assertFalse(SecurePrefs.reload())
+            val failed = try { Backup.restore(context, backupWith(null)); null } catch (x: Exception) { x }
+            assertNotNull(failed)
+            assertNull(Backup.restoringRefusal())
+        } finally { Backup.testLiveHeld = null; Vault.testFailWrites = emptySet(); Backup.restoreEndedForTest() }
+    }
+
+
+    /**
+     * 22 Nov 2026 (B6-E, round 3): an entry already past the door when the restore starts (still sending, or sent and not yet booked) is
+     * waited for; still going at the bound, the restore is refused - nothing written, entries go again.
+     */
+    @Test fun aRestoreWaitsForAnEntryAlreadyOnItsWayAndRefusesIfItStaysBusy() {
+        seedPhone()
+        val c = backupWith(stratBook(), JSONObject().put("s.capital", 1.0))
+        try {
+            Backup.entryWaitMs = 300
+            Backup.testEntriesQuiet = { false }
+            val e = try { Backup.restore(context, c); null } catch (x: Backup.EntryInFlight) { x }
+            assertNotNull("refused", e)
+            assertEquals(Backup.ENTRY_IN_FLIGHT, e!!.message)
+            assertTrue(e is Backup.Refused)
+            assertFalse("nothing written - not even the disarm flag", SecurePrefs.getBoolean(Backup.DISARM, false))
+            assertEquals(321_000.0, SecurePrefs.getDouble("s.capital", 0.0), 0.0)
+            assertNull("entries go again", Backup.restoringRefusal())
+            // An entry that settles within the bound: waited for, then restored (the entry door refused new ones meanwhile).
+            var looks = 0
+            var atDoor: String? = null
+            val o = com.optionslab.engine.Kite.Order("NIFTY26NOV25000CE", com.optionslab.engine.Kite.Side.BUY, 65, 65, "MIS", "MARKET", null, exchange = "NFO")
+            Backup.entryWaitMs = 5_000
+            Backup.testEntriesQuiet = { if (looks++ == 1) atDoor = Broker.entryRecheck(o); looks > 3 }
+            Backup.restore(context, c)
+            assertTrue("it waited", looks > 3)
+            assertEquals(Backup.RESTORING, atDoor)
+            assertEquals(1.0, SecurePrefs.getDouble("s.capital", 0.0), 0.0)
+        } finally { Backup.restoreEndedForTest() }
+    }
+
+    /** The "no entry in flight" signal: the door idle and no entry sent in the settle window (its arm may still be booking it). */
+    @Test fun noEntryIsInFlightOnlyWithTheDoorIdleAndNoneSentJustNow() {
+        val now = 1_000_000L
+        assertFalse("inside the door", Broker.entriesQuiet(busy = true, sentAt = 0L, nowMs = now, settleMs = Broker.ENTRY_SETTLE_MS))
+        assertTrue(Broker.entriesQuiet(busy = false, sentAt = 0L, nowMs = now, settleMs = Broker.ENTRY_SETTLE_MS))
+        assertFalse("sent (or its reply lost) a moment ago", Broker.entriesQuiet(false, now - 2_000, now, Broker.ENTRY_SETTLE_MS))
+        assertFalse("its fill still waited for", Broker.entriesQuiet(false, now - 20_000, now, Broker.ENTRY_SETTLE_MS))
+        assertTrue("sent long ago", Broker.entriesQuiet(false, now - Broker.ENTRY_SETTLE_MS, now, Broker.ENTRY_SETTLE_MS))
+        assertTrue("a clock set back is no entry now", Broker.entriesQuiet(false, now + 60_000, now, Broker.ENTRY_SETTLE_MS))
+        assertTrue("a fresh phone", Broker.entriesQuiet())
+        assertTrue("the restore waits past the settle window", Backup.entryWaitMs > Broker.ENTRY_SETTLE_MS)
+    }
+
+
+    /**
+     * 23 Nov 2026 (B6-E, with B6-A's book): the arms' book's own stop-cancel marks (ownCancels, exitMarks, sweepCancels) are this phone's
+     * after a restore - never dropped, and never the backup's stale ones (read as the app's own, a cancel Boss made in Kite would be put back).
+     */
+    @Test fun aRestoreKeepsThisPhonesStopCancelMarksAndNeverTheBackups() {
+        val now = System.currentTimeMillis()
+        val t = today.toString()
+        fun marks(own: String, exit: String, sweep: String) = book().put("ownCancels", JSONObject().put(own, now))
+            .put("exitMarks", JSONObject().put(exit, now)).put("sweepCancels", JSONObject().put(sweep, JSONObject().put("what", "R51|NIFTY").put("day", t)))
+        Vault.writeFile(orbFile(), marks("here-own", "here-exit", "here-sweep").toString().toByteArray())
+        Backup.restore(context, backupWith(null, orb = marks("old-own", "old-exit", "old-sweep")))
+        var o = JSONObject(String(Vault.readFile(orbFile())!!))
+        assertEquals(listOf("here-own"), o.getJSONObject("ownCancels").keys().asSequence().toList())
+        assertEquals(listOf("here-exit"), o.getJSONObject("exitMarks").keys().asSequence().toList())
+        assertEquals(listOf("here-sweep"), o.getJSONObject("sweepCancels").keys().asSequence().toList())
+        // The backup has no arms' book and this phone no live trade: this phone's marks are still kept (its own book with only them).
+        Vault.thaw()
+        Vault.writeFile(orbFile(), marks("here-own", "here-exit", "here-sweep").toString().toByteArray())
+        Backup.restore(context, backupWith(null))
+        o = JSONObject(String(Vault.readFile(orbFile())!!))
+        assertEquals(now, o.getJSONObject("ownCancels").getLong("here-own"))
+        assertEquals(0, o.getJSONArray("positions").length())
+        assertEquals(0, o.getJSONObject("armed").length())
+        // None on this phone: none of the backup's come in.
+        Vault.thaw()
+        Vault.writeFile(orbFile(), book().toString().toByteArray())
+        Backup.restore(context, backupWith(null, orb = marks("old-own", "old-exit", "old-sweep")))
+        o = JSONObject(String(Vault.readFile(orbFile())!!))
+        for (k in Backup.STOP_MARKS) assertFalse("$k from the backup", o.has(k))
+    }
 }

@@ -12,6 +12,8 @@ import java.time.LocalDate
  *
  * Privacy: P&L figures may appear (they are Boss's own, and he shares the file himself), but never a token, key or secret, the access
  * token, the PIN, the relay's address or any IP, the Zerodha user or client id, a phone number, an e-mail or a name ([redact]).
+ * 22 Nov 2026 (B6 review): Zerodha's order ids stay (not secrets, and needed to match a line against Kite's order book: [orderId]);
+ * any other long run of digits (a bank account, a demat id) is still masked.
  */
 object StateShare {
     /** The file's first line, always. */
@@ -40,15 +42,15 @@ object StateShare {
     /** One part of the file: its heading and its lines (a line may hold line breaks; each becomes its own line). */
     data class Section(val title: String, val lines: List<String>)
 
-    /** The file's text: [TOP_LINE], then each section under "== title", every line redacted ([redact], with [known]). */
-    fun build(sections: List<Section>, known: Collection<String> = emptyList()): String {
+    /** The file's text: [TOP_LINE], then each section under "== title", every line redacted ([redact], with [known] and [year]). */
+    fun build(sections: List<Section>, known: Collection<String> = emptyList(), year: Int = LocalDate.now().year): String {
         val sb = StringBuilder()
         sb.append(TOP_LINE).append('\n')
         for (s in sections) {
             sb.append('\n').append("== ").append(s.title).append('\n')
             val lines = s.lines.flatMap { it.split('\n') }.map { it.trimEnd() }
             if (lines.none { it.isNotBlank() }) sb.append("(none)\n")
-            else for (l in lines) sb.append(redact(l, known)).append('\n')
+            else for (l in lines) sb.append(redact(l, known, year)).append('\n')
         }
         return sb.toString()
     }
@@ -94,8 +96,12 @@ object StateShare {
     /**
      * Zerodha client ids: two capital letters and four to six digits (AB1234), or three and three to six (XYZ123); never a year
      * ("FY2026", "CY2025"), an indicator's length, a strike word or an exchange ("EMA200", "ATM100", "NSE500"; "MA200", "SL500" are short).
+     * 22 Nov 2026 (B6 review): nor an option's side and strike ("CE24500", "PE52000") or an F&O segment ("NFO1234"); the account's
+     * own id is masked wherever it appears in any case (the app hands it in as a known value).
+     * 22 Nov 2026 (B6 review, second look): only a side with an index strike's shape (steps of 25: "CE24500", "PE4850", "PE12825") is
+     * kept - "PE4821" is masked.
      */
-    private val CLIENT_ID = Regex("\\b(?:(?!(?:FY|CY|AY)\\d)[A-Z]{2}\\d{4,6}|(?!(?:IST|UTC|EMA|SMA|DMA|WMA|HMA|ATR|RSI|ADX|NSE|BSE|MCX|ATM|OTM|ITM|VIX|ORB|CCI|MFI|OBV|ROC|TSI)\\d)[A-Z]{3}\\d{3,6})\\b")
+    private val CLIENT_ID = Regex("\\b(?:(?!(?:FY|CY|AY)\\d|(?:CE|PE)\\d{2,4}(?:00|25|50|75)\\b)[A-Z]{2}\\d{4,6}|(?!(?:IST|UTC|EMA|SMA|DMA|WMA|HMA|ATR|RSI|ADX|NSE|BSE|MCX|NFO|BFO|CDS|ATM|OTM|ITM|VIX|ORB|CCI|MFI|OBV|ROC|TSI)\\d)[A-Z]{3}\\d{3,6})\\b")
     /** An ntfy topic, as a path on its server or after the word ("ntfy.sh/boss-topic", "topic boss-topic"; never "topic set"). */
     private val NTFY_PATH = Regex("(?i)\\b(ntfy\\.sh)/[^\\s\"'<>)]+")
     /** (Only a word shaped like a topic - with a digit, '-', '_' or '.' - never "the topic can post".) */
@@ -104,12 +110,37 @@ object StateShare {
      * A host name with no scheme (the relay's "relay.example.net:22/path"), with its port and path: masked unless it is one of the public
      * services the app talks to by name (Zerodha, Upstox, NSE, GitHub, ntfy). The app's own class names never match (a package's start
      * is left out, and the name must end the word).
+     * 22 Nov 2026 (B6 review): any ending that is a country's two letters or a name ending ([HOST_ENDINGS]), not a fixed list of a few
+     * dozen. The app's own words never match ([hostLike]): a two-part name with a capital letter ("R72.live", "OrbArms.view") is not a
+     * host unless a port or path follows it, nor is a two-part file's name ("wg-relay-setup.sh", "orb.vault") unless one does.
+     * 22 Nov 2026 (B6 review, second look): a name with a '-' after it is masked too ("vps.example.com-2"); and a two-part name with a
+     * capital letter is a host after all when its ending is a web name's ([NAME_ENDINGS], any case: "MyRelay.com") or a country's written
+     * small ("MyBox.in"; "NIFTY.IN" stays).
      */
     private val HOST = Regex("(?<![\\w.@/-])(?!(?:com\\.optionslab|java|javax|android|androidx|kotlin|kotlinx|org\\.json|dalvik)\\.)" +
-        "((?:[A-Za-z0-9-]+\\.)+(?:com|net|org|io|in|dev|app|cloud|xyz|me|co|trade|ai|info|biz|tech|site|online|host|lan|local|internal|home|" +
-        "de|uk|eu|cc|link|us|ca|au|fr|nl|ru|jp|cn|sg|ly|gg|to|tv|pro|space|store|top|club|vip|work|world|live|fun|run|page|duckdns))" +
+        "((?:[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?\\.)+([A-Za-z]{2,24}))" +
         // (A full stop that ends the sentence still ends the name: "connected to relay.example.net.")
         "(?!\\w|\\.\\w)((?::\\d{1,5})?(?:/[^\\s\"'<>)]*)?)")
+    /** A host's last part that marks a real name: any two letters (a country; a file's only with a port or path after it), or one of these. */
+    private val HOST_ENDINGS = setOf("com", "net", "org", "edu", "gov", "mil", "int", "arpa", "info", "biz", "dev", "app", "cloud", "xyz",
+        "tech", "site", "online", "host", "lan", "local", "localdomain", "internal", "home", "link", "trade", "ovh", "zone", "network",
+        "systems", "click", "icu", "shop", "website", "digital", "email", "services", "solutions", "studio", "onion", "test", "example",
+        "invalid", "corp", "private", "duckdns", "pro", "space", "store", "top", "club", "vip", "work", "world", "live", "fun", "run", "page")
+    /** 22 Nov 2026 (B6 review): endings that mark a host even in a two-part name with a capital letter (never an arm's word, "R72.live"). */
+    private val NAME_ENDINGS = setOf("com", "net", "org", "edu", "gov", "mil", "arpa", "info", "biz", "xyz", "cloud", "online", "site",
+        "tech", "duckdns", "onion")
+    /** Two-letter endings that are also a file's (a script, a source file): a two-part name's only with a port or a path after it. */
+    private val FILE_ENDINGS = setOf("sh", "py", "js", "ts", "kt", "md", "rs", "go", "rb", "pl", "cs", "gz", "xz", "so", "db", "ps", "mk")
+
+    /** Whether [m] (a [HOST] match) is a host name to mask: never a public service's, nor one of the app's own words. */
+    private fun hostLike(m: MatchResult): Boolean {
+        val name = m.groupValues[1]; val ending = m.groupValues[2].lowercase(); val after = m.groupValues[3]
+        if (name.lowercase() in PUBLIC_HOSTS) return false
+        val twoParts = name.count { it == '.' } < 2
+        if (name != name.lowercase() && twoParts && after.isEmpty())
+            return ending in NAME_ENDINGS || (ending.length == 2 && m.groupValues[2] == ending && ending !in FILE_ENDINGS)
+        return ending in HOST_ENDINGS || (ending.length == 2 && (ending !in FILE_ENDINGS || !twoParts || after.isNotEmpty()))
+    }
     private val PUBLIC_HOSTS = setOf("kite.zerodha.com", "zerodha.com", "api.kite.trade", "ws.kite.trade", "kite.trade", "upstox.com",
         "api.upstox.com", "assets.upstox.com", "nseindia.com", "www.nseindia.com", "nsearchives.nseindia.com", "github.com", "api.github.com",
         "raw.githubusercontent.com", "objects.githubusercontent.com", "uploads.github.com", "ntfy.sh", "console.zerodha.com",
@@ -117,18 +148,38 @@ object StateShare {
     /** Indian phone numbers, with or without +91, and written 98765 43210 / 98765-43210. */
     private val PHONE = Regex("(?<![\\d.,])(?:\\+?91[ -]?)?[6-9]\\d{9}(?![\\d.,])")
     private val PHONE_SPLIT = Regex("(?<![\\d.,])(?:\\+?91[ -]?)?[6-9]\\d{4}[ -]\\d{5}(?![\\d.,])")
-    /** Long hex runs (keys, hashes) and long runs of letters and digits (tokens). */
-    private val HEX = Regex("\\b[A-Fa-f0-9]{16,}\\b")
+    /**
+     * Long hex runs (keys, hashes) and long runs of letters and digits (tokens). 22 Nov 2026 (B6 review): a hex run needs a letter - a
+     * run of digits alone is judged by [LONG_DIGITS] and [orderId].
+     */
+    private val HEX = Regex("\\b(?=[0-9]*[A-Fa-f])[A-Fa-f0-9]{16,}\\b")
     private val LONG_RUN = Regex("[A-Za-z0-9_\\-+/=]{24,}")
     /** Long digit runs (account numbers, ids); rupee figures are written with commas and are shorter. */
     private val LONG_DIGITS = Regex("(?<![\\d.,])\\d{11,}(?![\\d.,])")
+    /**
+     * 22 Nov 2026 (B6 review, item 8): Zerodha's order ids, kept - they are not secrets, and a line is matched to Kite's order book by
+     * them: a run of 15 or 16 digits that starts with its day (yymmdd, as Kite's do: "251121000123456"), or any long run right after an
+     * order's word ("order", "entry", "exit", "SL", "GTT", "target", "stop": "exchange order 1100000012345678"). Any other long run of
+     * digits (a bank account, a demat id) is still masked ([LONG_DIGITS]).
+     */
+    private fun orderId(year: Int): Regex {
+        orderIdFor?.let { (y, r) -> if (y == year) return r }
+        // 22 Nov 2026 (B6 review, second look): the day form only for this year and last year (an older "date" is more likely another id).
+        val yy = listOf(year, year - 1).joinToString("|") { "%02d".format(Math.floorMod(it, 100)) }
+        return Regex("(?<![\\d.,])(?:(?:(?:$yy)(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\\d|3[01])\\d{9,10})|" +
+            // (22 Nov 2026, B6-E: and Kite's own field names - "exchange_order_id=...", "order_id": "..." - whose '_' hid the word.)
+            "(?<=(?i:\\b(?:(?:exchange_|parent_)?order_id|orders?|entry|exit|sl(?:-m)?|gtt|target|tgt|stop)[\\s:#=(\"']{1,4}))\\d{11,20})(?![\\d.,])")
+            .also { orderIdFor = year to it }
+    }
+    @Volatile private var orderIdFor: Pair<Int, Regex>? = null
 
     /**
      * [text] with every secret-looking thing replaced: each value in [known] (the app's own key, user id, user name, access token,
      * relay host, static IP, ntfy topic...) wherever it appears, case-insensitively; then the shapes above. Trading symbols and
-     * reason codes are kept. A user or client id is shown as [LOGGED_IN_MASK]: the file says "logged in", never who.
+     * reason codes are kept. A user or client id is shown as [LOGGED_IN_MASK]: the file says "logged in", never who. [year]: today's,
+     * for the order ids' day form ([orderId]).
      */
-    fun redact(text: String, known: Collection<String> = emptyList()): String {
+    fun redact(text: String, known: Collection<String> = emptyList(), year: Int = LocalDate.now().year): String {
         if (text.isEmpty()) return text
         // Kept aside first, so no pattern below ever touches them (put back at the end).
         val kept = ArrayList<String>()
@@ -146,15 +197,17 @@ object StateShare {
         out = EMAIL.replace(out, MASK)
         out = NTFY_PATH.replace(out) { m -> "${m.groupValues[1]}/$MASK" }
         out = TOPIC_WORD.replace(out) { m -> "${m.groupValues[1]} $MASK" }
-        out = HOST.replace(out) { m -> if (m.groupValues[1].lowercase() in PUBLIC_HOSTS) m.value else MASK }
+        out = HOST.replace(out) { m -> if (hostLike(m)) MASK else m.value }
         out = USER_AT_HOST.replace(out, MASK)
         out = IPV4.replace(out, MASK)
         out = IPV6.replace(out, MASK)
         out = TRADING_SYMBOL.replace(out, ::keep)
-        out = REASON_CODE.replace(out) { m -> if (reasonCode(m)) keep(m) else m.value }
-        out = CLIENT_ID.replace(out, LOGGED_IN_MASK)
+        // (22 Nov 2026, B6 review: phones before the order ids - "order 919876543210" is a phone number, never kept as an id.)
         out = PHONE.replace(out, MASK)
         out = PHONE_SPLIT.replace(out, MASK)
+        out = orderId(year).replace(out, ::keep)
+        out = REASON_CODE.replace(out) { m -> if (reasonCode(m)) keep(m) else m.value }
+        out = CLIENT_ID.replace(out, LOGGED_IN_MASK)
         out = HEX.replace(out, MASK)
         out = LONG_RUN.replace(out, MASK)
         out = LONG_DIGITS.replace(out, MASK)
