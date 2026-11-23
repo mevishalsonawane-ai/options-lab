@@ -2100,6 +2100,10 @@ object Broker {
      * Date header, and when it was measured. Memory only.
      */
     @Volatile private var serverOffset: Pair<Long, Long>? = null
+    /** 23 Nov 2026 (B6-I round 5): [serverOffset] when fresh ([OFFSET_FRESH_MS]), ms (+: the phone ahead of Zerodha); null when none. Memory. */
+    internal fun serverOffsetMs(): Long? = serverOffsetMsForTest ?: serverOffset?.takeIf { (_, at) -> System.currentTimeMillis() - at in 0..OFFSET_FRESH_MS }?.first
+    /** TEST ONLY: the offset [serverOffsetMs] gives. Null in the app. */
+    @Volatile internal var serverOffsetMsForTest: Long? = null
     /** An offset older than this is not trusted for the tight window. */
     private const val OFFSET_FRESH_MS = 10 * 60_000L
     /** The tight window's allowance before the send (Zerodha's stamps are whole seconds; the offset is good to about a second). */

@@ -233,16 +233,16 @@ notes; match the surrounding code.
   leave-alone rule stays. Intraday only the stop rests at Zerodha (the target is watched by the app). Boss's own orders come first: a
   stop or target order of the app's he moved in Kite is kept at his level, never moved back (a GTT of the app's he moves is not
   followed). Per side (his stops fire in a fall, his targets in a rise): his own stop or GTT beside the app's (an order only once Zerodha
-  has taken it: open, trigger pending, being modified or an after-market order; never an order of the app's own GTT; his own GTT's order
-  once it fired is still his stop) brings the app's stop (or its GTT) down to what his stops do not cover (raised again if his cover drops,
-  never while his stop's order is on its way), his own target replaces the app's target, and the app's protection comes out - marked as its
-  own cancel first, checked again on a fresh read, confirmed out - only when his stops whose sale will go (not an after-market order, nor a
-  fired GTT's order a gap can leave behind: those only size it, said loudly) cover all that is held; his order refused meanwhile, the app's
-  stop stays (or goes back: only what the app itself cancelled; one he cancelled in Kite never); told once. A sale of his on the stream
-  asks for that look at once, and one that closed the position (or his target beside it seen filled) takes the app's stop out at once (two
-  agreeing reads). His sell on the spread's other leg takes the wing's protection off at once (not while a buy of his on that leg could
-  explain it). He is told how to exit while the app's SL rests (modify it in Kite, to MARKET or his level, or cancel it), and again when
-  Zerodha refuses his own sale - never two exits.
+  has taken it: open, trigger pending or being modified; never an order of the app's own GTT, nor after a restart one of a fired GTT not
+  known to be his) brings the app's stop (or its GTT) down to what his stops do not cover (raised again if his cover drops, never while his
+  fired GTT's order is on its way), his own target replaces the app's target, and the app's protection comes out - marked as its own cancel
+  first, checked again on a fresh read, confirmed out - only when his stops cover all that is held - never sized nor taken out by a sale of
+  his that may not go (an after-market order, a fired GTT's order a gap can leave behind): beside one the app keeps its stop, said loudly;
+  his order refused meanwhile, the app's stop stays (or goes back: only what the app itself cancelled; one he cancelled in Kite never);
+  told once. A sale of his on the stream asks for that look at once, and one that closed the position (or his target beside it seen filled)
+  takes the app's stop out at once (two agreeing reads). His sell on the spread's other leg takes the wing's protection off at once (not
+  while a buy of his on that leg could explain it). He is told how to exit while the app's SL rests (modify it in Kite, to MARKET or his
+  level, or cancel it), and again when Zerodha refuses his own sale - never two exits.
 - ORDER COUNT AND KILL SWITCH (20 Nov audit, B5).
   - Today's order count at Zerodha that cannot be read (read twice) is unknown, never 0. The order count check starts in shadow: the
     live entry goes as before, logged "would have refused: order count unknown" and counted. Its Bot settings switch (off by default)

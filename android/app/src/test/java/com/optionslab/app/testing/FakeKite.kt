@@ -299,6 +299,8 @@ class FakeKite : Closeable {
 
     /** 18 Nov 2026: the next this many order modifies are refused (Zerodha's InputException), as a stop Zerodha would not move. */
     @Volatile var modifyRefusals = 0
+    /** 23 Nov 2026 (B6-I round 5): the next this many order modifies are made at Zerodha, but their answers are lost (500 GeneralException). */
+    @Volatile var modifyRepliesLost = 0
 
     /** Mark an order filled now (e.g. the stop of a protection triggered). */
     fun fill(id: String, price: Double? = null) = synchronized(lock) {
@@ -688,6 +690,7 @@ class FakeKite : Closeable {
         f["order_type"]?.let { o.type = it }
         f["price"]?.let { o.price = it.toDouble() }
         f["trigger_price"]?.let { o.trigger = it.toDouble() }
+        if (modifyRepliesLost > 0) { modifyRepliesLost--; return error(500, "GeneralException", "Something went wrong. Please try again.") }
         return ok(JSONObject().put("order_id", id))
     }
 

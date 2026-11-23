@@ -52,6 +52,8 @@ class ManualCoverPointsTest : RobolectricTest() {
         ManualCover.resetForTest(on = false)
         Protections.resetFollowUpForTest()
         Protections.cancelWaitMsForTest = null
+        Protections.trackedSinceForTest = null
+        Broker.serverOffsetMsForTest = null
         pineHeld(emptyMap())
         Market.testClock = null
         if (::kite.isInitialized) kite.close()
@@ -954,11 +956,11 @@ class ManualCoverPointsTest : RobolectricTest() {
     // ---- round 4, the final gate's cases ---------------------------------------------------------------------------------------
 
     /**
-     * Major 1 (the reviewer's sequence): NRML, 150 held. His own GTT stop for 75 brings the app's stop down to 75; it fires (first with its
-     * order not in the book yet, then its LIMIT resting unfilled under a falling price) - the app's stop is never raised back beside it, so the
-     * two never sell more than is held.
+     * Round 4 major 1, as round 5 has it: NRML, 150 held. His own GTT stop for 75 brings the app's stop down to 75; it fires - with its order
+     * not in the book yet the app's stop is never raised beside it; once its LIMIT rests unfilled under a falling price (a sale that may not
+     * go) the app's stop covers all held again, and he is told once, loudly, that both could sell.
      */
-    @Test fun bossesFiredGttStopIsStillHisStopAndTheAppsIsNeverRaisedBesideIt() {
+    @Test fun bossesFiredGttStopOnItsWayHoldsTheAppsStopAndItsRestingLimitIsSaidOnce() {
         val s75 = "NIFTY26N0925100CE"
         kite.instruments += FakeKite.Ins(12_345_680, s75, "NIFTY", Market.today().plusDays(2), 25_100.0, "CE", 75)
         kite.quote("NFO:$s75", 126.0, 125.95, 126.05)
@@ -984,10 +986,86 @@ class ManualCoverPointsTest : RobolectricTest() {
         kite.quote("NFO:$s75", 118.0, 117.95, 118.05)
         val fired = kite.triggerGtt(gid)
         assertEquals("OPEN", kite.order(fired).status)
+        tick()
+        assertEquals("its LIMIT may not sell: the app's stop covers all held again", 150, kite.order(p.stopOrderId!!).qty)
+        val told = Alerts.posted.count { it.text.contains("part of it may not sell") }
+        assertTrue("told", told > 0)
         tick(); tick()
-        assertEquals("never raised beside his resting stop", 75, kite.order(p.stopOrderId!!).qty)
-        assertFalse(said("so the app's automatic stop covers 150 again"))
-        assertEquals("the two together never sell more than is held", 150, kite.order(p.stopOrderId!!).qty + kite.order(fired).qty)
+        assertEquals(150, kite.order(p.stopOrderId!!).qty)
+        assertEquals("told once", told, Alerts.posted.count { it.text.contains("part of it may not sell") })
+    }
+
+    /**
+     * Round 5 major 1 (the final gate's scenario): long 150; Boss's own GTT stop for 75 fires before the app saw it, and its LIMIT rests above
+     * the market after a gap. The app's stop is never cut to 75 beside it (the other 75 would have no stop): it stays at 150, said once.
+     */
+    @Test fun bossesFiredGttLimitLeftByAGapNeverCutsTheAppsStop() {
+        Protections.trackedSinceForTest = 0L                                       // this run began before his GTT was made
+        val s75 = "NIFTY26N0925100CE"
+        kite.instruments += FakeKite.Ins(12_345_680, s75, "NIFTY", Market.today().plusDays(2), 25_100.0, "CE", 75)
+        kite.quote("NFO:$s75", 126.0, 125.95, 126.05)
+        kite.position(s75, 150, 125.35)
+        look(); later(25); look()
+        val p = runBlocking { Protections.active() }.single { it.symbol == s75 }
+        val gid = 6_201L
+        val made = java.time.LocalDateTime.now(com.optionslab.engine.IST).format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+        kite.gtts[gid] = org.json.JSONObject().put("id", gid).put("type", "single").put("status", "active").put("created_at", made)
+            .put("condition", org.json.JSONObject().put("exchange", "NFO").put("tradingsymbol", s75)
+                .put("trigger_values", org.json.JSONArray().put(120.0)).put("last_price", 126.0))
+            .put("orders", org.json.JSONArray().put(org.json.JSONObject().put("exchange", "NFO").put("tradingsymbol", s75).put("transaction_type", "SELL")
+                .put("quantity", 75).put("product", "NRML").put("order_type", "LIMIT").put("price", 119.0)))
+        kite.quote("NFO:$s75", 116.0, 115.95, 116.05)                              // a gap through his trigger and his limit
+        val fired = kite.triggerGtt(gid)
+        assertEquals("his LIMIT rests above the market", "OPEN", kite.order(fired).status)
+        later(65)
+        tick()
+        assertEquals("the app's stop never cut beside it", 150, kite.order(p.stopOrderId!!).qty)
+        val told = Alerts.posted.count { it.text.contains("part of it may not sell") }
+        assertTrue("told", told > 0)
+        tick(); tick()
+        assertEquals(150, kite.order(p.stopOrderId!!).qty)
+        assertEquals("told once", told, Alerts.posted.count { it.text.contains("part of it may not sell") })
+    }
+
+    /** Round 5 (2): a cancel of the app's own sent while taking its stop out, landing only after the mark was dropped - never read as Boss's. */
+    @Test fun aCancelOfItsOwnLandingLateIsNeverReadAsBosss() {
+        Protections.cancelWaitMsForTest = 0L
+        val id = kite.boughtInKite(sym, 130, 125.35)
+        update(id, "COMPLETE", 130)
+        Background.await("covered") { kite.placed.isNotEmpty() }
+        settled()
+        val p = runBlocking { Protections.active() }.single()
+        val own = kite.restsInKite(sym, "SELL", 130, 108.0, type = "SL")
+        later(65)
+        kite.drop += "/orders/regular/${p.stopOrderId}"                            // the app's cancel of its stop does not get through yet
+        tick()
+        assertEquals("TRIGGER PENDING", kite.order(p.stopOrderId!!).status)
+        kite.drop.clear()
+        kite.order(own).status = "REJECTED"
+        tick()
+        assertTrue(said("so the app keeps its own stop"))
+        kite.order(p.stopOrderId!!).status = "CANCELLED"                           // the app's own cancel lands late
+        val stops = kite.placed.count { it.form["order_type"] == "SL" }
+        tick()
+        assertEquals("put back: the app's own cancel", stops + 1, kite.placed.count { it.form["order_type"] == "SL" })
+        assertFalse(said("cancelled in Kite (by you)"))
+    }
+
+    /** Round 5 (7): the app's stop cancelled under another of its own paths' marks while being taken out - never said as Boss's cancel. */
+    @Test fun aStopCancelledUnderAnotherPathsMarkIsNeverSaidAsBosss() {
+        Protections.cancelWaitMsForTest = 0L
+        val p = autoProtected()
+        val own = kite.restsInKite(sym, "SELL", 130, 108.0, type = "SL", product = "NRML")
+        later(65)
+        kite.afterNext("/orders") {                                                 // a square-off's own cancel, marked as the app's
+            Protections.noteTakenOver(listOf(p.stopOrderId!!)); kite.order(p.stopOrderId!!).status = "CANCELLED"
+        }
+        kite.drop += "/orders/regular/${p.targetOrderId}"
+        tick()
+        kite.drop.clear()
+        kite.order(own).status = "REJECTED"
+        tick()
+        assertFalse(said("cancelled in Kite (by you)"))
     }
 
     /** Major 2: Boss cancels the app's SL in Kite himself while it was being taken out, then his own SL is refused - his cancel is respected. */
@@ -1009,8 +1087,11 @@ class ManualCoverPointsTest : RobolectricTest() {
         assertTrue(said("cancelled in Kite (by you), so it is not put back"))
     }
 
-    /** Minor 1: his after-market sell for part, waiting for the open, brings the app's overnight GTT down - never two exits at the open. */
-    @Test fun bossesAfterMarketSellCountsBesideTheOvernightGtt() {
+    /**
+     * Round 4 minor 1, as round 5 has it: his after-market stop for part, waiting for the open (Zerodha may yet refuse it), never cuts the app's
+     * overnight GTT: it stays whole, and he is told once that both could sell.
+     */
+    @Test fun bossesAfterMarketStopForPartKeepsTheOvernightGttAndIsSaid() {
         val p = autoProtected()
         at(15, 45)
         listOfNotNull(p.stopOrderId, p.targetOrderId).forEach { kite.order(it).status = "CANCELLED" }
@@ -1020,7 +1101,8 @@ class ManualCoverPointsTest : RobolectricTest() {
         kite.order(amo).status = "AMO REQ RECEIVED"
         tick()
         assertEquals("the GTT kept", "active", kite.gtts.getValue(g).getString("status"))
-        assertEquals(65, kite.gtts.getValue(g).getJSONArray("orders").getJSONObject(0).getInt("quantity"))
+        assertEquals("whole", 130, kite.gtts.getValue(g).getJSONArray("orders").getJSONObject(0).getInt("quantity"))
+        assertTrue(said("part of it may not sell"))
     }
 
     /** Review: his after-market stop for all of it, waiting for the open - it may be refused then: the app's GTT stays, and he is told loudly. */
@@ -1075,5 +1157,44 @@ class ManualCoverPointsTest : RobolectricTest() {
         assertNotNull("a new overnight GTT rests", g2)
         assertTrue(g2 != g && kite.gtts.getValue(g2!!).getString("status") == "active")
         assertTrue(said("rests its overnight GTT at Zerodha again"))
+    }
+
+    /**
+     * Round 5 (6): a GTT that fired is read on Zerodha's clock - the phone's offset to it when known (a 2-minute window), else a 3-minute one -
+     * so a phone clock ahead never makes one that fired a moment ago read as long fired.
+     */
+    @Test fun aFiredGttIsReadOnZerodhasClock() {
+        val fmt = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        fun fired(agoMs: Long) = Broker.GttRow(6_301L, "single", "triggered", "NFO", sym, listOf(120.0), 126.0, "", "2026-11-23 09:15:00",
+            firedAt = Market.now().toLocalDateTime().minusNanos(agoMs * 1_000_000L).format(fmt))
+        // The phone 5 minutes ahead of Zerodha: fired 30 s ago by Zerodha's clock.
+        Broker.serverOffsetMsForTest = 300_000L
+        assertTrue("on Zerodha's clock: a moment ago", Protections.firedLatelyForTest(fired(330_000L)))
+        Broker.serverOffsetMsForTest = null
+        assertFalse("the offset not known: over the wide window", Protections.firedLatelyForTest(fired(330_000L)))
+        assertTrue("the offset not known: 2.5 minutes is within the wide window", Protections.firedLatelyForTest(fired(150_000L)))
+        assertFalse(Protections.firedLatelyForTest(fired(200_000L)))
+        Broker.serverOffsetMsForTest = 0L
+        assertFalse("the offset known: the 2-minute window", Protections.firedLatelyForTest(fired(150_000L)))
+        assertTrue(Protections.firedLatelyForTest(fired(60_000L)))
+    }
+
+    /**
+     * Round 5 (5): a GTT that fired is known as Boss's only when it was seen active as his in this run, or made after this run began - after
+     * a restart, one of the app's own that fired is never taken for his.
+     */
+    @Test fun aFiredGttIsHissOnlyWhenSeenOrMadeSinceThisRunBegan() {
+        val fmt = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        val madeAt = java.time.LocalDateTime.now(com.optionslab.engine.IST).withNano(0)
+        val madeMs = madeAt.atZone(com.optionslab.engine.IST).toInstant().toEpochMilli()
+        fun g(id: Long) = Broker.GttRow(id, "single", "triggered", "NFO", sym, listOf(120.0), 126.0, "", madeAt.format(fmt))
+        Broker.serverOffsetMsForTest = 0L
+        Protections.trackedSinceForTest = madeMs
+        assertFalse("made as this run began: not known", Protections.hisGttKnownForTest(g(6_401L)))
+        Protections.seeHisGttsForTest(listOf(6_401L))
+        assertTrue("seen active as his", Protections.hisGttKnownForTest(g(6_401L)))
+        Protections.trackedSinceForTest = madeMs - 10 * 60_000L
+        assertTrue("made well after this run began", Protections.hisGttKnownForTest(g(6_402L)))
+        assertFalse("its time not told: not known", Protections.hisGttKnownForTest(g(6_403L).copy(created = "")))
     }
 }

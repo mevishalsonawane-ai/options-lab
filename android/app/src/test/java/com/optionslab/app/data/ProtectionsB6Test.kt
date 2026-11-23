@@ -1040,6 +1040,44 @@ class ProtectionsB6Test : RobolectricTest() {
     }
 
     /**
+     * B6-I round 5 (3): the stop's grow beside Boss's lost exit made at Zerodha, its answer lost - the look still ends there, so the trail's
+     * modify on the look's older read never shrinks it back.
+     */
+    @Test fun aGrowWhoseAnswerWasLostIsNeverShrunkBackByTheTrail() {
+        kite.position(sym, 150, 100.0, product = "MIS")
+        val said = runBlocking { Protections.protectLive(sym, "NFO", "MIS", 150, 100.0, 90.0, 10.0, null) }
+        assertTrue(said, said.startsWith("Protected"))
+        val p = active().single()
+        at(12, 5)
+        Broker.lostSearchInlineForTest = true; Broker.lostLookGapMsForTest = 0L
+        SquareOffExit.noteBossLost(sell(75), kite.orders.keys.toList(), null, Origins.MANUAL)
+        Protections.noteTakenOver(listOf(p.stopOrderId!!))
+        runBlocking { Broker.cancel(p.stopOrderId!!) }
+        tick()
+        assertEquals(listOf(75), stopQtys())
+        kite.quote("NFO:$sym", 110.0, 109.95, 110.05)                       // the trail would move the stop up
+        Broker.ageLostForTest(SquareOffExit.bossLostKey("NFO", sym, "MIS"), Broker.LOST_SEARCH_MS + 1_000)
+        kite.modifyRepliesLost = 1                                           // the grow goes through at Zerodha; its answer is lost
+        tick()
+        assertEquals("grown at Zerodha, never shrunk back in that look", listOf(150), stopQtys())
+        tick(); tick()
+        assertEquals("nor after", listOf(150), stopQtys())
+    }
+
+    /**
+     * B6-I round 5 (4): a found exit of Boss's is booked where there is no marks file at all (nothing a restart could find again), and nothing is
+     * written - nor booked - after Erase everything.
+     */
+    @Test fun aFoundExitsRecordIsWrittenOnlyBeforeAnErase() {
+        Protections.withoutMarksFileForTest { assertTrue("no marks file: as written", Protections.bossLostWritten()) }
+        val marks = Protections.filesForErase().firstOrNull { it.name == "protections_marks.vault" }
+        val gen = Protections.eraseGen()
+        Protections.wipe()
+        assertFalse("never after an erase", Protections.bossLostWritten(gen))
+        if (marks != null) assertFalse("the marks file never written again", marks.exists())
+    }
+
+    /**
      * MAJOR 2: Boss's lost exit is counted at every moment of its hand-over - while its search writes down what it found, and between the
      * look that takes it off and anything after - never nowhere in between.
      */

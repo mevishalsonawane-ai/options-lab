@@ -345,7 +345,9 @@ internal object SquareOffExit {
     private suspend fun tellFound(key: String, rec: BossLost?, l: Broker.LostLook.Found, noted: Kite.Order?) {
         // (Review: no longer kept on disk first - written before he is told, so a restart a moment later never tells or books it twice. Ninth
         // round: he is told at once either way - a refusal must never wait - and it is booked only once that write took (below).)
-        var written = rec == null || runCatching { Protections.bossLostWritten() }.getOrDefault(false)
+        // (23 Nov 2026, B6-I round 5, final gate: Erase everything's count when this began - an erase since stops its write and its booking.)
+        val gen = Protections.eraseGen()
+        var written = rec == null || runCatching { Protections.bossLostWritten(gen) }.getOrDefault(false)
         val sym = rec?.order?.tradingSymbol ?: noted?.tradingSymbol ?: l.symbol
         val side = rec?.order?.side ?: noted?.side ?: Kite.Side.SELL
         val source = rec?.source ?: Origins.MANUAL
@@ -358,6 +360,8 @@ internal object SquareOffExit {
             if (f != null && f.status in ENDED || System.currentTimeMillis() >= until) break
             kotlinx.coroutines.delay(5_000L)
         }
+        // (B6-I round 5, review: erased meanwhile - nothing said, written or booked of it any more.)
+        if (Protections.eraseGen() != gen) return
         val ended = f != null && f.status in ENDED
         val words = when {
             f == null -> "Your exit on $sym was found at Zerodha (order ${l.id}), but its state could not be read: check Kite."
@@ -382,8 +386,10 @@ internal object SquareOffExit {
         val until2 = System.currentTimeMillis() + BOSS_BOOK_MS
         while (!written && System.currentTimeMillis() < until2) {
             kotlinx.coroutines.delay(30_000L)
-            written = runCatching { Protections.bossLostWritten() }.getOrDefault(false)
+            if (Protections.eraseGen() != gen) { runCatching { Diag.record("zerodha", "$sym: the found exit ${l.id} not booked - everything was erased") }; return }
+            written = runCatching { Protections.bossLostWritten(gen) }.getOrDefault(false)
         }
+        if (Protections.eraseGen() != gen) return
         if (!written) { runCatching { Diag.record("zerodha", "$sym: the found exit ${l.id} not booked - the saved record of it could not be cleared") }; return }
         rec?.session?.let { day -> runCatching { Ledger.attachOrders(day, listOf(done.orderId), null, null) } }
         if (source.startsWith(Origins.MANUAL)) runCatching {

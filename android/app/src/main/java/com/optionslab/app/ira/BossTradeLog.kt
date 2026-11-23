@@ -110,7 +110,8 @@ object BossTradeLog {
                closing: Boolean? = null) {
         if (!enabled()) return
         // (23 Nov 2026, B6 review, ninth round: an order that closed a trade already is never taken again - nor prompted.)
-        if (closing == true && trades.any { it.closeId == venueId }) return
+        // (23 Nov 2026, B6-I round 5: nor one already queued as closing - a found exit booked twice in one run is booked once.)
+        if (closing == true && (trades.any { it.closeId == venueId } || fills.any { it.venueId == venueId && it.closing == true })) return
         fills.add(Fill(venueId, symbol, buy, live, System.currentTimeMillis(), entry, stop, target, closing))
         _prompt.value = Prompt(venueId, symbol, exit = closing == true, atMs = System.currentTimeMillis())
         scope.launch { runCatching { drain() } }
