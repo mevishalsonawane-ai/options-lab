@@ -119,6 +119,9 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
     com.optionslab.app.ui.PollWhileStarted { com.optionslab.app.data.WhatsNewStore.shown() }
     // Typed up front: an annotated lambda inside an if-expression is not taken as @Composable by the compiler.
     val automationCard: (@Composable () -> Unit)? = if (com.optionslab.app.BuildConfig.GOLD) null else { { AutomationHomeCard(model) } }
+    // 23 Nov 2026 (Boss: the stop and target on his Kite buys "a button ... as a Home screen card"): under the MCX bots. None in GOLD.
+    val manualCoverCard: List<Pair<String, @Composable () -> Unit>> =
+        if (com.optionslab.app.BuildConfig.GOLD) emptyList() else listOf("manualcover" to @Composable { ManualCoverHomeCard(model) })
     AlmanacBody(s.live, loggedIn, { quotesState.value }, { noteState.value }, { dailyState.value },
         { accountState.value }, { paperState.value }, onGo, onRow = { model.rowAction.value = it }, owners = owners,
         // Under it, the market context (TODO I6, I10, I11, 13 Oct): event warning, expiry card, days like today; none on a plain day.
@@ -128,7 +131,7 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
         } else null,
         strategies = { StrategyArmCard(model) { onGo("strategy") } },
         // Under the Strategies card: the MCX bots.
-        afterStrategies = listOf("mcx" to @Composable { McxHomeCard(model) }),
+        afterStrategies = listOf("mcx" to @Composable { McxHomeCard(model) }) + manualCoverCard,
         // Last, after the chart (11 Oct, Boss: trading first, less clutter): the trade manager, Autopilot, the strategy lab,
         // the order flow and the Brain, one line each in one card, each section in full a tap away. None in GOLD.
         automation = automationCard)

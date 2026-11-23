@@ -26,6 +26,8 @@ class OrderUpdateTest {
         assertEquals("NIFTY26OCT24500CE", u.symbol)
         assertEquals("orb", u.tag)
         assertTrue(u.terminal)
+        // 23 Nov 2026 (a manual buy looked at as soon as it fills): its side, exchange, product and quantity.
+        assertEquals("BUY", u.side); assertEquals("NFO", u.exchange); assertEquals("MIS", u.product); assertEquals(75, u.qty)
         // Nothing of the account is kept.
         assertFalse(u.toString().contains("XY0000"))
     }
@@ -39,6 +41,10 @@ class OrderUpdateTest {
         assertEquals("3", open.orderId); assertFalse(open.terminal); assertEquals(0.0, open.avgPrice); assertEquals("", open.tag)
         val upd = OrderUpdate.parse("""{"type":"order","data":{"order_id":"4","status":"UPDATE","average_price":"bad","filled_quantity":25}}""")!!
         assertFalse(upd.terminal); assertEquals(25, upd.filled); assertEquals(0.0, upd.avgPrice)
+        // 23 Nov 2026: not given - empty and 0, never a guess (a lower-case side is read upper-case).
+        assertEquals("", upd.side); assertEquals("", upd.exchange); assertEquals("", upd.product); assertEquals(0, upd.qty)
+        val sell = OrderUpdate.parse("""{"type":"order","data":{"order_id":"6","status":"OPEN","transaction_type":"sell","exchange":"bfo","product":"nrml","quantity":"20"}}""")!!
+        assertEquals("SELL", sell.side); assertEquals("BFO", sell.exchange); assertEquals("NRML", sell.product); assertEquals(20, sell.qty)
     }
 
     @Test fun anythingElseIsNotAnOrderUpdate() {

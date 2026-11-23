@@ -52,7 +52,8 @@ class ManualCoverCardTest {
             { offs++ }, { ons++ })
         compose.waitForIdle()
         assertTrue(shows("On: placed automatically in market hours (09:15-15:24)"))
-        assertTrue(shows("gets a stop 5% under its average price and a target sell 10% over it", sub = true))
+        // 23 Nov 2026 (Boss): the points rule, 10 and 10 by default.
+        assertTrue(shows("gets a stop 10 points under your average and a target sell 10 points over it", sub = true))
         assertTrue(shows("today protected 1", sub = true))
         compose.onNodeWithText(toggle).performClick()
         compose.waitForIdle()

@@ -936,13 +936,16 @@ object KiteStream {
             // (An order changed at Zerodha - from Kite web too: Jarvis's kept account figures are read afresh.)
             // Its state is kept by order id first, so an order being waited on ([Broker.awaitOrder]) is answered from it at once.
             "order" -> {
-                com.optionslab.ira.OrderUpdate.parse(text)?.let { u ->
+                val update = com.optionslab.ira.OrderUpdate.parse(text)?.also { u ->
                     keepUpdate(u)
                     // Its slippage, when it ended filled (a map remove; the measuring is done on its own thread).
                     if (u.terminal) runCatching { FillSlippage.ended(u.orderId, u.status, u.avgPrice, u.filled) }
                 }
                 // The kept order book and positions (the event-driven exits' looks) are read afresh after any change.
                 runCatching { Broker.reconStale() }
+                // 23 Nov 2026 (Boss: "check live orders placed manually in kite immediately"): a buy placed in Kite that is done filling is
+                // queued for its stop and target at once (a queue add and a job started; the look reads Zerodha afresh in its own job).
+                update?.let { u -> runCatching { ManualCover.onOrderUpdate(u) } }
                 _orderEvents.value = System.currentTimeMillis()
                 runCatching { com.optionslab.app.ira.IraAccount.invalidate() }
                 // Smart scheduling (10 Oct): the workers waiting on an order update are woken (a set add and a wake; no I/O).

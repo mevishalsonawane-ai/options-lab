@@ -9,8 +9,13 @@ import java.time.LocalDate
  * from Zerodha or the app): the decisions behind "Stop and target on my manual positions".
  *
  * A live option Boss bought by hand - in the Kite app or on IraAlgo's own order screen - that nothing in the app follows (no arm,
- * no Pine script, no arm's live trade, no protection) gets a stop 5% under its average price and a target sell 10% over it (Boss's
- * choice, 7 Nov: a fixed target, no trail; first 20% / 40%, then "too much, try 5-10" the same day). On 6 Nov NIFTY26N0925150CE (130 qty) was bought by hand and stayed unprotected overnight.
+ * no Pine script, no arm's live trade, no protection) gets a stop under its average price and a target sell over it (a fixed
+ * target, no trail). On 6 Nov NIFTY26N0925150CE (130 qty) was bought by hand and stayed unprotected overnight.
+ *
+ * Boss, 23 Nov 2026 ("set a target of 10 points and stoploss of 10points"; on the option's premium: bought at 120, stop 110, target
+ * 130; 10 and 10 by default, editable in the app): the stop is [DEFAULT_STOP_POINTS] premium points under the average and the
+ * target [DEFAULT_TARGET_POINTS] over it ([levels]), in place of the 5% / 10% of 7 Nov. An option too cheap for the points (the
+ * stop would be under [FALLBACK_TICKS] ticks) keeps the old 5% stop, and says so. Protections already set keep their levels.
  *
  * It only ever adds exits (lowers risk). It never places an entry, never resizes, and never cancels or changes Boss's own orders:
  * any working order or active GTT on the contract means Boss (or an entry still filling) is handling it, and it is left alone.
@@ -18,10 +23,17 @@ import java.time.LocalDate
  * Pure: no clock, no I/O. The app ([com.optionslab.app.data.ManualCover]) reads Zerodha's books and acts.
  */
 object ManualCoverRule {
-    /** The stop: 95% of the average price (5% under it), rounded down to the tick. */
+    /** 23 Nov 2026: the stop for an option too cheap for the points ([FALLBACK_TICKS]): 95% of the average (5% under it), down to the tick. */
     const val STOP_FRACTION = 0.95
-    /** The target: 110% of the average price (10% over it), rounded up to the tick. */
-    const val TARGET_FRACTION = 1.10
+    /** Boss, 23 Nov 2026: the stop this many premium points under the average price, rounded down to the tick (Boss may change it). */
+    const val DEFAULT_STOP_POINTS = 10.0
+    /** Boss, 23 Nov 2026: the target this many premium points over the average price, rounded up to the tick (Boss may change it). */
+    const val DEFAULT_TARGET_POINTS = 10.0
+    /** 23 Nov 2026: the points Boss may set, each of the stop and the target ([clampPoints]). */
+    const val MIN_POINTS = 1.0
+    const val MAX_POINTS = 500.0
+    /** 23 Nov 2026: a points stop under this many ticks (a very cheap option) falls back to the 5% stop ([STOP_FRACTION]). */
+    const val FALLBACK_TICKS = 2
     /** Two looks this far apart, the same quantity both times, before acting (an arm's fill may not be recorded yet). */
     const val SETTLE_MS = 20_000L
     /** Definite refusals (RMS and the like) at most this many a day per contract; then Boss is told loudly that it is NOT protected. */
@@ -259,25 +271,46 @@ object ManualCoverRule {
         }
     }
 
-    /** The stop and target for [avg] on [tick]: the stop rounded DOWN, the target UP (never looser than 5% / tighter than 10%). */
-    data class Levels(val stop: Double, val target: Double)
+    /**
+     * The stop and target for [avg] on [tick]: the stop rounded DOWN, the target UP (never looser than the points). [fallback]: the
+     * option was too cheap for the stop's points ([FALLBACK_TICKS]), so the stop is the old 5% one.
+     */
+    data class Levels(val stop: Double, val target: Double, val fallback: Boolean = false)
 
-    fun levels(avg: Double, tick: Double): Levels? {
-        if (!(avg > 0) || !(tick > 0) || !avg.isFinite()) return null
+    /**
+     * Boss, 23 Nov 2026: the stop [stopPoints] premium points under [avg] and the target [targetPoints] over it (each [clampPoints]ed),
+     * on [tick]. A stop under [FALLBACK_TICKS] ticks is the 5% stop instead ([Levels.fallback]). Null: no usable price.
+     */
+    fun levels(avg: Double, tick: Double, stopPoints: Double = DEFAULT_STOP_POINTS, targetPoints: Double = DEFAULT_TARGET_POINTS): Levels? {
+        if (!(avg > 0) || !(tick > 0) || !avg.isFinite() || !tick.isFinite()) return null
         val t = BigDecimal.valueOf(tick)
         fun on(x: Double, mode: RoundingMode): Double =
             BigDecimal.valueOf(x).divide(t, 6, RoundingMode.HALF_EVEN).setScale(0, mode).multiply(t).toDouble()
-        val stop = on(avg * STOP_FRACTION, RoundingMode.FLOOR)
-        val target = on(avg * TARGET_FRACTION, RoundingMode.CEILING)
-        return if (stop > 0) Levels(stop, target) else null
+        val points = on(avg - clampPoints(stopPoints, DEFAULT_STOP_POINTS), RoundingMode.FLOOR)
+        val fallback = points < FALLBACK_TICKS * tick - 1e-9
+        val stop = if (fallback) on(avg * STOP_FRACTION, RoundingMode.FLOOR) else points
+        val target = on(avg + clampPoints(targetPoints, DEFAULT_TARGET_POINTS), RoundingMode.CEILING)
+        return if (stop > 0) Levels(stop, target, fallback) else null
     }
+
+    /**
+     * 23 Nov 2026: points as Boss may set them - [MIN_POINTS] to [MAX_POINTS], to the nearest 0.05; not a number: [default]. Every
+     * value saved or read passes here, so a bad saved value can never make a stop at or over the price.
+     */
+    fun clampPoints(x: Double, default: Double): Double {
+        if (!x.isFinite()) return default
+        return (Math.round(x * 20.0) / 20.0).coerceIn(MIN_POINTS, MAX_POINTS)
+    }
+
+    /** 23 Nov 2026: whether moving the stop's points from [old] to [new] widens it (more points: a looser stop, more at risk). */
+    fun stopWidens(old: Double, new: Double): Boolean = clampPoints(new, old) > clampPoints(old, DEFAULT_STOP_POINTS) + 1e-9
 
     /** What to place for one position. */
     sealed class Plan {
-        /** The stop and the target sell. */
-        data class Both(val stop: Double, val target: Double) : Plan()
+        /** The stop and the target sell ([fallback]: the 5% stop of an option too cheap for the points, [Levels.fallback]). */
+        data class Both(val stop: Double, val target: Double, val fallback: Boolean = false) : Plan()
         /** The price is already at or over the target: the stop only (a target sell under the price would fill at once). */
-        data class StopOnly(val stop: Double, val target: Double) : Plan()
+        data class StopOnly(val stop: Double, val target: Double, val fallback: Boolean = false) : Plan()
         /** The price is already at, under or just over the stop ([room]): nothing placed; Boss is told to set one by hand. */
         data class TooLow(val stop: Double) : Plan()
         /** No usable average price or last price: nothing this look. */
@@ -287,16 +320,43 @@ object ManualCoverRule {
     /** The room the last price needs over the stop ([ROOM_TICKS] ticks or [ROOM_FRACTION] of the average, the larger). */
     fun room(avg: Double, tick: Double): Double = maxOf(ROOM_TICKS * tick, avg * ROOM_FRACTION)
 
-    fun plan(avg: Double, last: Double, tick: Double): Plan {
-        val l = levels(avg, tick) ?: return Plan.NoPrice
+    fun plan(avg: Double, last: Double, tick: Double, stopPoints: Double = DEFAULT_STOP_POINTS, targetPoints: Double = DEFAULT_TARGET_POINTS): Plan {
+        val l = levels(avg, tick, stopPoints, targetPoints) ?: return Plan.NoPrice
         if (!(last > 0) || !last.isFinite()) return Plan.NoPrice
         return when {
             // 7 Nov, review: too close over the stop is "too low" too (it would trigger, or be refused, at once).
             last < l.stop + room(avg, tick) - 1e-9 -> Plan.TooLow(l.stop)
-            last >= l.target -> Plan.StopOnly(l.stop, l.target)
-            else -> Plan.Both(l.stop, l.target)
+            last >= l.target -> Plan.StopOnly(l.stop, l.target, l.fallback)
+            else -> Plan.Both(l.stop, l.target, l.fallback)
         }
     }
+
+    // ---- 23 Nov 2026 (Boss: "check live orders placed manually in kite immediately"): a fill Zerodha reports on the stream ------
+
+    /**
+     * Whether a Zerodha order update ([OrderUpdate.Update]) is a manual buy the app should look at at once: an order with NO tag (Kite's
+     * own app or site: every order this app sends carries its tag, and a hand order from the app's own screen is left to the look
+     * after two sightings, so its bracket's stop is never raced), a BUY of an NFO / BFO option ([EXCHANGES], CE or PE) in MIS or NRML
+     * ([PRODUCTS]), and done filling: COMPLETE, or CANCELLED after part of it filled (the rest cancelled: what is held is covered).
+     * A part fill still working is not (its COMPLETE update comes later). Shorts, futures, stock and MCX never are.
+     */
+    fun fillTriggers(side: String, exchange: String, product: String, symbol: String, status: String, filled: Int, tag: String): Boolean =
+        tag.isBlank() && side.equals("BUY", ignoreCase = true) && exchange in EXCHANGES && product in PRODUCTS && isOption(symbol) && filled > 0 &&
+            (status.equals("COMPLETE", ignoreCase = true) || status.equals("CANCELLED", ignoreCase = true))
+
+    /**
+     * Whether a fill reported done ([fillTriggers]) of [filled] units is confirmed by Zerodha's positions read afresh: at least that
+     * many held ([heldNow]). This replaces the two looks 20 s apart for such a fill; less held (Zerodha's positions can trail a fill
+     * for a moment) waits ([FILL_RETRY_MS]).
+     */
+    fun fillHeld(heldNow: Int, filled: Int): Boolean = filled > 0 && heldNow >= filled
+
+    /** 23 Nov 2026: a reported fill is acted on this long after it came (later: the two looks, as any other sighting). */
+    const val FILL_KEEP_MS = 120_000L
+    /** 23 Nov 2026: a fill whose position Zerodha does not show yet is looked at again this soon ... */
+    const val FILL_RETRY_MS = 2_000L
+    /** ... at most this many times; then it is left to the two looks. */
+    const val FILL_TRIES = 5
 
     /**
      * The two looks before acting. A contract is due once it was seen uncovered with the same quantity at two looks at least
@@ -333,7 +393,9 @@ object ManualCoverRule {
      * [SIGHTED]: one was seen uncovered but is not due yet (its first look, or under [SETTLE_MS] since); [READ_FAILED]: a read it
      * needed failed, so nothing was decided. [NONE]: nothing.
      */
-    enum class FollowUp { NONE, SIGHTED, READ_FAILED }
+    enum class FollowUp { NONE, SIGHTED, READ_FAILED,
+        /** 23 Nov 2026: a fill reported done that Zerodha's positions do not show yet ([fillHeld]): looked at again in [FILL_RETRY_MS]. */
+        FILL_LAG }
 
     /** 15 Nov: the second look this long after a first sighting: just over [SETTLE_MS], so it is due then. */
     const val FOLLOW_UP_MS = SETTLE_MS + 1_000L
@@ -350,6 +412,7 @@ object ManualCoverRule {
         FollowUp.NONE -> null
         FollowUp.SIGHTED -> FOLLOW_UP_MS
         FollowUp.READ_FAILED -> RETRY_READ_MS
+        FollowUp.FILL_LAG -> FILL_RETRY_MS
     }
 
     /**
@@ -436,18 +499,27 @@ object ManualCoverRule {
 
     private fun f2(x: Double): String = String.format(java.util.Locale.ENGLISH, "%.2f", x)
 
-    /** Boss's words when it protected a position Boss bought by hand. */
-    fun saidProtected(symbol: String, qty: Int, avg: Double, result: String): String =
+    /** 23 Nov 2026: points as words ("10", "7.5"). */
+    fun points(x: Double): String = if (x == Math.floor(x)) x.toLong().toString() else f2(x).trimEnd('0').trimEnd('.')
+
+    /** 23 Nov 2026: the rule in words: "a stop 10 points under your average and a target sell 10 points over it". */
+    fun ruleWords(stopPoints: Double, targetPoints: Double, fallback: Boolean = false): String =
+        (if (fallback) "a stop 5% under your average (the option is too cheap for a ${points(stopPoints)}-point stop)"
+        else "a stop ${points(stopPoints)} points under your average") + " and a target sell ${points(targetPoints)} points over it"
+
+    /** Boss's words when it protected a position Boss bought by hand (23 Nov 2026: the points rule, [ruleWords]). */
+    fun saidProtected(symbol: String, qty: Int, avg: Double, result: String, stopPoints: Double = DEFAULT_STOP_POINTS,
+                      targetPoints: Double = DEFAULT_TARGET_POINTS, fallback: Boolean = false): String =
         "$symbol: you bought $qty yourself (average ${f2(avg)}) and nothing in the app followed it, so the app protected it " +
-            "automatically: a stop 5% under your average and a target sell 10% over it (Stop and target on my manual positions). $result"
+            "automatically: ${ruleWords(stopPoints, targetPoints, fallback)} (Stop and target on my manual positions). $result"
 
     /** The price is already at or over the target: the stop alone. */
     fun saidStopOnly(symbol: String, last: Double, target: Double): String =
-        "$symbol is already at ${f2(last)}, at or over the 10% target (${f2(target)}), so only the stop was placed."
+        "$symbol is already at ${f2(last)}, at or over its target (${f2(target)}), so only the stop was placed."
 
-    /** The price is already at, under or just over the 5% stop: nothing placed (looked at again on later passes). */
+    /** The price is already at, under or just over the stop: nothing placed (looked at again on later passes). */
     fun saidTooLow(symbol: String, last: Double, stop: Double): String =
-        "$symbol is already at or close to 5% down (last ${f2(last)}, the stop would be ${f2(stop)}): no stop was placed. Set one yourself."
+        "$symbol is already at or close to its stop (last ${f2(last)}, the stop would be ${f2(stop)}): no stop was placed. Set one yourself."
 
     /** 7 Nov, review: a contract left alone for a reason Boss should hear once a day (a spread, two products). */
     fun saidLeftAlone(symbol: String, why: Skip): String = "$symbol: no automatic stop and target, ${why.words}."

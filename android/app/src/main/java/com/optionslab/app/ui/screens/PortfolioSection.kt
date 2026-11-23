@@ -428,8 +428,10 @@ internal fun ManualCoverCardFlow(view: com.optionslab.app.data.ManualCover.View,
 @Composable
 internal fun ManualCoverCardContent(view: com.optionslab.app.data.ManualCover.View, said: String?, onSwitch: (Boolean) -> Unit) {
     LedgerCard(title = "Your own buys: stop and target") {
-        Note("Any live option you buy yourself, in Kite or here, that no arm, Pine script or protection follows, gets a stop 5% " +
-            "under its average price and a target sell 10% over it.")
+        // 23 Nov 2026 (Boss): the points rule (10 and 10 by default), edited on Home's "Stop & target on my Kite buys" (the same switch).
+        Note("Any live option you buy yourself, in Kite or here, that no arm, Pine script or protection follows, gets " +
+            "${com.optionslab.ira.ManualCoverRule.ruleWords(view.stopPoints, view.targetPoints)}. Change the points on Home's " +
+            "\"Stop & target on my Kite buys\".")
         // 7 Nov, review: until the saved switch is read, the card says so (never "On" from the default); the switch is not offered.
         if (!view.loaded) Note("Reading the switch...", Modifier.padding(top = 4.dp))
         else ToggleRow("Stop and target on my manual positions", if (view.on) "On: placed automatically in market hours (09:15-15:24)"

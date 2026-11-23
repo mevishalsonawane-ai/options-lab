@@ -19,7 +19,8 @@ import org.robolectric.annotation.ConscryptMode
 /**
  * 7 Nov (Boss: "if any manual order is placed, then stoploss and target (profit lock) order should be placed by the application"):
  * "Stop and target on my manual positions" ([ManualCover]) against the fake Kite. A live option bought by hand that nothing in the
- * app follows gets protectLive's SL at 95% of its average and a LIMIT sell at 110%, after two looks 20 s apart; an arm's or Pine's
+ * app follows gets protectLive's SL 10 points under its average and a LIMIT sell 10 points over it (Boss, 23 Nov 2026; 95% and 110% before),
+ * after two looks 20 s apart; an arm's or Pine's
  * position, one with Boss's own stop working, one whose protection Boss removed today are never touched; off or in Paper nothing
  * happens; three refusals are said loudly and it stops trying.
  */
@@ -33,7 +34,8 @@ class ManualCoverTest : RobolectricTest() {
         kite = FakeKite()
         kite.instruments += FakeKite.Ins(12_345_679, sym, "NIFTY", Market.today().plusDays(2), 25_150.0, "CE", 65)
         kite.position(sym, 130, 125.35)
-        // 7 Nov, review: comfortably over the 5% stop (119.05) and its room (1% of the average), under the 10% target (137.90).
+        // 7 Nov, review: comfortably over the stop (23 Nov 2026: 10 points, 115.35) and its room (1% of the average), under the target
+        // (10 points, 135.35).
         kite.quote("NFO:$sym", 126.0, 125.95, 126.05)
         kite.login()
         AutomationSupport.liveSettings()
@@ -94,12 +96,12 @@ class ManualCoverTest : RobolectricTest() {
         assertEquals(listOf("SELL", "SELL"), placed.map { it.form["transaction_type"] })
         assertEquals(listOf("130", "130"), placed.map { it.form["quantity"] })
         assertEquals(listOf("NRML", "NRML"), placed.map { it.form["product"] })
-        // 125.35 x 0.95 = 119.08, down to the tick; x 1.1 = 137.89, up to the tick.
-        assertEquals(119.05, placed[0].form.getValue("trigger_price").toDouble(), 1e-9)
-        assertEquals(137.9, placed[1].form.getValue("price").toDouble(), 1e-9)
+        // 23 Nov 2026 (Boss: 10 points each way on the premium): 125.35 - 10 = 115.35 and + 10 = 135.35, both on the tick.
+        assertEquals(115.35, placed[0].form.getValue("trigger_price").toDouble(), 1e-9)
+        assertEquals(135.35, placed[1].form.getValue("price").toDouble(), 1e-9)
         val p = runBlocking { Protections.active() }.single()
         assertTrue(p.live); assertEquals(sym, p.symbol); assertEquals(130, p.qty)
-        assertEquals(119.05, p.stop!!, 1e-9); assertEquals(137.9, p.target!!, 1e-9)
+        assertEquals(115.35, p.stop!!, 1e-9); assertEquals(135.35, p.target!!, 1e-9)
         assertTrue(Alerts.posted.any { it.kind == Alerts.Kind.SUCCESS && it.text.contains("you bought 130 yourself") })
         assertTrue(Diag.lines().any { it.contains("[protection]") && it.contains("you bought 130 yourself") })
         assertEquals(1, ManualCover.tallyForTest().protectedN)
@@ -279,7 +281,7 @@ class ManualCoverTest : RobolectricTest() {
     }
 
     @Test fun justOverTheStopIsTooCloseNothingIsPlaced() {
-        kite.quote("NFO:$sym", 120.0, 119.95, 120.05)                 // 0.95 over the 119.05 stop: under 1% of the average
+        kite.quote("NFO:$sym", 116.0, 115.95, 116.05)                 // 0.65 over the 115.35 stop: under 1% of the average
         twoLooks(); later(25); look()
         assertTrue(writes().isEmpty())
         assertEquals(1, Alerts.posted.count { it.text.contains("no stop was placed") })

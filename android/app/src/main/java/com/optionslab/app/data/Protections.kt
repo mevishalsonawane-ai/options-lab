@@ -2125,15 +2125,28 @@ object Protections {
         return if (gttGone(next, cancelFired = true)) next.copy(gttId = null) else next.copy(active = true, note = REMOVING)
     }
 
-    private suspend fun tickLiveOnce(p: Item): Item {
-        if (!Broker.loggedIn) return p
-        if (p.note == REMOVING) return if (cancelOrders(p)) p.copy(active = false, note = "removed") else p
+    private suspend fun tickLiveOnce(p0: Item): Item {
+        if (!Broker.loggedIn) return p0
+        // (23 Nov 2026, B6-I: one taken out for Boss's own exit beside it ends as such, said once: [removedNote].)
+        if (p0.note == REMOVING) return if (cancelOrders(p0)) p0.copy(active = false, note = removedNote(p0)) else p0
+        // 23 Nov 2026 (B6-I, review): an automatic protection resting as a GTT (all day as one GTT, or overnight) with Boss's own sell
+        // working beside it is taken out the same way as one resting as orders (below). Only while its GTT is active (a fired one's own
+        // order is never taken for his) and both books were read.
+        if (!streamLook && p0.auto && p0.gttId != null) {
+            val own = runCatching { passGtts() }.getOrNull()?.firstOrNull { it.id == p0.gttId }?.takeIf { it.active }
+            val book = if (own == null) null else runCatching { passOrders(stream = false) }.getOrNull()
+            if (own != null && book != null) bossExitBeside(p0, book.filter { it.id !in own.orderIds }, null)?.let { return markBossExit(p0, it) }
+        }
         // 21 Oct, enhancement round 4 (idea 1): resting all day as one GTT: its own look.
-        if (p.note == DAY_GTT) return tickDayGtt(p, streamLook)
+        if (p0.note == DAY_GTT) return tickDayGtt(p0, streamLook)
         // A stream look (round 2): Zerodha's books as last read (re-read after any change), the price from the fresh tick.
         val stream = streamLook
         // 20 Nov 2026 (audit): the look's one read of each book, shared by every protection while nothing changed ([PassReads]).
         val rows = passOrders(stream).associateBy { it.id }
+        // 23 Nov 2026 (B6-I, Boss: the app respects his own stop): an automatic protection's ([ManualCover]) stop or target that Boss moved
+        // in Kite is its level from now ([bossMoved]): whatever is placed again later (a stop put back, the overnight GTT) is at his level,
+        // and nothing moves it back. A regular look only.
+        val p = if (!stream && p0.auto) bossMoved(p0, rows) else p0
         settleExits(rows.values)
         val so = p.stopOrderId?.let { rows[it] }; val to = p.targetOrderId?.let { rows[it] }
         val stopDone = so?.status == "COMPLETE"; val targetDone = to?.status == "COMPLETE"
@@ -2376,6 +2389,13 @@ object Protections {
                 "The position is NOT protected any more: set the protection again.")
             return p.copy(active = false, note = "exit orders no longer working")
         }
+        // 23 Nov 2026 (B6-I, Boss: never two exits on one holding): an automatic protection ([ManualCover]) with Boss's own sell working
+        // beside it on the contract ([bossExitBeside]) is taken out, so only his remains: marked as the app's own cancel first ([REMOVING],
+        // saved at the end of this look, so a restart never reads it as Boss's cancel) and cancelled - confirmed - by the look asked at once
+        // after it ([removedNote] says it once then). A regular look only; never beside the app's own exits on their way.
+        if (!stream && p.auto && p.gttId == null && listOfNotNull(so, to).any { it.working }) {
+            bossExitBeside(p, rows.values, net)?.let { return markBossExit(p, it) }
+        }
         // Less held than the exits cover (part closed by hand, or one exit part-filled): both come down to what
         // is held, or the one that fills in full would leave the account the other way round.
         var stopQty = so?.qty ?: 0
@@ -2433,6 +2453,112 @@ object Protections {
             if (r.isFailure) return cur.copy(best = n.best)
         }
         return cur.copy(best = n.best, stop = ns)
+    }
+
+    /** 23 Nov 2026 (B6-I): the note of an automatic protection taken out because Boss's own exit order works beside it ([bossExitBeside]). */
+    const val BOSS_EXIT = "taken out: your own exit order works beside it"
+    /** 23 Nov 2026 (B6-I): the look that cancels it comes at once after the look that marked it (as [TARGET_LOOK_MS]). */
+    private const val BOSS_EXIT_LOOK_MS = 1L
+    /**
+     * 23 Nov 2026 (B6-I): automatic protections being taken out for Boss's own exit beside them, by id, with what is said once out and
+     * whether his order leaves part of the position with no stop ([BossExit.bare]). Memory (after a restart it ends as "removed", unsaid).
+     */
+    private data class BossExit(val said: String, val bare: Boolean)
+    private val bossExits = java.util.concurrent.ConcurrentHashMap<Long, BossExit>()
+    /** 23 Nov 2026 (B6-I): the levels Boss moved, said once each ("id|stop|target"). Memory. */
+    private val bossMovedSaid = java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<String, Boolean>())
+
+    /**
+     * 23 Nov 2026 (B6-I): the note [p] ends with once its exits are confirmed out from [REMOVING]: [BOSS_EXIT] when it was taken out for
+     * Boss's own exit beside it (said once now: a banner; loudly, with a notification, when his order leaves part with no stop), else
+     * "removed" as before. Neither is a natural end, so
+     * [ManualCover] leaves the position alone for the day (Boss is handling it).
+     */
+    private suspend fun removedNote(p: Item): String {
+        val b = bossExits.remove(p.id) ?: return "removed"
+        // (Review: its own stop or target may have filled between the look that marked it and its cancel - then the position may be closed
+        // while Boss's own sell still works: said loudly as that, never "took its own out". A read that fails is taken as not filled.)
+        val filled = listOfNotNull(p.stopOrderId, p.targetOrderId).mapNotNull { id ->
+            runCatching { Broker.orderState(id) }.getOrNull()?.takeIf { it.filled > 0 }?.let { id to it.filled }
+        }
+        if (filled.isNotEmpty()) {
+            val stop = filled.any { it.first == p.stopOrderId }
+            val said = "${p.symbol}: the app's ${if (stop) "stop" else "target"} filled at Zerodha (${filled.sumOf { it.second }}) just as it was being " +
+                "taken out for your own sell order, which is still working. If the position is closed now, cancel your order in Kite: filled, it " +
+                "would open a short."
+            runCatching { Diag.record("protection", said) }
+            unprotected(said)
+            return if (stop) "stop filled" else "target filled"
+        }
+        runCatching { Diag.record("protection", b.said) }
+        // Part left with no stop: loudly (a notification too); else a banner (his own order protects it).
+        if (b.bare) unprotected(b.said) else Alerts.post(b.said, Alerts.Kind.INFO, "Protection")
+        return BOSS_EXIT
+    }
+
+    /**
+     * 23 Nov 2026 (B6-I, Boss: "never two exits"; the app respects his own stop): Boss's own sell working on [p]'s contract (same exchange,
+     * symbol and product, on its exit side) beside its own exits, as words for him; null when there is none. His: no tag (placed in Kite)
+     * or "iraalgo" (his hand order from this app's own screen), and no protection's order. Never while the app's own exits are on their way
+     * (his exit from the app, a square-off's sale and its gap, another seller holding the row): those are the app's, not his. [net]: what
+     * is held, when known.
+     */
+    /**
+     * 23 Nov 2026 (B6-I): [p] marked to be taken out for Boss's own exit [b] ([REMOVING], saved at the end of this look - the app's own
+     * cancel's mark), with a look asked at once after it that cancels its exits, confirmed ([removedNote] then says [b] once).
+     */
+    private fun markBossExit(p: Item, b: BossExit): Item {
+        bossExits[p.id] = b
+        askFollowUp(BOSS_EXIT_LOOK_MS)
+        runCatching { Diag.record("protection", "${p.symbol}: your own exit order works beside the app's automatic stop and target: the app takes its own out") }
+        return p.copy(note = REMOVING)
+    }
+
+    private fun bossExitBeside(p: Item, orders: Collection<Broker.OrderRow>, net: Int?): BossExit? {
+        if (ArmLive.handsOffNow(p.exchange, p.symbol) || SquareOffExit.inGap(p.exchange, p.symbol, p.product) || rowClaimedByOther(p)) return null
+        val apps = cache.orEmpty().filter { it.active }.flatMap { listOfNotNull(it.stopOrderId, it.targetOrderId) }.toSet() +
+            listOfNotNull(p.stopOrderId, p.targetOrderId)
+        fun left(o: Broker.OrderRow) = com.optionslab.engine.risk.ExitQty.remaining(o.qty, o.filled, o.pending)
+        val boss = orders.filter { it.working && it.exchange == p.exchange && it.symbol == p.symbol && it.product == p.product &&
+            it.side == p.exitSide && it.id !in apps && (it.tag.isBlank() || it.tag == "iraalgo") && left(it) > 0 }
+        if (boss.isEmpty()) return null
+        val covers = boss.sumOf { left(it) }
+        val held = net?.takeIf { it != 0 && it.sign() == p.qty.sign() }?.let { abs(it) } ?: abs(p.qty)
+        // (Review: his orders hold no stop - a target alone - so nothing stops a fall now: said loudly too.)
+        val noStop = boss.none { it.type == "SL" || it.type == "SL-M" }
+        val what = boss.joinToString(", ") { o ->
+            val at = if (o.trigger > 0) o.trigger else o.price
+            "${o.type}${if (at > 0) " at %.2f".format(java.util.Locale.ENGLISH, at) else ""} for ${left(o)}"
+        }
+        return BossExit("${p.symbol}: your own ${p.exitSide.lowercase()} order in Kite ($what) works beside the app's automatic stop" +
+            (if (p.target != null) " and target" else "") + ", so the app took its own out: never two exits on one position. " +
+            (if (covers < held) "Your order covers $covers of the $held held: the rest has no stop from the app; set one yourself if you want it."
+            else if (noStop) "Your order is not a stop: the position has no stop now; set one yourself if you want it."
+            else "Only your order protects it now."), covers < held || noStop)
+    }
+
+    /**
+     * 23 Nov 2026 (B6-I, Boss: the app respects his own stop): [p] (an automatic protection, [ManualCover]) with the levels Boss moved in
+     * Kite: its stop's trigger (an SL or SL-M still working) and its target LIMIT's price (still working), each when it differs from the
+     * protection's by half a tick or more. The app never moves a level of such a protection itself (no trail), so a difference is his.
+     * Said once per change; the orders are not touched (nothing moves them back).
+     */
+    private fun bossMoved(p: Item, rows: Map<String, Broker.OrderRow>): Item {
+        val so = p.stopOrderId?.let { rows[it] }?.takeIf { it.working && (it.type == "SL" || it.type == "SL-M") && it.trigger > 0 }
+        val to = p.targetOrderId?.let { rows[it] }?.takeIf { it.working && it.type == "LIMIT" && it.price > 0 }
+        val side = if (p.qty > 0) Kite.Side.SELL else Kite.Side.BUY
+        val stop = so?.trigger?.takeIf { s -> p.stop == null || abs(s - p.stop) >= p.tick / 2 - 1e-9 }
+        val target = to?.price?.takeIf { t -> p.target == null || abs(t - Kite.onTick(p.target, p.tick, side)) >= p.tick / 2 - 1e-9 }
+        if (stop == null && target == null) return p
+        val out = p.copy(stop = stop ?: p.stop, target = target ?: p.target)
+        if (bossMovedSaid.add("${p.id}|${out.stop}|${out.target}")) {
+            val said = "${p.symbol}: you moved its automatic " + listOfNotNull(stop?.let { "stop to %.2f".format(java.util.Locale.ENGLISH, it) },
+                target?.let { "target to %.2f".format(java.util.Locale.ENGLISH, it) }).joinToString(" and ") +
+                " in Kite. The app keeps your level and never moves it back."
+            runCatching { Diag.record("protection", said) }
+            Alerts.post(said, Alerts.Kind.INFO, "Protection")
+        }
+        return out
     }
 
     /**
@@ -2529,6 +2655,8 @@ object Protections {
         synchronized(marksMon) { marksLoaded = false; marksForgotten.clear(); marksFails = 0; marksFile?.let { runCatching { it.delete() } } }
         runCatching { gttTries.clear() }
         flatSince.clear(); ocoSaid.clear(); ocoPending.clear()
+        // (23 Nov 2026, B6-I: the automatic protections being taken out for Boss's own exit, and the levels he moved, said.)
+        bossExits.clear(); bossMovedSaid.clear()
         filesForErase().forEach { runCatching { it.delete() } }
     }
 
@@ -2551,5 +2679,6 @@ object Protections {
     /** TEST ONLY: this object's lock held until [release] completes (a look holding it across Zerodha calls). */
     internal suspend fun holdLockForTest(release: kotlinx.coroutines.CompletableDeferred<Unit>) { lock.withLock { release.await() } }
 
-    internal fun forgetMemoryForTest() { resetFollowUpForTest(); cache = null; published = null; gttTries.clear(); flatSince.clear(); synchronized(this) { lastId = 0L } }
+    internal fun forgetMemoryForTest() { resetFollowUpForTest(); cache = null; published = null; gttTries.clear(); flatSince.clear(); synchronized(this) { lastId = 0L }
+        bossExits.clear(); bossMovedSaid.clear() }
 }

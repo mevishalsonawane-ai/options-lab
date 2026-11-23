@@ -377,6 +377,26 @@ class OrderPathRound2Test : RobolectricTest() {
     }
 
     /**
+     * 23 Nov 2026 (B6-I, Boss: "check live orders placed manually in kite immediately"): Zerodha's order update for a buy placed in Kite,
+     * on the stream's thread (the order path), reads nothing from the settings vault and only queues the stop and target's look - the
+     * look itself runs in ManualCover's own job, never here.
+     */
+    @Test fun aManualBuysOrderUpdateOnTheStreamsThreadReadsNothingAndOnlyQueuesItsLook() {
+        ManualCover.resetForTest(on = true)
+        try {
+            val asked = ManualCover.lookNowAskedForTest()
+            SecurePrefs.readsForTest.set(0)
+            SecurePrefs.countedThread = Thread.currentThread()
+            try {
+                KiteStream.textForTest("""{"type":"order","data":{"order_id":"9101","status":"COMPLETE","tradingsymbol":"$sym","exchange":"NFO",""" +
+                    """"product":"MIS","transaction_type":"BUY","quantity":30,"filled_quantity":30,"average_price":200.0,"tag":null}}""")
+            } finally { SecurePrefs.countedThread = null }
+            assertEquals("settings reads on the stream's thread for an order update", 0L, SecurePrefs.readsForTest.get())
+            assertEquals("its look queued (it runs in ManualCover's own job)", asked + 1, ManualCover.lookNowAskedForTest())
+        } finally { ManualCover.resetForTest(on = false) }
+    }
+
+    /**
      * 18 Oct, review: the stream's drop and its gap (both told on the socket thread) read nothing from the vault either, and
      * reach the speed card on its next read. One queued on an earlier day (no look overnight) is never filed under today.
      */

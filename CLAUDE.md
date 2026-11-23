@@ -218,6 +218,19 @@ notes; match the surrounding code.
   working exits on it cannot be taken over, or a stop is going back on it. When the size is known, the safe part (whole lots) goes under
   his confirmation. After a cut or refused leg the later legs go on only where that is safe (a short's buy-back always; a hedge's sale
   only while no short may stay), and each contract is said ("Sent X of N").
+- STOP AND TARGET ON BOSS'S OWN BUYS (Boss, 7 Nov; 23 Nov 2026: "check live orders placed manually in kite immediately, and set a target
+  of 10 points and stoploss of 10points, a button, where i could stop/start the functionality"). One switch, on by default, on Bot
+  settings and on Home's "Stop & target on my Kite buys" card: off is one tap, on takes the PIN. In Live, a live NSE / BSE option Boss
+  bought himself (never shorts, futures, stock or MCX) that nothing in the app follows gets a stop 10 premium points under its average
+  and a target sell 10 over it (bought at 120: 110 / 130), in place of 7 Nov's 5% / 10%. Boss edits the points on that card (saved on
+  this phone only; in Live a wider stop takes the PIN); an option too cheap for the points gets a 5% stop, said; protections already
+  placed keep their levels. A buy placed in Kite is covered as soon as Zerodha reports it COMPLETE (or the rest cancelled after a part
+  fill; a part fill still working waits): the order update only queues the look, which needs a fresh positions read showing at least
+  that quantity; anything else after two looks 20 s apart, as before. Every leave-alone rule stays. Intraday only the stop rests at
+  Zerodha (the target is watched by the app). Boss's own orders come first: a stop or target order of the app's he moved in Kite is kept
+  at his level, never moved back (a GTT of the app's he moves is not followed); his own sell working beside the app's stop, target or GTT
+  takes the app's out (marked as the app's own cancel first, confirmed out), told once - loudly when his order is no stop or covers less
+  than is held - never two exits.
 - ORDER COUNT AND KILL SWITCH (20 Nov audit, B5).
   - Today's order count at Zerodha that cannot be read (read twice) is unknown, never 0. The order count check starts in shadow: the
     live entry goes as before, logged "would have refused: order count unknown" and counted. Its Bot settings switch (off by default)

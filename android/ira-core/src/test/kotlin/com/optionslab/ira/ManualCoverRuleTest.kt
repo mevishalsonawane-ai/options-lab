@@ -274,34 +274,103 @@ class ManualCoverRuleTest {
 
     // ---- prices -------------------------------------------------------------------------------------------------------------------
 
+    /** Boss, 23 Nov 2026: 10 premium points under and over the average by default (bought at 120: stop 110, target 130). */
     @Test fun theStopRoundsDownAndTheTargetUpToTheTick() {
-        assertEquals(ManualCoverRule.Levels(119.05, 137.9), ManualCoverRule.levels(125.35, 0.05))   // 119.08 down, 137.89 up
-        assertEquals(ManualCoverRule.Levels(95.0, 110.0), ManualCoverRule.levels(100.0, 0.05))       // exact: no tick added
-        assertEquals(ManualCoverRule.Levels(123.5, 143.0), ManualCoverRule.levels(130.0, 0.05))
-        assertEquals(ManualCoverRule.Levels(0.95, 1.1), ManualCoverRule.levels(1.0, 0.05))
-        assertEquals(ManualCoverRule.Levels(9.5, 11.1), ManualCoverRule.levels(10.03, 0.1))          // another tick size
+        assertEquals(ManualCoverRule.Levels(110.0, 130.0), ManualCoverRule.levels(120.0, 0.05), "Boss's own example")
+        assertEquals(ManualCoverRule.Levels(115.35, 135.35), ManualCoverRule.levels(125.35, 0.05))
+        assertEquals(ManualCoverRule.Levels(90.0, 110.0), ManualCoverRule.levels(100.0, 0.05))       // exact: no tick added
+        // An average off the tick (several fills): the stop down to the tick, the target up (never looser than the points).
+        assertEquals(ManualCoverRule.Levels(110.35, 130.4), ManualCoverRule.levels(120.37, 0.05))
+        assertEquals(ManualCoverRule.Levels(110.0, 130.1), ManualCoverRule.levels(120.03, 0.1))       // another tick size
+        // Boss's own points (editable in the app).
+        assertEquals(ManualCoverRule.Levels(105.0, 145.0), ManualCoverRule.levels(120.0, 0.05, 15.0, 25.0))
+        assertEquals(ManualCoverRule.Levels(117.5, 121.0), ManualCoverRule.levels(120.0, 0.05, 2.5, 1.0))
         assertNull(ManualCoverRule.levels(0.0, 0.05))
         assertNull(ManualCoverRule.levels(Double.NaN, 0.05))
         assertNull(ManualCoverRule.levels(100.0, 0.0))
-        assertNull(ManualCoverRule.levels(0.05, 0.05), "a stop of 0.04 rounds to zero: nothing")
+        assertNull(ManualCoverRule.levels(100.0, Double.NaN))
+        assertNull(ManualCoverRule.levels(0.05, 0.05), "a 5% stop of 0.0475 rounds to zero: nothing")
+    }
+
+    /** 23 Nov 2026: an option too cheap for the points (the stop under two ticks) keeps the old 5% stop, and says it did. */
+    @Test fun aCheapOptionFallsBackToTheFivePercentStop() {
+        assertEquals(ManualCoverRule.Levels(0.95, 11.0, fallback = true), ManualCoverRule.levels(1.0, 0.05))
+        assertEquals(ManualCoverRule.Levels(9.5, 20.05, fallback = true), ManualCoverRule.levels(10.05, 0.05), "one tick left: under two")
+        assertEquals(ManualCoverRule.Levels(0.1, 20.1), ManualCoverRule.levels(10.1, 0.05), "two ticks left: the points stop")
+        assertEquals(ManualCoverRule.Levels(9.5, 20.1, fallback = true), ManualCoverRule.levels(10.03, 0.1))
+        assertEquals(ManualCoverRule.Levels(85.5, 100.0, fallback = true), ManualCoverRule.levels(90.0, 0.05, 90.0, 10.0), "points at the price")
+        assertTrue(ManualCoverRule.ruleWords(10.0, 10.0, fallback = true).contains("5% under your average (the option is too cheap for a 10-point stop)"))
+        assertTrue(ManualCoverRule.saidProtected("X", 65, 1.0, "Protected.", fallback = true).contains("too cheap for a 10-point stop"))
+    }
+
+    /** 23 Nov 2026: the points Boss may set: 1 to 500, to 0.05; anything else is brought inside (a bad saved value included). */
+    @Test fun thePointsAreKeptInSaneBounds() {
+        assertEquals(1.0, ManualCoverRule.clampPoints(0.0, 10.0))
+        assertEquals(1.0, ManualCoverRule.clampPoints(-5.0, 10.0))
+        assertEquals(500.0, ManualCoverRule.clampPoints(9_999.0, 10.0))
+        assertEquals(10.0, ManualCoverRule.clampPoints(Double.NaN, 10.0))
+        assertEquals(10.0, ManualCoverRule.clampPoints(Double.POSITIVE_INFINITY, 10.0))
+        assertEquals(7.55, ManualCoverRule.clampPoints(7.53, 10.0), 1e-9)
+        assertEquals(ManualCoverRule.levels(120.0, 0.05, 1.0, 500.0), ManualCoverRule.levels(120.0, 0.05, -3.0, 1e9), "levels clamp too")
+        // Widening the stop is more points (a looser stop); fewer is narrowing.
+        assertTrue(ManualCoverRule.stopWidens(10.0, 15.0))
+        assertFalse(ManualCoverRule.stopWidens(10.0, 10.0))
+        assertFalse(ManualCoverRule.stopWidens(10.0, 5.0))
+        assertFalse(ManualCoverRule.stopWidens(500.0, 9_999.0), "past the bound it is the bound: no wider")
+        assertEquals("10", ManualCoverRule.points(10.0)); assertEquals("7.5", ManualCoverRule.points(7.5)); assertEquals("2.25", ManualCoverRule.points(2.25))
     }
 
     @Test fun thePlanFollowsTheLastPrice() {
-        assertEquals(Plan.Both(119.05, 137.9), ManualCoverRule.plan(125.35, 125.0, 0.05))
-        assertEquals(Plan.TooLow(119.05), ManualCoverRule.plan(125.35, 119.05, 0.05), "at the stop")
-        assertEquals(Plan.TooLow(119.05), ManualCoverRule.plan(125.35, 90.0, 0.05), "under it")
-        assertEquals(Plan.StopOnly(119.05, 137.9), ManualCoverRule.plan(125.35, 137.9, 0.05), "at the target")
-        assertEquals(Plan.StopOnly(119.05, 137.9), ManualCoverRule.plan(125.35, 200.0, 0.05), "over it")
-        // 7 Nov, review: the last price needs max(3 ticks, 1% of the average) = 1.2535 over the stop, so 120.3035 at least.
-        assertEquals(Plan.TooLow(119.05), ManualCoverRule.plan(125.35, 119.1, 0.05), "a tick over the stop is too close")
-        assertEquals(Plan.TooLow(119.05), ManualCoverRule.plan(125.35, 120.3, 0.05), "just short of the room")
-        assertEquals(Plan.Both(119.05, 137.9), ManualCoverRule.plan(125.35, 120.35, 0.05), "just enough room")
-        // A cheap option: three ticks is the larger room (1% of 5.00 is 0.05).
+        assertEquals(Plan.Both(115.35, 135.35), ManualCoverRule.plan(125.35, 125.0, 0.05))
+        assertEquals(Plan.TooLow(115.35), ManualCoverRule.plan(125.35, 115.35, 0.05), "at the stop")
+        assertEquals(Plan.TooLow(115.35), ManualCoverRule.plan(125.35, 90.0, 0.05), "under it")
+        assertEquals(Plan.StopOnly(115.35, 135.35), ManualCoverRule.plan(125.35, 135.35, 0.05), "at the target")
+        assertEquals(Plan.StopOnly(115.35, 135.35), ManualCoverRule.plan(125.35, 200.0, 0.05), "over it")
+        // 7 Nov, review: the last price needs max(3 ticks, 1% of the average) = 1.2535 over the stop, so 116.6035 at least.
+        assertEquals(Plan.TooLow(115.35), ManualCoverRule.plan(125.35, 115.4, 0.05), "a tick over the stop is too close")
+        assertEquals(Plan.TooLow(115.35), ManualCoverRule.plan(125.35, 116.6, 0.05), "just short of the room")
+        assertEquals(Plan.Both(115.35, 135.35), ManualCoverRule.plan(125.35, 116.65, 0.05), "just enough room")
+        // Boss's own points.
+        assertEquals(Plan.Both(105.0, 145.0), ManualCoverRule.plan(120.0, 121.0, 0.05, 15.0, 25.0))
+        // A cheap option (the 5% stop): three ticks is the larger room (1% of 5.00 is 0.05).
         assertEquals(0.15, ManualCoverRule.room(5.0, 0.05), 1e-9)
         assertEquals(Plan.TooLow(4.75), ManualCoverRule.plan(5.0, 4.85, 0.05))
-        assertEquals(Plan.Both(4.75, 5.5), ManualCoverRule.plan(5.0, 4.9, 0.05))
+        assertEquals(Plan.Both(4.75, 15.0, fallback = true), ManualCoverRule.plan(5.0, 4.9, 0.05))
+        assertEquals(Plan.StopOnly(4.75, 15.0, fallback = true), ManualCoverRule.plan(5.0, 16.0, 0.05))
         assertEquals(Plan.NoPrice, ManualCoverRule.plan(125.35, 0.0, 0.05), "no last price")
         assertEquals(Plan.NoPrice, ManualCoverRule.plan(0.0, 120.0, 0.05), "no average")
+    }
+
+    // ---- 23 Nov 2026: a manual buy looked at as soon as Zerodha reports it filled ------------------------------------------------
+
+    @Test fun onlyAnUntaggedOptionBuyThatIsDoneFillingTriggersAtOnce() {
+        fun t(side: String = "BUY", ex: String = "NFO", product: String = "MIS", sym: String = this.sym, status: String = "COMPLETE",
+              filled: Int = 65, tag: String = "") = ManualCoverRule.fillTriggers(side, ex, product, sym, status, filled, tag)
+        assertTrue(t(), "a Kite buy filled in full")
+        assertTrue(t(product = "NRML")); assertTrue(t(ex = "BFO", sym = "SENSEX26N1382000PE"))
+        assertTrue(t(status = "CANCELLED", filled = 30), "part filled, the rest cancelled: what is held is covered")
+        assertFalse(t(status = "CANCELLED", filled = 0), "cancelled with nothing filled")
+        assertFalse(t(status = "OPEN", filled = 30), "a part fill still working waits for its COMPLETE")
+        assertFalse(t(status = "REJECTED", filled = 0))
+        assertFalse(t(status = "UPDATE", filled = 65))
+        assertFalse(t(side = "SELL"), "a sale is never covered")
+        assertFalse(t(sym = "NIFTY26NOVFUT"), "a future"); assertFalse(t(ex = "NSE", sym = "RELIANCE", product = "CNC"), "stock")
+        assertFalse(t(ex = "MCX", sym = "CRUDEOIL26NOV5000CE"), "MCX")
+        assertFalse(t(product = "CNC"))
+        assertFalse(t(tag = "iraalgo"), "the app's own order screen: left to the two looks (its bracket is never raced)")
+        assertFalse(t(tag = "iraarm")); assertFalse(t(tag = "iraorb")); assertFalse(t(tag = "irapine"))
+        assertFalse(t(side = "", ex = "", product = ""), "an update without them: the two looks")
+        assertTrue(t(side = "buy"), "the side read either case")
+    }
+
+    @Test fun aReportedFillIsConfirmedByAtLeastThatMuchHeld() {
+        assertTrue(ManualCoverRule.fillHeld(65, 65))
+        assertTrue(ManualCoverRule.fillHeld(130, 65), "more held (an earlier buy too): all of it is covered")
+        assertFalse(ManualCoverRule.fillHeld(0, 65), "Zerodha's positions trail the fill: wait")
+        assertFalse(ManualCoverRule.fillHeld(30, 65))
+        assertFalse(ManualCoverRule.fillHeld(65, 0))
+        assertEquals(ManualCoverRule.FILL_RETRY_MS, ManualCoverRule.followUpMs(ManualCoverRule.FollowUp.FILL_LAG))
+        assertTrue(ManualCoverRule.FILL_RETRY_MS * ManualCoverRule.FILL_TRIES < ManualCoverRule.SETTLE_MS, "quicker than the two looks it replaces")
     }
 
     // ---- words ----------------------------------------------------------------------------------------------------------------------
@@ -314,8 +383,11 @@ class ManualCoverRuleTest {
             ManualCoverRule.line(false, true, t, d.plusDays(1)), "a new day starts at nothing")
         assertTrue(ManualCoverRule.line(true, false, t, d).contains("not read yet"))
         assertTrue(ManualCoverRule.saidProtected(sym, 130, 125.35, "Protected.").contains("you bought 130 yourself"))
-        assertTrue(ManualCoverRule.saidTooLow(sym, 90.0, 119.05).contains("no stop was placed"))
-        assertTrue(ManualCoverRule.saidStopOnly(sym, 200.0, 137.9).contains("only the stop"))
+        assertTrue(ManualCoverRule.saidTooLow(sym, 90.0, 115.35).contains("no stop was placed"))
+        assertTrue(ManualCoverRule.saidStopOnly(sym, 200.0, 135.35).contains("only the stop"))
+        // 23 Nov 2026: the points rule in words, Boss's own points included.
+        assertTrue(ManualCoverRule.saidProtected(sym, 130, 125.35, "Protected.").contains("a stop 10 points under your average and a target sell 10 points over it"))
+        assertTrue(ManualCoverRule.saidProtected(sym, 130, 125.35, "Protected.", 7.5, 20.0).contains("a stop 7.5 points under your average and a target sell 20 points over it"))
         assertTrue(ManualCoverRule.saidGaveUp(sym, 130, "RMS").contains("is NOT protected"))
         assertTrue(ManualCoverRule.saidGaveUp(sym, 130, "timed out", ManualCoverRule.MAX_ATTEMPTS).contains("tried 10 times"))
     }

@@ -12,8 +12,13 @@ object OrderUpdate {
     /** A terminal status: the order will not change again. */
     val TERMINAL = setOf("COMPLETE", "REJECTED", "CANCELLED")
 
+    /**
+     * 23 Nov 2026 ([ManualCoverRule.fillTriggers]: a manual buy looked at as soon as it fills): also the order's side ("BUY" /
+     * "SELL"), exchange, product and quantity; empty (0) when the update does not give them.
+     */
     data class Update(val orderId: String, val status: String, val avgPrice: Double, val filled: Int, val message: String,
-                      val symbol: String = "", val tag: String = "") {
+                      val symbol: String = "", val tag: String = "", val side: String = "", val exchange: String = "",
+                      val product: String = "", val qty: Int = 0) {
         val terminal: Boolean get() = status in TERMINAL
     }
 
@@ -25,7 +30,9 @@ object OrderUpdate {
         val id = str(d["order_id"]) ?: return null
         val status = str(d["status"])?.uppercase() ?: return null
         return Update(id, status, num(d["average_price"]), num(d["filled_quantity"]).toInt(),
-            str(d["status_message"]).orEmpty(), str(d["tradingsymbol"]).orEmpty(), str(d["tag"]).orEmpty())
+            str(d["status_message"]).orEmpty(), str(d["tradingsymbol"]).orEmpty(), str(d["tag"]).orEmpty(),
+            str(d["transaction_type"])?.uppercase().orEmpty(), str(d["exchange"])?.uppercase().orEmpty(), str(d["product"])?.uppercase().orEmpty(),
+            num(d["quantity"]).toInt())
     }
 
     private fun str(v: Any?): String? = when (v) {
