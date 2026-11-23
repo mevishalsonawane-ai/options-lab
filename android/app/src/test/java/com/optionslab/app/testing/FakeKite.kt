@@ -637,6 +637,18 @@ class FakeKite : Closeable {
         return false
     }
 
+    /** 23 Nov 2026 (B6-H round 4): each order's earlier states, oldest first (a modify, or Boss's change in Kite, adds the state before it). */
+    private val past = HashMap<String, MutableList<JSONObject>>()
+    /** Modifies of these orders that Kite accepts and the exchange then refuses: answered OK, nothing changed, the order's time set (null: now). */
+    private val modifyRefusedLater = HashMap<String, LocalDateTime?>()
+    fun refuseNextModifyLater(id: String, at: LocalDateTime? = null) = synchronized(lock) { modifyRefusedLater[id] = at }
+    /** Boss changes order [id]'s quantity in Kite at [at] (null: now): its history keeps the state before it. */
+    fun modifyInKite(id: String, qty: Int, at: LocalDateTime? = null) = synchronized(lock) {
+        val o = orders.getValue(id)
+        past.getOrPut(id) { ArrayList() }.add(orderJson(o))
+        o.qty = qty; o.updated = at ?: Market.now().toLocalDateTime()
+    }
+
     private fun history(id: String): MockResponse {
         val o = orders[id] ?: return error(400, "InputException", "Couldn't find that `order_id`.")
         cancelLag[id]?.let { left -> if (left <= 1) { cancelLag.remove(id); o.status = "CANCELLED" } else cancelLag[id] = left - 1 }
@@ -644,8 +656,9 @@ class FakeKite : Closeable {
             if (o.cancelRest) { o.status = "CANCELLED"; o.message = "Your order has been cancelled because of market protection." }
             else { o.status = "COMPLETE"; val add = o.qty - o.filled; o.filled = o.qty; o.avg = o.fillPrice; move(o, add) }
         }
-        val first = orderJson(o).put("status", "OPEN PENDING").put("filled_quantity", 0).put("average_price", 0)
-        return ok(JSONArray().put(first).put(orderJson(o)))
+        val earlier = past[id].orEmpty()
+        val first = (earlier.firstOrNull()?.let { JSONObject(it.toString()) } ?: orderJson(o)).put("status", "OPEN PENDING").put("filled_quantity", 0).put("average_price", 0)
+        return ok(JSONArray().put(first).apply { for (e in earlier) put(e) }.put(orderJson(o)))
     }
 
     private fun cancel(id: String): MockResponse {
@@ -662,6 +675,8 @@ class FakeKite : Closeable {
         val o = orders[id] ?: return error(400, "InputException", "Couldn't find that `order_id`.")
         if (!o.working) return error(400, "InputException", "Order cannot be modified as it is being processed.")
         if (modifyRefusals > 0) { modifyRefusals--; return error(400, "InputException", "Trigger price for stoploss sell orders should be lower than the last traded price.") }
+        if (modifyRefusedLater.containsKey(id)) { o.updated = modifyRefusedLater.remove(id) ?: Market.now().toLocalDateTime(); return ok(JSONObject().put("order_id", id)) }
+        past.getOrPut(id) { ArrayList() }.add(orderJson(o))
         f["quantity"]?.let { o.qty = it.toInt() }
         f["order_type"]?.let { o.type = it }
         f["price"]?.let { o.price = it.toDouble() }

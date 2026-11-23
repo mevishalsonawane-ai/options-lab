@@ -2307,10 +2307,11 @@ class StrategiesLiveTest : RobolectricTest() {
     }
 
     /**
-     * Item 4: a read that left another row out as malformed is no good reading either: the earlier day's leg neither closes nor lets its stop
-     * go (which would leave it open in the run with no way out) - it waits, its record kept; on a good read it is closed.
+     * Item 4 (round 4): a read that left the leg's own row out as malformed is no reading: the earlier day's leg neither closes nor lets its
+     * stop go (which would leave it open in the run with no way out) - it waits, its record kept, and Boss is told why after a while; on a
+     * good read it is closed. (Another contract's malformed row holds nothing up: below.)
      */
-    @Test fun anEarlierDaysLegWaitsOnAPositionsReadWithAMalformedRow() {
+    @Test fun anEarlierDaysLegWaitsWhileItsOwnRowIsUnreadable() {
         val id = twoLotLeg(com.optionslab.engine.strategy.Product.NRML)
         startLive(id)
         runBlocking { Strategies.manageOnly(compromised = false) }
@@ -2320,15 +2321,78 @@ class StrategiesLiveTest : RobolectricTest() {
         gttFiredAt(gid, dayBefore().atTime(14, 0))
         kite.orders.remove(oid)
         kite.quote("NFO:$NIFTY_CE", 72.0, 71.95, 72.05)
-        kite.extraNetRows = listOf(org.json.JSONObject().put("tradingsymbol", NIFTY_PE).put("exchange", "NFO").put("product", "NRML"))
+        kite.extraNetRows = listOf(org.json.JSONObject().put("tradingsymbol", NIFTY_CE).put("exchange", "NFO").put("product", "NRML"))
         repeat(3) { runBlocking { Strategies.manageOnly(compromised = false) }; later(Strategies.GTT_BARE_AGREE_MS + 1_000) }
         assertEquals("not closed", 150, leg(id).qty)
         assertTrue("nothing let go or said", logged("stop_fired_earlier").isEmpty())
         assertTrue("its stop record stays", runBlocking { Strategies.legStopsForTest() }.values.single().startsWith("gtt:$gid|"))
+        later(Strategies.EARLY_WAIT_SAY_MS)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        val told = logged("stop_fired_earlier_waiting").single()
+        assertTrue(told.message, told.message.contains("left its row out as unreadable") && told.message.contains("exits are refused") &&
+            told.message.contains("close it there yourself") && told.message.contains("is not known"))
+        later(Strategies.EARLY_WAIT_REPEAT_MS - 60_000)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("not again so soon", 1, logged("stop_fired_earlier_waiting").size)
+        later(60_000)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("again after a while", 2, logged("stop_fired_earlier_waiting").size)
         kite.extraNetRows = emptyList()                                    // a good read
         repeat(3) { runBlocking { Strategies.manageOnly(compromised = false) } }
         assertEquals("closed then", 0, leg(id).qty)
         assertEquals("critical", logged("stop_fired_earlier").single().severity)
+    }
+
+    /** Item 4 (round 4): another contract's malformed row tells nothing of this leg's: its earlier day's close goes on. */
+    @Test fun anotherContractsMalformedRowDoesNotHoldTheEarlierDaysClose() {
+        val id = twoLotLeg(com.optionslab.engine.strategy.Product.NRML)
+        startLive(id)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        val gid = kite.gtts.keys.single()
+        kite.quote("NFO:$NIFTY_CE", 67.0, 66.95, 67.05)
+        val oid = kite.triggerGtt(gid)
+        gttFiredAt(gid, dayBefore().atTime(14, 0))
+        kite.orders.remove(oid)
+        kite.quote("NFO:$NIFTY_CE", 72.0, 71.95, 72.05)
+        kite.extraNetRows = listOf(org.json.JSONObject().put("tradingsymbol", NIFTY_PE).put("exchange", "NFO").put("product", "NRML"))
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        later(Strategies.GTT_BARE_AGREE_MS + 1_000)
+        repeat(2) { runBlocking { Strategies.manageOnly(compromised = false) } }
+        assertEquals("closed", 0, leg(id).qty)
+        assertEquals(1, logged("stop_fired_earlier").size)
+    }
+
+    /**
+     * Item 4 (round 4): a close that waits for the market to open is told to Boss once it has waited [Strategies.EARLY_WAIT_SAY_MS], naming
+     * why - once only: nothing is wrong, it waits for the open. (A wait for any other reason is told again every
+     * [Strategies.EARLY_WAIT_REPEAT_MS] at most: above.)
+     */
+    @Test fun anEarlierDaysCloseWaitingForTheOpenIsToldOnce() {
+        val id = twoLotLeg(com.optionslab.engine.strategy.Product.NRML)
+        startLive(id)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        val gid = kite.gtts.keys.single()
+        kite.quote("NFO:$NIFTY_CE", 67.0, 66.95, 67.05)
+        val oid = kite.triggerGtt(gid)
+        gttFiredAt(gid, dayBefore().atTime(14, 0))
+        kite.orders.remove(oid)
+        kite.positions.remove("NFO:$NIFTY_CE:NRML")
+        kite.quote("NFO:$NIFTY_CE", 72.0, 71.95, 72.05)
+        val sys = java.time.Clock.system(com.optionslab.engine.IST)
+        val early = Market.today().atTime(7, 30).atZone(com.optionslab.engine.IST)
+        Market.testClock = java.time.Clock.offset(sys, java.time.Duration.between(java.time.ZonedDateTime.now(sys), early))
+        val look = { runBlocking { Strategies.manageOnly(compromised = false) } }
+        look(); later(Strategies.GTT_BARE_AGREE_MS + 1_000); look()           // counted: waits from here
+        later(Strategies.EARLY_WAIT_SAY_MS - 60_000); look()
+        assertTrue("not before it has waited a while", logged("stop_fired_earlier_waiting").isEmpty())
+        later(60_000); look()
+        val told = logged("stop_fired_earlier_waiting").single()
+        assertTrue(told.message, told.message.contains("the market is shut") && told.message.contains("exits are refused") &&
+            told.message.contains("Zerodha shows none of $NIFTY_CE held"))
+        assertEquals("warn", told.severity)
+        later(Strategies.EARLY_WAIT_REPEAT_MS + 60_000); look()
+        assertEquals("not again while it waits for the open", 1, logged("stop_fired_earlier_waiting").size)
+        assertEquals("still not closed", 150, leg(id).qty)
     }
 
     /**
@@ -2391,6 +2455,23 @@ class StrategiesLiveTest : RobolectricTest() {
         assertEquals(75, runBlocking { Strategies.legStopsForTest() }.values.single().split('|')[3].toInt())
     }
 
+    /** Item 3 (round 4): a shrink Kite refused outright (its InputException: nothing changed) puts the record back; the next look shrinks it. */
+    @Test fun aShrinkKiteRefusedOutrightPutsTheRecordBack() {
+        val id = twoLotLeg()
+        startLive(id)
+        val stop = workingStops().single()
+        assertEquals(150, stop.qty)
+        kite.position(NIFTY_CE, 75, 100.0, product = "MIS")                // one lot sold by hand: the stop must shrink to 75
+        kite.kiteErrors["/orders/regular/${stop.id}"] = 400 to "InputException"
+        try { runBlocking { Strategies.manageOnly(compromised = false) } } finally { kite.kiteErrors.remove("/orders/regular/${stop.id}") }
+        assertEquals("nothing changed at Zerodha", 150, kite.order(stop.id).qty)
+        assertEquals("the record back at its size", 150, runBlocking { Strategies.legStopsForTest() }.values.single().split('|')[3].toInt())
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("shrunk on the next look", 75, kite.order(stop.id).qty)
+        assertEquals(75, runBlocking { Strategies.legStopsForTest() }.values.single().split('|')[3].toInt())
+        assertTrue("never a cut", logged("stop_resized_by_you").isEmpty())
+    }
+
     /** Item 2: a grow Kite accepted but Zerodha did not apply (it still shows the size it grew from) is no cut of Boss's: tried again later. */
     @Test fun aGrowKiteAcceptedButDidNotApplyIsNeverReadAsBossesCut() {
         val id = twoLotLeg()
@@ -2417,7 +2498,114 @@ class StrategiesLiveTest : RobolectricTest() {
         assertEquals(listOf("150", ""), runBlocking { Strategies.legStopsForTest() }.values.single().split('|').let { listOf(it[3], it.getOrElse(5) { "" }) })
     }
 
-    /** Item 2 (review): Boss cutting a just-grown stop back to its old size in Kite - Zerodha's time of it after the grow - is their cut. */
+    /**
+     * Item 2 (round 4): a grow Kite accepted that the exchange refused at once is no cut of Boss's - though the phone's clock is 10 s behind
+     * Zerodha's, so the refusal's time reads after the grow: its history never showed the new size. It is tried again later.
+     */
+    @Test fun aGrowRefusedAtOnceWithThePhonesClockBehindIsNoCut() {
+        val id = twoLotLeg()
+        val other = kite.restsInKite(NIFTY_CE, "SELL", 75, 150.0, product = "MIS")
+        startLive(id)
+        val stop = workingStops().single()
+        kite.order(other).status = "CANCELLED"                             // room for the whole leg
+        kite.refuseNextModifyLater(stop.id, at = Market.now().toLocalDateTime().plusSeconds(10))
+        val puts = { kite.requests.count { it.method == "PUT" && it.path.endsWith("/${stop.id}") } }
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals(1, puts())
+        assertEquals(75, kite.order(stop.id).qty)
+        repeat(2) { runBlocking { Strategies.manageOnly(compromised = false) } }
+        assertTrue("never read as Boss's cut", logged("stop_resized_by_you").isEmpty())
+        Strategies.forgetGrowWaitsForTest()
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("tried again and grown", 150, kite.order(stop.id).qty)
+        assertTrue(logged("stop_resized_by_you").isEmpty())
+    }
+
+    /** Item 2 (round 4): the history rule - the old size, then the new at the exchange, then the old again; a validation state never counts. */
+    @Test fun aGrowIsTakenBackOnlyWhenItsHistoryShowsItThenTheOldSize() {
+        fun row(qty: Int, status: String = "TRIGGER PENDING") = Broker.OrderRow("1", NIFTY_CE, "SELL", qty, 0, 69.0, 0.0, status, "", "")
+        assertTrue("grown, then cut back", Strategies.grownThenBack(listOf(row(75, "OPEN PENDING"), row(75), row(150), row(75)), 75, 150))
+        assertFalse("never took", Strategies.grownThenBack(listOf(row(75, "OPEN PENDING"), row(75)), 75, 150))
+        assertFalse("its size before an earlier shrink is not the grow's", Strategies.grownThenBack(listOf(row(150), row(75), row(75)), 75, 150))
+        assertFalse("a refused modify's validation state", Strategies.grownThenBack(listOf(row(75), row(150, "MODIFY VALIDATION PENDING"), row(75)), 75, 150))
+        assertTrue("shrunk, grown, cut back", Strategies.grownThenBack(listOf(row(150), row(75), row(150), row(75)), 75, 150))
+    }
+
+    /** Item 2 (round 4, review): a stop shrunk, then grown back with the grow refused, is no cut of Boss's - its first size is not the grow's. */
+    @Test fun aShrunkStopWhoseGrowWasRefusedIsNoCut() {
+        val id = twoLotLeg()
+        startLive(id)
+        val stop = workingStops().single()
+        assertEquals(150, stop.qty)
+        val other = kite.restsInKite(NIFTY_CE, "SELL", 75, 150.0, product = "MIS")   // Boss's own sale covers a lot: the stop shrinks
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals(75, kite.order(stop.id).qty)
+        kite.order(other).status = "CANCELLED"                             // their sale taken back: it grows - refused at the exchange
+        kite.refuseNextModifyLater(stop.id)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        repeat(2) { runBlocking { Strategies.manageOnly(compromised = false) } }
+        assertTrue("never read as Boss's cut", logged("stop_resized_by_you").isEmpty())
+        Strategies.forgetGrowWaitsForTest()
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("grown on the retry", 150, kite.order(stop.id).qty)
+    }
+
+    /**
+     * Item 2 (round 4, self-review): a stop grown and shrunk by the app before - its history already shows the old size, the new and the old
+     * again - whose next grow is refused is no cut of Boss's: only what came after that grow was sent is judged.
+     */
+    @Test fun aRefusedGrowAfterAnEarlierGrowAndShrinkIsNoCut() {
+        val id = twoLotLeg()
+        val other = kite.restsInKite(NIFTY_CE, "SELL", 75, 150.0, product = "MIS")
+        startLive(id)
+        val stop = workingStops().single()
+        assertEquals(75, stop.qty)
+        kite.order(other).status = "CANCELLED"
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("grown", 150, kite.order(stop.id).qty)
+        runBlocking { Strategies.manageOnly(compromised = false) }        // seen at Zerodha
+        val again = kite.restsInKite(NIFTY_CE, "SELL", 75, 150.0, product = "MIS")
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("shrunk by the app", 75, kite.order(stop.id).qty)
+        kite.order(again).status = "CANCELLED"
+        kite.refuseNextModifyLater(stop.id)                                // the next grow is refused at the exchange
+        Strategies.forgetGrowWaitsForTest()
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        repeat(2) { runBlocking { Strategies.manageOnly(compromised = false) } }
+        assertTrue("never read as Boss's cut", logged("stop_resized_by_you").isEmpty())
+        Strategies.forgetGrowWaitsForTest()
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("grown on the retry", 150, kite.order(stop.id).qty)
+    }
+
+    /** Item 2 (round 4): with the stop's history unreadable nothing is decided - no cut, no grow - until a later look reads it. */
+    @Test fun aGrowNotSeenWithItsHistoryUnreadableIsNotDecided() {
+        val id = twoLotLeg()
+        val other = kite.restsInKite(NIFTY_CE, "SELL", 75, 150.0, product = "MIS")
+        startLive(id)
+        val stop = workingStops().single()
+        kite.order(other).status = "CANCELLED"
+        kite.refuseNextModifyLater(stop.id)
+        val puts = { kite.requests.count { it.method == "PUT" && it.path.endsWith("/${stop.id}") } }
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        kite.down += "/orders/${stop.id}"
+        Strategies.forgetGrowWaitsForTest()
+        try { repeat(2) { runBlocking { Strategies.manageOnly(compromised = false) } } } finally { kite.down -= "/orders/${stop.id}" }
+        assertTrue("no cut", logged("stop_resized_by_you").isEmpty())
+        assertEquals("nor grown again", 1, puts())
+        assertEquals("the grow still waits to be seen", "75", runBlocking { Strategies.legStopsForTest() }.values.single().split('|')[5])
+        runBlocking { Strategies.manageOnly(compromised = false) }                   // read now: it did not take
+        Strategies.forgetGrowWaitsForTest()
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals(2, puts())
+        assertEquals(150, kite.order(stop.id).qty)
+        assertTrue(logged("stop_resized_by_you").isEmpty())
+    }
+
+    /**
+     * Item 2 (round 4): Boss cutting a grown stop back to its old size in Kite is their cut - its history shows the grown size at the exchange
+     * and the old one after - whatever the two clocks say.
+     */
     @Test fun bossCuttingAGrownStopBackToItsOldSizeIsTheirCut() {
         val id = twoLotLeg()
         val other = kite.restsInKite(NIFTY_CE, "SELL", 75, 150.0, product = "MIS")
@@ -2426,8 +2614,8 @@ class StrategiesLiveTest : RobolectricTest() {
         kite.order(other).status = "CANCELLED"
         runBlocking { Strategies.manageOnly(compromised = false) }
         assertEquals("grown", 150, kite.order(stop.id).qty)
-        kite.order(stop.id).qty = 75                                       // Boss cuts it back in Kite, some time after the grow
-        kite.order(stop.id).updated = Market.now().toLocalDateTime().plusSeconds(30)
+        // Boss cuts it back in Kite - with the phone's clock 10 s ahead of Zerodha's, so the exchange's time of it reads before the grow.
+        kite.modifyInKite(stop.id, 75, at = Market.now().toLocalDateTime().minusSeconds(10))
         val puts = { kite.requests.count { it.method == "PUT" && it.path.endsWith("/${stop.id}") } }
         runBlocking { Strategies.manageOnly(compromised = false) }
         assertEquals("told it is theirs", 1, logged("stop_resized_by_you").size)

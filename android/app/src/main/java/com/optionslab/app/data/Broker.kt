@@ -2801,6 +2801,15 @@ object Broker {
         return orderRow(hist.getJSONObject(hist.length() - 1)).takeIf { it.id.isNotBlank() }
     }
 
+    /**
+     * 23 Nov 2026 (B6-H round 4): every state Kite keeps of order [orderId] (GET /orders/{id}), oldest first - e.g. whether a modify ever
+     * took at the exchange. Throws when it cannot be read.
+     */
+    suspend fun orderHistory(orderId: String): List<OrderRow> {
+        val hist = call("GET", "/orders/${Kite.enc(orderId)}") as JSONArray
+        return (0 until hist.length()).map { orderRow(hist.getJSONObject(it)) }
+    }
+
     /** One order's latest state (last entry of its history), or null if Kite has none yet. */
     suspend fun orderState(orderId: String): Fill? {
         val hist = call("GET", "/orders/${Kite.enc(orderId)}") as JSONArray

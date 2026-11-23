@@ -2046,7 +2046,7 @@ object Strategies {
     /** TEST ONLY: whether [id] is marked the app's own cancel in the book (or in memory, waiting for it). */
     internal suspend fun ownCancelForTest(id: String): Boolean = lock.withLock { ownMarked(book(), id) }
 
-    /** TEST ONLY (B6-H round 3): the legs' stop records ("runId:legId" -> "id|trigger|day|qty|cut|from"). */
+    /** TEST ONLY (B6-H round 3): the legs' stop records ("runId:legId" -> "id|trigger|day|qty|cut|from|grewAt|historyBefore"). */
     internal suspend fun legStopsForTest(): Map<String, String> = lock.withLock { book().legStops.toMap() }
 
     /** TEST ONLY (B6-H round 3): the earlier days' counts in progress ([gttBareSince]'s "early|" and "early-unread|" keys). */
@@ -2188,7 +2188,8 @@ object Strategies {
     private fun gttBareConfirmed(key: String, agreeMs: Long = GTT_BARE_AGREE_MS): Boolean {
         val now = Market.now().toInstant().toEpochMilli()
         // (Review: bounded by age - one left behind long ago goes; a leg's wait in progress is never reset.)
-        if (gttBareSince.size > 100) gttBareSince.entries.removeIf { now - it.value > 600_000L }
+        // (Round 4: an earlier day's count of a leg still waiting never goes by age - it goes with its stop record, [restLegStops].)
+        if (gttBareSince.size > 100) gttBareSince.entries.removeIf { now - it.value > 600_000L && !it.key.startsWith("early") }
         val first = gttBareSince.putIfAbsent(key, now) ?: return false
         return now - first >= agreeMs
     }
@@ -2264,6 +2265,9 @@ object Strategies {
             val p = key.split('|')
             (p[0] == "early" || p[0] == "early-unread") && (p.size < 3 || b.legStops[p[1]]?.let(::gttOf)?.toString() != p[2])
         }
+        // (Round 4: and the waits of legs no longer counted.)
+        earlyWaitSince.keys.removeIf { k -> gttBareSince.keys.none { it.startsWith("early|$k|") || it.startsWith("early-unread|$k|") } }
+        earlyWaitSaid.keys.removeIf { !earlyWaitSince.containsKey(it) }
         if (open.isEmpty() && mine.isEmpty()) return
         // (23 Nov 2026, B6 follow-ups, item 2: when this look read the books, by the square-offs' clock - a stop goes in only on reads made
         // after any square-off's sale on its row, [SquareOffExit.lastSaleAt].)
@@ -2368,19 +2372,25 @@ object Strategies {
                 if (!unread) gttBareSince.remove("early-unread|$k|$gid")
                 if (unread || g!!.orderIds.any { row(it) == null }) {
                     // (Review: every read showing it held ends a flat count, the wait's looks included - two agreeing reads, none between.)
-                    // (B6-H round 3, item 4: flat only on a complete read - no row of it left out as malformed - and closed only while the
+                    // (B6-H round 3, item 4: flat only on a read that did not leave its own row out as malformed, and closed only while the
                     // market takes orders on the leg's exchange, on a reply that shows this run's other legs there that Zerodha holds under a
                     // stop resting now ([carriedShown]): before the open a reply can lack the carried rows, and an absent row is then no reading.
-                    // Otherwise it waits, the stop record kept.)
-                    val flat = held <= 0 && !book.unknown(kiteSym) && !book.partial
+                    // Otherwise it waits, the stop record kept - and Boss is told why once it has waited a while ([earlyWaiting]).)
+                    val flat = held <= 0 && !book.unknown(kiteSym)
                     if (!flat) legFlatSince.remove(k)
                     if (gttBareConfirmed(key, if (unread) EARLY_UNREAD_AGREE_MS else GTT_BARE_AGREE_MS)) {
                         // Zerodha holds none of it: closed in the run as sold by that stop - on two agreeing reads, never one.
                         // (Round 3: none shown held on a read that is not a good one is no reading either way - waits, its record kept; only a
                         // read showing it held lets the stop go below.)
-                        if (!flat && held <= 0) continue
-                        if (flat && !runCatching { if (ex == "MCX") McxMarket.isOpen() else Market.isOpen() }.getOrDefault(false)) continue
-                        if (flat && !carriedShown(b, run.runId, open, leg.legId, v, ex, net, orders, gtts)) continue
+                        val waitWhy = when {
+                            !flat && held <= 0 -> "Zerodha's positions reply left its row out as unreadable"
+                            !flat -> null
+                            !runCatching { if (ex == "MCX") McxMarket.isOpen() else Market.isOpen() }.getOrDefault(false) -> SHUT_WORDS
+                            !carriedShown(b, run.runId, open, leg.legId, v, ex, net, orders, gtts) ->
+                                "Zerodha's positions reply is missing the rows of the run's other legs it holds"
+                            else -> null
+                        }
+                        if (waitWhy != null) { earlyWaiting(b, def, k, leg.legId, kiteSym, waitWhy, flat, unread); continue }
                         if (flat && !legFlatConfirmed(k)) { flatSeen.incrementAndGet(); continue }
                         if (!flat) { gttBareSince.remove("early|$k|$gid"); gttBareSince.remove("early-unread|$k|$gid") }
                         if (flat) {
@@ -2402,6 +2412,7 @@ object Strategies {
                             // (Nothing booked - the run would not close the leg now: its record kept, tried again on the next look.)
                             if (ctx.qty <= 0) continue
                             gttBareSince.remove("early|$k|$gid"); gttBareSince.remove("early-unread|$k|$gid")
+                            earlyWaitSince.remove(k); earlyWaitSaid.remove(k)
                             b.legStops.remove(k)
                             val sold = if (exitSide == Kite.Side.SELL) "sold" else "bought back"
                             record(b, def, Event("stop_fired_earlier", "Leg ${leg.legId}'s GTT ${ctx.word} at Zerodha fired on an earlier day, Kite no longer shows " +
@@ -2525,24 +2536,41 @@ object Strategies {
             // it grew from ([stopFrom]) until a read shows the new size. Zerodha showing the new size: done. Still the size it grew from: the
             // grow did not take - the record goes back to it and the grow is tried again later; never a cut. Any other size: judged by the
             // rules below.
-            // (Review: Zerodha's own time of the stop's last change - an SL order's exchange update, a GTT's updated_at - more than
-            // [GROW_SEEN_SKEW_MS] after the grow was sent is a change made since: Boss's own resize back, judged by the rule below, never
-            // grown again; at or before it, or not given, the grow did not take. Done or any other size: the checks below go on this look.)
+            // Back at the size it grew from, it is Boss's own resize back - judged by the rule below, never grown again - only when the stop is
+            // known to have been at the new size since: an SL order by its own history at Zerodha (round 4: at the exchange, the old size, then
+            // the new, then the old again - [grownThenBack] - never by comparing the phone's clock with the exchange's), its history not read
+            // this look: not decided (no cut, no grow, no level move; a shrink for less held still goes); a GTT (its modify is synchronous) by
+            // its updated_at more than [GROW_SEEN_SKEW_MS] after the grow was sent. Otherwise the grow did not take. Done or any other size:
+            // the checks below go on this look. (A resting GTT that gives no size: nothing to judge by - taken as done.)
             val grewFrom = stopFrom(cur)
+            var undecided = false
+            if (cur != null && grewFrom != null && live == null && restingAsStop) { cur = noFrom(cur); b.legStops[k] = cur }
             if (cur != null && grewFrom != null && live != null && restingAsStop) {
-                val grewAt = stopGrewAt(cur)
-                val changedAt = (if (so != null) so.updatedAt else g?.updatedAt)?.let(::stampOf)
-                    ?.atZone(com.optionslab.engine.IST)?.toInstant()?.toEpochMilli()
-                val changedSince = grewAt != null && changedAt != null && changedAt > grewAt + GROW_SEEN_SKEW_MS
-                if (live == grewFrom && live != recorded && !changedSince) {
-                    b.legStops[k] = noFrom(withQty(cur, grewFrom))
-                    growLater(k, GROW_LOOK_MS)
-                    continue
+                if (live == grewFrom && recorded != null && live != recorded) {
+                    val bossBack: Boolean? = if (so != null) {
+                        try {
+                            val h = Broker.orderHistory(so.id)
+                            val before = cur.split('|').getOrNull(7)?.toIntOrNull()?.takeIf { it <= h.size }
+                            if (before != null) grownThenBack(h.drop(before), grewFrom, recorded, fromSeen = true) else grownThenBack(h, grewFrom, recorded)
+                        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { null }
+                    } else {
+                        val grewAt = stopGrewAt(cur)
+                        val changedAt = g?.updatedAt?.let(::stampOf)?.atZone(com.optionslab.engine.IST)?.toInstant()?.toEpochMilli()
+                        grewAt != null && changedAt != null && changedAt > grewAt + GROW_SEEN_SKEW_MS
+                    }
+                    if (bossBack == null) undecided = true
+                    else if (!bossBack) {
+                        b.legStops[k] = noFrom(withQty(cur, grewFrom))
+                        growLater(k, GROW_LOOK_MS)
+                        continue
+                    }
                 }
-                cur = noFrom(cur)
-                b.legStops[k] = cur
+                if (!undecided) {
+                    cur = noFrom(cur)
+                    b.legStops[k] = cur
+                }
             }
-            if (cur != null && recorded != null && live != null && live in 1 until recorded && restingAsStop && !ArmLive.handsOffNow(ex, kiteSym)) {
+            if (!undecided && cur != null && recorded != null && live != null && live in 1 until recorded && restingAsStop && !ArmLive.handsOffNow(ex, kiteSym)) {
                 b.legStops[k] = withCut(withQty(cur, live))
                 record(b, def, Event("stop_resized_by_you", "Leg ${leg.legId}'s stop at Zerodha now covers $live of the $recorded the app rested: it was made " +
                     "smaller in Kite, it looks by you. The app keeps your size and does not grow it back.", "info", leg.legId), false)
@@ -2570,6 +2598,9 @@ object Strategies {
                 if (r.isSuccess) {
                     if (so != null) working[so.id] = room
                     record(b, def, Event("stop_shrunk", "Leg ${leg.legId}'s stop at Zerodha shrunk to $room (Zerodha holds less)", "info"), false)
+                } else if (r.exceptionOrNull() is kotlinx.coroutines.CancellationException) {
+                    // (B6-H round 4: cancelled with the modify perhaps on its way - the smaller size kept, as for a lost answer.)
+                    throw r.exceptionOrNull()!!
                 } else if (r.exceptionOrNull().let { e -> e !is java.io.IOException || e is Broker.NotLoggedIn || e is Broker.NotSent ||
                         (e as? Broker.KiteError)?.type in SHRINK_REFUSED }) {
                     // (Refused outright by Kite, or never sent - not logged in, no connection, a local error: nothing changed at Zerodha, the
@@ -2586,7 +2617,7 @@ object Strategies {
             // claimed as when a stop goes in. Refused (Zerodha would not take the modify), the stop stays as it is - still a stop for what it
             // covers - and is tried again after [GROW_RETRY_MS]; Boss is told the first time.
             // (B6-H round 2: only a stop at the size the app set - never one Boss resized themselves, [stopCut].)
-            if (cur != null && covers != null && covers < minOf(leg.qty, room) && !leg.exitInFlight && !stopCut(cur) &&
+            if (!undecided && cur != null && covers != null && covers < minOf(leg.qty, room) && !leg.exitInFlight && !stopCut(cur) &&
                 ((so != null && so.status == "TRIGGER PENDING" && so.filled == 0) || (so == null && g != null && g.active)) &&
                 growNext[k]?.let { System.currentTimeMillis() < it } != true) {
                 val lot = ref.lot.coerceAtLeast(1)
@@ -2597,6 +2628,10 @@ object Strategies {
                 val to = heldNow?.let { minOf(leg.qty, (it * dir - others).coerceAtLeast(0) / lot * lot) } ?: 0
                 val trig = cur.split('|').getOrNull(1)?.toDoubleOrNull()
                 val px = q.firstOrNull { it.symbol == leg.symbol }?.ltp
+                // (B6-H round 4: an SL order's history as it stands before the grow - read before the row is claimed - so whether the grow
+                // took is later judged on what came after it alone, [grownThenBack]. Not read: judged on its whole history.)
+                val histBefore = if (so != null && to > covers && !ArmLive.handsOffNow(ex, kiteSym))
+                    runCatching { Broker.orderHistory(so.id).size }.getOrNull() else null
                 val rowClaim = if (to <= covers || ArmLive.handsOffNow(ex, kiteSym) || (gid != null && (trig == null || px == null))) null
                     else SquareOffExit.claimExit(ex, kiteSym, product, CLAIM_STOP_OWNER)
                 val growSentAt = marketMs()
@@ -2615,7 +2650,8 @@ object Strategies {
                     if (r.isSuccess) {
                         if (so != null) working[so.id] = to
                         // (B6-H round 3, item 2: with the size it grew from, until a read shows the new size at Zerodha - [stopFrom].)
-                        b.legStops[k] = withField(withField(withQty(cur, to), 5, (live ?: covers).toString()), 6, growSentAt.toString())
+                        b.legStops[k] = withField(withField(withField(withQty(cur, to), 5, (live ?: covers).toString()), 6, growSentAt.toString()),
+                            7, histBefore?.toString() ?: "")
                         growNext.remove(k); growRefusedSaid.remove(k)
                         record(b, def, Event("stop_grown", "Leg ${leg.legId}'s stop at Zerodha grown from $covers to $to (room came back)", "info", leg.legId), false)
                     } else {
@@ -2687,6 +2723,9 @@ object Strategies {
                 // 23 Nov 2026 (B6-H round 2): never while Boss is exiting the contract from the app ([ArmLive.handsOff]) - their exit may have
                 // turned this stop into its LIMIT sale - nor on an order that is no longer a stop: a trail never turns their sale back into an SL.
                 if (ArmLive.handsOffNow(ex, kiteSym)) continue
+                // (B6-H round 4: nor while a grow is not seen at Zerodha yet - a level move sent with the size it shows then could undo that
+                // grow and read as Boss's resize; moved on the look that sees it, normally the next.)
+                if (stopFrom(cur) != null) continue
                 val r = if (gid != null) {
                     if (g?.status?.lowercase() != "active") continue
                     runCatching {
@@ -2722,17 +2761,69 @@ object Strategies {
         return p.joinToString("|")
     }
 
+    /**
+     * 23 Nov 2026 (B6-H round 4): by leg ("runId:legId"), since when (market ms) its earlier day's GTT close has waited, and when Boss was
+     * last told. Memory only (a restart counts again); cleared with the leg's count.
+     */
+    private val earlyWaitSince = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private val earlyWaitSaid = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    /** (Round 4: Boss is told once a close has waited this long, and again at most this often while it still waits.) */
+    internal const val EARLY_WAIT_SAY_MS = 5 * 60_000L
+    internal const val EARLY_WAIT_REPEAT_MS = 10 * 60_000L
+
+    /**
+     * 23 Nov 2026 (B6-H round 4: the earlier day's close could wait for ever without a word): leg [legId] ([k]) whose GTT stop fired on an
+     * earlier day waits to be closed in the run for [why] ([flat]: Zerodha shown holding none of it; [unread]: that day's order could not be
+     * read). Once it has waited [EARLY_WAIT_SAY_MS], Boss is told why - its exits are refused meanwhile - and again at most every
+     * [EARLY_WAIT_REPEAT_MS] while it still waits; only once while it waits for the market to open (nothing is wrong then).
+     */
+    private fun earlyWaiting(b: Book, def: StrategyDef, k: String, legId: Int, sym: String, why: String, flat: Boolean, unread: Boolean) {
+        val now = marketMs()
+        if (earlyWaitSince.size > 200) earlyWaitSince.clear()
+        val since = earlyWaitSince.putIfAbsent(k, now) ?: now
+        if (now - since < EARLY_WAIT_SAY_MS) return
+        val said = earlyWaitSaid[k]
+        if (said != null && (why == SHUT_WORDS || now - said < EARLY_WAIT_REPEAT_MS)) return
+        earlyWaitSaid[k] = now
+        val order = if (unread) "its order of that day cannot be read" else "Kite no longer shows its order"
+        val held = if (flat) "Zerodha shows none of $sym held, so the app is only waiting to book the leg closed in the run"
+            else "whether Zerodha still holds any of $sym is not known"
+        record(b, def, Event("stop_fired_earlier_waiting", "Leg $legId's GTT stop at Zerodha fired on an earlier day and $order. $held, and it " +
+            "cannot yet: $why. It has waited ${(now - since) / 60_000} minutes and tries again on each look; until then the leg's exits are " +
+            "refused. Check $sym in Kite, and close it there yourself if any is still held.", "warn", legId), true)
+    }
+    private const val SHUT_WORDS = "the market is shut"
+
     /** 23 Nov 2026 (B6-H round 3, item 2): the size the leg stop [v] grew from, while its grow is not yet seen at Zerodha; else null. */
     private fun stopFrom(v: String?): Int? = v?.split('|')?.getOrNull(5)?.toIntOrNull()
     /** ... and the market's time (ms) just before that grow was sent. */
     private fun stopGrewAt(v: String): Long? = v.split('|').getOrNull(6)?.toLongOrNull()
     /** [v] with no grow waiting to be seen. */
-    private fun noFrom(v: String): String = if (v.split('|').size > 5) withField(withField(v, 5, ""), 6, "") else v
+    private fun noFrom(v: String): String = if (v.split('|').size > 5) withField(withField(withField(v, 5, ""), 6, ""), 7, "") else v
     /**
-     * (B6-H round 3 review: a stop's own change at Zerodha's clock more than this after the app's grow was sent is a change made after it -
+     * (B6-H round 3 review: a GTT stop's own change at Zerodha's clock more than this after the app's grow was sent is a change made after it -
      * room for the two clocks' difference.)
      */
     private const val GROW_SEEN_SKEW_MS = 5_000L
+    /** (B6-H round 4: an order's states at the exchange - not one still being validated, which a refused modify can show too.) */
+    private val AT_EXCHANGE = setOf("TRIGGER PENDING", "OPEN")
+
+    /**
+     * 23 Nov 2026 (B6-H round 4): whether a stop order's history [h] (oldest first) shows, at the exchange, the size it grew [from], then the
+     * size it grew [to], then [from] again - the grow took and was changed back after it. A size it had before an earlier shrink never counts.
+     * [fromSeen]: [h] is only what came after the grow was sent (the stop was at [from] then).
+     */
+    internal fun grownThenBack(h: List<Broker.OrderRow>, from: Int, to: Int, fromSeen: Boolean = false): Boolean {
+        var atFrom = fromSeen
+        var atTo = false
+        for (e in h) {
+            if (e.status !in AT_EXCHANGE) continue
+            if (atTo && e.qty == from) return true
+            if (atFrom && e.qty == to) atTo = true
+            if (e.qty == from) atFrom = true
+        }
+        return false
+    }
     /** (B6-H round 3: Kite's refusals of a modify that change nothing - its input, order, token and permission errors.) */
     private val SHRINK_REFUSED = setOf("InputException", "OrderException", "TokenException", "PermissionException")
 
@@ -2816,7 +2907,7 @@ object Strategies {
     fun wipe() {
         synchronized(ioLock) { synchronized(writeOrder) { wipeGen++; ownersPending = null; saveSeq++; cache = null } }
         ownersSoon.clear()
-        clearHints(); notRestedAt.clear(); legFlatSince.clear(); gttBareSince.clear()
+        clearHints(); notRestedAt.clear(); legFlatSince.clear(); gttBareSince.clear(); earlyWaitSince.clear(); earlyWaitSaid.clear()
         // (23 Nov 2026, B6-H: the stop marks kept in memory, and the grow-backs' waits, go too; the book's own go with its file.)
         ownCancelsSoon.clear(); ownCancelsGone.clear(); squareMarks.clear(); growNext.clear(); growRefusedSaid.clear(); keepFromToday = null
         written.forget()
