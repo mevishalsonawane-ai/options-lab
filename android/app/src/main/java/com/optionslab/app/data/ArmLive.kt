@@ -1955,7 +1955,8 @@ object ArmLive {
         // never rested again for lots an exit sold a moment ago (it would open a short when it triggered). 18 Nov 2026 (audit A2): with
         // the positions-lag guard acting whatever its switch says ([ExitCoordinator.held]'s forceLag: it only ever lowers what is held).
         val heldNow = if (covered == null) null else runCatching {
-            ExitCoordinator.held(p.exchange, p.symbol, p.product, "arm ${p.label} stop", book, forceLag = lagForced()) * p.side
+            SquareOffExit.lessBossLost(ExitCoordinator.held(p.exchange, p.symbol, p.product, "arm ${p.label} stop", book, forceLag = lagForced()),
+                p.symbol, p.product, p.exchange) * p.side
         }.getOrNull()
         if (covered == null || heldNow == null) { stopFailed(p, trigger, "Zerodha's books could not be read"); return p.copy(stopTrigger = trigger) }
         // Seen held is the look's to say, oldest first (review: the contract's total includes the other trades on it). A new stop
@@ -2380,9 +2381,12 @@ object ArmLive {
 
     // ---- exits ------------------------------------------------------------------------------------------------------------------
 
-    /** What Zerodha holds of [p]'s contract and product, as [p]'s side sees it (a long's +, a short's - flipped). */
-    private suspend fun heldNow(p: Pos): Int =
-        Broker.positionBook().net.filter { it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product }.sumOf { it.qty } * p.side
+    /**
+     * What Zerodha holds of [p]'s contract and product, as [p]'s side sees it (a long's +, a short's - flipped). 23 Nov 2026 (B6 review, eighth
+     * round, M1): less what Boss's own exit on it whose reply was lost may be selling ([SquareOffExit.lessBossLost]) - an exit never sells it again.
+     */
+    private suspend fun heldNow(p: Pos): Int = SquareOffExit.lessBossLost(
+        Broker.positionBook().net.filter { it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product }.sumOf { it.qty }, p.symbol, p.product, p.exchange) * p.side
 
     /**
      * Sell [qty] of [p] ([why]) at the price [ltp]; [g] its GTT as last read (a fired one is taken out like a whole sale's stop).
@@ -2560,7 +2564,9 @@ object ArmLive {
                 // 21 Oct, enhancement round 3 (idea 1): what is held, read after that orders read and checked against its fills
                 // (an exit that filled a moment ago is never sold again while the positions catch up; [ExitCoordinator.held]).
                 // 18 Nov 2026 (audit A2): the guard acts for these sales whatever its switch says (forceLag: it only ever sends less).
-                val held = runCatching { ExitCoordinator.held(cur.exchange, cur.symbol, cur.product, "arm ${p.label}", book, forceLag = lagForced()) * cur.side }.getOrNull()
+                // (23 Nov 2026, B6 review, eighth round, M1: less what Boss's own exit whose reply was lost may be selling.)
+                val held = runCatching { SquareOffExit.lessBossLost(ExitCoordinator.held(cur.exchange, cur.symbol, cur.product, "arm ${p.label}", book,
+                    forceLag = lagForced()), cur.symbol, cur.product, cur.exchange) * cur.side }.getOrNull()
                     ?: return closed + back(cur)
                 heldSeen = held
                 val sendable = ExitQty.sendable(held.coerceAtLeast(0), working.sumOf { ExitQty.remaining(it.qty, it.filled, it.pending) }, minOf(toSell, cur.qty), p.lot)

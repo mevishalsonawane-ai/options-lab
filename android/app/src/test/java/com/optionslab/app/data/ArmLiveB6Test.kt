@@ -734,11 +734,13 @@ class ArmLiveB6Test : RobolectricTest() {
 
     /**
      * Seventh round, review: while Boss's lost exit is looked for, the arm's level is still watched at full cadence (the open-positions rule) -
-     * the price through its stop, the app sells there itself; only its stop is not rested beside his exit.
+     * the price through its stop, the app sells there itself; only its stop is not rested beside his exit. Eighth round, M1: it sells only what
+     * his exit leaves - here his own 30 on the row beside the arm's 30, his exit for 30: the arm's 30 go, the row ends flat.
      */
     @Test fun theArmStillSellsAtItsLevelWhileBossesLostExitIsLookedFor() {
         ArmLive.entered(ask(donchian, "boss-level"))
         watch()
+        kite.position(sym, 60, 200.0, product = "MIS")                      // Boss's own 30 on the same row
         val sid = view().openReal.single().stopOrderId!!
         runBlocking { ArmLive.markOwnCancels(listOf(sid)) }
         runBlocking { Broker.cancel(sid) }
@@ -751,6 +753,63 @@ class ArmLiveB6Test : RobolectricTest() {
         kite.quote("NFO:$sym", 169.0, 168.95, 169.05)                      // at its level: the app sells there itself
         later(5); watch()
         assertEquals("sold at its level", before + 1, marketSells())
-        assertEquals(0, held())
+        assertEquals("the arm's 30 only", "30", kite.placed.last { it.form["order_type"] == "MARKET" }.form["quantity"])
+        assertEquals("his 30 left for his own exit", 30, held())
+    }
+
+    /**
+     * Eighth round, M1 (the gap that could sell twice): Boss's exit reached Zerodha and sold the row, but its reply was lost and neither the
+     * order book nor the positions show it yet. The arm's look goes on; the price touches its level - it sells nothing beside his exit (what
+     * Zerodha shows held, less what his exit may be selling), and the account never goes short.
+     */
+    @Test fun theArmsLevelExitSellsNothingBesideBossesLostExitThatWent() {
+        ArmLive.entered(ask(donchian, "boss-went"))
+        watch()
+        val sid = view().openReal.single().stopOrderId!!
+        runBlocking { ArmLive.markOwnCancels(listOf(sid)) }                  // his exit's takeover
+        runBlocking { Broker.cancel(sid) }
+        // His exit: at Zerodha and filled, but hidden from both books.
+        kite.trailReads = 1_000; kite.positionsTrailReads = 1_000
+        val his = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, 30, 30, "MIS", "MARKET", null)
+        runBlocking { Broker.placeOrder(his, exit = true) }
+        ExitCoordinator.restartForTest()                                     // the exit registry's minute is over; his search is not
+        Broker.lostSearchInlineForTest = true; Broker.lostLookGapMsForTest = 0L
+        SquareOffExit.noteBossLost(his, kite.orders.keys.toList(), null, Origins.MANUAL)
+        assertEquals("sold at Zerodha", 0, kite.positions.getValue("NFO:$sym:MIS").first)
+        val before = marketSells()
+        kite.quote("NFO:$sym", 169.0, 168.95, 169.05)                      // the arm's level
+        later(20); watch()
+        later(5); watch()
+        assertEquals("nothing sold beside his exit", before, marketSells())
+        assertEquals("never short", 0, kite.positions.getValue("NFO:$sym:MIS").first)
+        assertEquals("no stop beside it either", 0, kite.orders.values.count { it.working && it.side == "SELL" })
+    }
+
+    /**
+     * Eighth round (missing test): the expiry square-off counts Boss's own lost exit sale - at 15:08 it sells nothing beside it, and once his
+     * sale shows it finds the row flat: one sale, never two.
+     */
+    @Test fun theExpirySquareOffCountsBossesLostExitSale() {
+        val today = Market.today()
+        val s = "BANKNIFTY26NOV52000CE"
+        kite.instruments += FakeKite.Ins(22_000_051, s, "BANKNIFTY", today, 52_000.0, "CE", 30)
+        kite.quote("NFO:$s", 200.0, 199.95, 200.05)
+        java.io.File(context.filesDir, "kite_instruments.json").delete(); runBlocking { Broker.instruments() }
+        kite.position(s, 30, 200.0, product = "MIS")
+        kite.trailReads = 1_000; kite.positionsTrailReads = 1_000
+        val his = com.optionslab.engine.Kite.Order(s, com.optionslab.engine.Kite.Side.SELL, 30, 30, "MIS", "MARKET", null)
+        runBlocking { Broker.placeOrder(his, exit = true) }
+        ExitCoordinator.restartForTest()                                     // the exit registry's minute is over; his search is not
+        SquareOffExit.noteBossLost(his, kite.orders.keys.toList(), null, Origins.MANUAL)
+        assertEquals("counted for the square-offs", 30, SquareOffExit.lostPendingProviders.getValue(SquareOffExit.BOSS_OWNER)(s, "MIS"))
+        ExpirySquareOff.testNow = today.atTime(15, 8).atZone(com.optionslab.engine.IST)
+        runBlocking { ExpirySquareOff.maybeRun(context, AppSettings.load()) }
+        fun expirySells() = kite.placed.count { it.form["tag"] == "iraalgoexpiry" }
+        assertEquals("nothing sold beside his lost exit", 0, expirySells())
+        kite.showInBook(); kite.positionsCatchUp()
+        ExpirySquareOff.testNow = today.atTime(15, 9).atZone(com.optionslab.engine.IST)
+        runBlocking { ExpirySquareOff.maybeRun(context, AppSettings.load()) }
+        assertEquals(0, expirySells())
+        assertEquals("flat, never short", 0, held(s))
     }
 }

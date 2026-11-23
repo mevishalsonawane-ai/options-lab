@@ -1973,8 +1973,9 @@ object PineAuto {
             val working = book.filter { it.working && it.symbol == sym && it.side == "SELL" && it.product == "MIS" }
             // Review: the read failing here, after its stop came out, puts the stop back (as every other "not sold" path does).
             // 21 Oct, enhancement round 3 (idea 1): held, checked against that orders read's fills ([ExitCoordinator.held]).
-            val heldNow = runCatching { ExitCoordinator.held("NFO", sym, "MIS", "Pine ${label(item)}", book) }
-                .getOrNull() ?: run { restop(h); return }
+            // (23 Nov 2026, B6 review, eighth round, M1: less what Boss's own exit whose reply was lost may be selling.)
+            val heldRaw = runCatching { ExitCoordinator.held("NFO", sym, "MIS", "Pine ${label(item)}", book) }.getOrNull() ?: run { restop(h); return }
+            val heldNow = SquareOffExit.lessBossLost(heldRaw, sym, "MIS", "NFO")
             val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: run { restop(h); return }
             val qty = com.optionslab.engine.risk.ExitQty.sendable(heldNow, working.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) },
                 h.qty, spec.lotSize)
@@ -1984,7 +1985,8 @@ object PineAuto {
                 // 22 Nov 2026 (B6 review, item 2): its stop, taken out above for this sale, is never left out for good: while Zerodha still
                 // holds the contract (only other sales cover it), it is asked again on the next checks ([stopNotRested]: rested by [one] for
                 // what the other sales leave once there is room). Never now - there is none - and never when Zerodha holds nothing.
-                if (tookStop && heldNow > 0 && !h.unconfirmed) stopNotRested += lostStopKey(item, h)
+                // (23 Nov 2026, B6 review, eighth round: on what Zerodha holds, before Boss's lost exit is taken off - his exit may never have gone.)
+                if (tookStop && heldRaw > 0 && !h.unconfirmed) stopNotRested += lostStopKey(item, h)
                 return
             }
             val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, qty, spec.lotSize, "MIS", "MARKET", null, spec.tickSize, "NFO", "irapine")

@@ -761,4 +761,20 @@ class ManualCoverTest : RobolectricTest() {
         twoLooks()
         assertTrue("too low: Boss is told to set one; not pending", ManualCover.pendingSymbols().isEmpty())
     }
+
+    /**
+     * B6 review, eighth round (missing test): Boss's own exit on the position whose reply was lost may be selling it - no cover placed beside
+     * it (a hands-off look, not an attempt) until it is known; given up on after a good read 2 minutes on, covered.
+     */
+    @Test fun noCoverIsPlacedWhileBossesLostExitMayBeSellingIt() {
+        Broker.lostSearchInlineForTest = true; Broker.lostLookGapMsForTest = 0L
+        val key = SquareOffExit.bossLostKey("NFO", sym, "NRML")
+        Broker.noteLost(key, com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, 130, 65, "NRML", "MARKET", null), emptyList(), "Your exit")
+        twoLooks()
+        later(25); look()
+        assertTrue("nothing placed beside his exit", kite.placed.isEmpty())
+        Broker.ageLostForTest(key, Broker.LOST_SEARCH_MS + 1_000)
+        later(25); look(); later(25); look()
+        assertEquals("covered once it is known not to have gone", listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
+    }
 }

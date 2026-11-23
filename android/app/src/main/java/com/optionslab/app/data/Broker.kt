@@ -2426,10 +2426,12 @@ object Broker {
      * or found and taken by its caller: [foundLately]), so a read that began just before it was found, or a caller that took it at once,
      * never leaves it in neither, and a square-off is held back seconds, not minutes. Memory only, never a wait.
      */
-    fun lostSales(prefix: String, symbol: String, product: String): Int {
+    fun lostSales(prefix: String, symbol: String, product: String,
+                  /** 23 Nov 2026 (B6 review, eighth round): the side counted - a short's exit is a BUY ([SquareOffExit.lessBossLost]). */
+                  side: Kite.Side = Kite.Side.SELL): Int {
         val now = System.currentTimeMillis()
         val window = (lostSearchMsForTest ?: LOST_SEARCH_MS) + 60_000L
-        fun row(o: Kite.Order) = o.side == Kite.Side.SELL && o.tradingSymbol == symbol && o.product == product
+        fun row(o: Kite.Order) = o.side == side && o.tradingSymbol == symbol && o.product == product
         // (23 Nov 2026, B6 follow-ups, round 4: both books read in one go, never across a look's hand-over of a found sale from the one to
         // the other - [foundHandover] - which could have counted it twice, or not at all.)
         synchronized(foundHandover) {
@@ -2451,6 +2453,12 @@ object Broker {
     const val FOUND_COUNTED_MS = 20_000L
     /** Lost replies found and taken by their caller lately (key -> the order, when it was found): [lostSales]. Memory only; bounded. */
     private val foundLately = java.util.concurrent.ConcurrentHashMap<String, Pair<Kite.Order, Long>>()
+
+    /**
+     * 23 Nov 2026 (B6 review, eighth round): the lost sale found under [key] is no longer counted as going ([lostSales]) - its order was
+     * refused or cancelled with nothing filled. Memory only.
+     */
+    fun forgetFound(key: String) { synchronized(foundHandover) { foundLately.remove(key) } }
 
     /** The lost reply under [key] forgotten: its stop was taken another way, or its position closed (its search stopped). Memory only. */
     fun forgetLost(key: String) { lostWrites.remove(key)?.searching?.cancel() }
@@ -2494,6 +2502,9 @@ object Broker {
 
     /** 20 Nov 2026 (delta review): how long ago the lost reply under [key] was noted (null: none kept). */
     fun lostAgeMs(key: String): Long? = lostWrites[key]?.let { System.currentTimeMillis() - it.sinceMs }
+
+    /** 23 Nov 2026 (B6 review, eighth round): the order kept under the lost reply [key], if any. Memory only. */
+    fun lostOrder(key: String): Kite.Order? = lostWrites[key]?.order
 
     /** 20 Nov 2026 (delta review): the trigger the lost stop under [key] was sent at (null: none kept, or no trigger). */
     fun lostTrigger(key: String): Double? = lostWrites[key]?.order?.triggerPrice

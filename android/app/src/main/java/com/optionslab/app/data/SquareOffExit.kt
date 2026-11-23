@@ -2,6 +2,7 @@ package com.optionslab.app.data
 
 import com.optionslab.engine.Kite
 import kotlin.math.abs
+import kotlinx.coroutines.launch
 
 /**
  * One live position's square-off exit, as the expiry square-off has sent it since 20 Oct ([ExpirySquareOff]) and the flat-by
@@ -107,7 +108,7 @@ internal object SquareOffExit {
     }
 
     /** TEST ONLY. */
-    internal fun resetForTest(gap: Long = GAP_MS) { placedAt.clear(); clock = System::currentTimeMillis; gapMs = gap; claims.clear(); skips.clear(); soldAt.clear(); chasing.clear(); bossFoundAt.clear() }
+    internal fun resetForTest(gap: Long = GAP_MS) { placedAt.clear(); clock = System::currentTimeMillis; gapMs = gap; claims.clear(); skips.clear(); soldAt.clear(); chasing.clear(); bossFoundAt.clear(); bossLost.clear(); bossFoundQty.clear() }
 
     /**
      * 23 Nov 2026 (B6 follow-ups, round 2): by position row ("EXCHANGE:SYMBOL:PRODUCT"), the square-off passes chasing a blocked MARKET
@@ -222,28 +223,93 @@ internal object SquareOffExit {
     /** 22 Nov 2026 (B6 review, second round): the name Boss's own exit from the app claims a row by ([claimExit]; AppModel's takeover). */
     const val BOSS_OWNER = "boss"
 
+    /** 23 Nov 2026 (B6 review, eighth round): the prefix of the keys Boss's own lost exits are looked for under ([bossLostKey]). */
+    const val BOSS_LOST = "bossexit:"
+
     /**
      * 23 Nov 2026 (B6 review, seventh round): the key Boss's own exit on a position row is looked for under when its reply was lost or
      * unsure ([Broker.noteLost], AppModel) - the exit may have gone.
      */
-    fun bossLostKey(exchange: String, symbol: String, product: String) = "bossexit:$exchange:$symbol:$product"
+    fun bossLostKey(exchange: String, symbol: String, product: String) = "$BOSS_LOST$exchange:$symbol:$product"
+
+    /**
+     * 23 Nov 2026 (B6 review, eighth round): Boss's own exit whose reply was lost, as it was noted ([noteBossLost]) - what he is told and
+     * booked when it is found ([session]: the ledger's day, [source]: whose order), and kept with the protections' marks so a restart inside
+     * its search keeps the hold and the counts ([Protections]: [sinceMs], [sentAt] - its search's window and start as at first).
+     */
+    data class BossLost(val key: String, val order: Kite.Order, val known: Set<String>, val sinceMs: Long, val sentAt: java.time.LocalDateTime?,
+                        val session: java.time.LocalDate?, val source: String)
+
+    /** 23 Nov 2026 (B6 review, eighth round): Boss's lost exits not found nor given up on yet, by key. Memory, kept on disk by [Protections]. */
+    private val bossLost = java.util.concurrent.ConcurrentHashMap<String, BossLost>()
+    private val bossScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    /** 23 Nov 2026 (B6 review, eighth round): how long a lost exit is asked after by its own watch ([watchBossLost]), and how often. */
+    private const val BOSS_WATCH_MS = 30 * 60_000L
+    @Volatile internal var bossWatchGapMsForTest: Long? = null
+
+    /**
+     * 23 Nov 2026 (B6 review, seventh and eighth rounds): Boss's own exit [order] whose reply was lost or unsure - it may have gone. Looked
+     * for ([Broker.noteLost]; [known]: never taken for it) and asked after by its own watch, so he is told what became of it even with nothing
+     * else on the row asking ([bossFound]); kept with the protections' marks. Memory, and the marks' own writer.
+     */
+    fun noteBossLost(order: Kite.Order, known: Collection<String>, session: java.time.LocalDate?, source: String) {
+        val key = bossLostKey(order.exchange, order.tradingSymbol, order.product)
+        val rec = BossLost(key, order, known.toSet(), System.currentTimeMillis(),
+            runCatching { Market.now().toLocalDateTime() }.getOrNull(), session, source)
+        bossLost[key] = rec
+        bossFoundAt.remove(key); bossFoundQty.remove(key)
+        Broker.noteLost(key, order, known, "Your exit", sinceMs = rec.sinceMs, sentAt = rec.sentAt)
+        runCatching { Protections.bossLostChanged() }
+        watchBossLost(rec)
+    }
+
+    /** 23 Nov 2026 (B6 review, eighth round): a lost exit kept before a restart ([Protections]' marks), looked for again from when it went. */
+    internal fun restoreBossLost(rec: BossLost) {
+        if (bossLost.putIfAbsent(rec.key, rec) != null) return
+        Broker.noteLost(rec.key, rec.order, rec.known, "Your exit", sinceMs = rec.sinceMs, sentAt = rec.sentAt)
+        watchBossLost(rec)
+    }
+
+    /** 23 Nov 2026 (B6 review, eighth round): Boss's lost exits still looked for, for the protections' marks file. Memory only. */
+    internal fun bossLostRecords(): List<BossLost> = bossLost.values.toList()
+
+    /** 23 Nov 2026 (B6 review, eighth round): [rec] asked after every few seconds until it is found or given up on, at most [BOSS_WATCH_MS]. */
+    private fun watchBossLost(rec: BossLost) {
+        runCatching { bossScope.launch {
+            val until = System.currentTimeMillis() + BOSS_WATCH_MS
+            while (bossLost[rec.key] === rec && System.currentTimeMillis() < until) {
+                // (Its search's record gone another way - forgotten, as after the tests' resets: nothing more to ask.)
+                if (!Broker.lostPending(rec.key)) { if (bossLost.remove(rec.key, rec)) runCatching { Protections.bossLostChanged() }; break }
+                runCatching { bossExitLost(rec.order.exchange, rec.order.tradingSymbol, rec.order.product) }
+                kotlinx.coroutines.delay(bossWatchGapMsForTest ?: 5_000L)
+            }
+        } }
+    }
 
     /**
      * 23 Nov 2026 (B6 review, seventh round): Boss's own exit on the row whose reply was lost or unsure is still looked for - it may be
-     * selling: no stop is placed or put back on the row meanwhile (the protections' put-back, an arm's, an ORB / Liquidity or a strategy
-     * leg's stop, a manual position's cover); the arms' and the books' level watches and their own exits go on as ever. Asking starts the
-     * background search when one is due ([Broker.lookLost]): memory only, never a read or a wait here. Found, or given up on after a good
-     * read 2 minutes on: no longer held.
+     * selling. Asking starts the background search when one is due ([Broker.lookLost]): memory only, never a read or a wait here. Found
+     * ([bossFound]: Boss told what became of it), or given up on after a good read 2 minutes on: no longer held. Eighth round: the arms'
+     * stops (which the app watches at their level) are not rested beside it ([ArmLive.noStopBeside]); the protections' put-back rests one
+     * only for what his exit leaves ([lessBossLost]); every exit sale beside it sells only that ([lessBossLost]).
      */
     fun bossExitLost(exchange: String, symbol: String, product: String): Boolean {
         val key = bossLostKey(exchange, symbol, product)
         val now = System.currentTimeMillis()
-        return when (Broker.lookLost(key)) {
+        // (Its order as noted, read before the look that may take it off: the side and size of what was found.)
+        val noted = Broker.lostOrder(key) ?: bossLost[key]?.order
+        return when (val l = Broker.lookLost(key)) {
             Broker.LostLook.Searching -> true
             // (Review: found - in Zerodha's book from now on, where the stops' own checks count it - held [Broker.FOUND_COUNTED_MS] more, so
             // a read begun just before it was found never puts a stop back beside it.)
-            is Broker.LostLook.Found -> { bossFoundAt[key] = now; true }
-            else -> {
+            is Broker.LostLook.Found -> {
+                bossFoundAt[key] = now
+                bossFoundQty[key] = FoundQty(noted?.quantity ?: l.qty, noted?.side ?: Kite.Side.SELL, now)
+                bossFound(key, l, noted)
+                true
+            }
+            Broker.LostLook.GaveUp -> { bossLost.remove(key)?.let { runCatching { Protections.bossLostChanged() } }; false }
+            null -> {
                 val at = bossFoundAt[key] ?: return false
                 // (Review: dropped once its time is up - the map never grows with the day's found exits.)
                 (now - at < Broker.FOUND_COUNTED_MS).also { held -> if (!held) bossFoundAt.remove(key, at) }
@@ -251,17 +317,124 @@ internal object SquareOffExit {
         }
     }
     private val bossFoundAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    /** 23 Nov 2026 (B6 review, eighth round): a lost exit just found - its size and side - for [bossLostQty]'s short count after it is found. */
+    private data class FoundQty(val qty: Int, val side: Kite.Side, val at: Long)
+    private val bossFoundQty = java.util.concurrent.ConcurrentHashMap<String, FoundQty>()
+    /**
+     * 23 Nov 2026 (B6 review, eighth round, review): how long a found exit is still counted by the exits' sizes - long enough for a read begun
+     * just before it was found, short enough that its working order or fill (in the book from then on) is not counted twice for long.
+     */
+    private const val BOSS_FOUND_SIZING_MS = 5_000L
+    /** TEST ONLY: the found exit under [key] found [ms] earlier than it was ([Broker.FOUND_COUNTED_MS]). */
+    internal fun ageBossFoundForTest(key: String, ms: Long) { bossFoundAt.computeIfPresent(key) { _, at -> at - ms } }
+    /** TEST ONLY: Boss's lost exits forgotten from memory, as after a restart (the marks' file kept). */
+    internal fun forgetBossLostForTest() { bossLost.clear(); bossFoundAt.clear(); bossFoundQty.clear() }
+    /** 23 Nov 2026 (B6 review, eighth round): Erase everything - Boss's lost exits forgotten (their watches end with them). Memory only. */
+    internal fun forgetBossLostForErase() { bossLost.clear(); bossFoundAt.clear(); bossFoundQty.clear() }
+
+    /**
+     * 23 Nov 2026 (B6 review, eighth round, m1: a lost exit found was never said): Boss's lost exit [l] found in Zerodha's book - its state
+     * read (in the background, never on the caller's path) and said: what went (booked like any exit of his: its owner, the ledger, his
+     * trade log), or Zerodha's refusal (the position still open: the hold ends now, so its stops go back on the next look), or still working.
+     */
+    private fun bossFound(key: String, l: Broker.LostLook.Found, noted: Kite.Order?) {
+        val rec = bossLost.remove(key)
+        runCatching { bossScope.launch { tellFound(key, rec, l, noted) } }
+    }
+
+    /** 23 Nov 2026 (B6 review, eighth round): how long a found exit still working is followed before what became of it is said anyway. */
+    private const val BOSS_FOLLOW_MS = 15 * 60_000L
+    private val ENDED = setOf("COMPLETE", "REJECTED", "CANCELLED")
+
+    private suspend fun tellFound(key: String, rec: BossLost?, l: Broker.LostLook.Found, noted: Kite.Order?) {
+        // (Review: no longer kept on disk first - written before he is told or it is booked, so a restart a moment later never tells or books
+        // it twice.)
+        if (rec != null) runCatching { Protections.bossLostWritten() }
+        val sym = rec?.order?.tradingSymbol ?: noted?.tradingSymbol ?: l.symbol
+        val side = rec?.order?.side ?: noted?.side ?: Kite.Side.SELL
+        val source = rec?.source ?: Origins.MANUAL
+        runCatching { Strategies.tagOwner("kite:${l.id}", source) }
+        // (Review: one still working is followed until it ends - at most [BOSS_FOLLOW_MS] - so what went is said and booked whole.)
+        val until = System.currentTimeMillis() + BOSS_FOLLOW_MS
+        var f: Broker.Fill? = null
+        while (true) {
+            f = try { Broker.awaitOrder(l.id) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { f }
+            if (f != null && f.status in ENDED || System.currentTimeMillis() >= until) break
+            kotlinx.coroutines.delay(5_000L)
+        }
+        val ended = f != null && f.status in ENDED
+        val words = when {
+            f == null -> "Your exit on $sym was found at Zerodha (order ${l.id}), but its state could not be read: check Kite."
+            f.filled > 0 -> "Your exit on $sym went: ${side.name} ${f.filled} at ${"%.2f".format(java.util.Locale.ENGLISH, f.avgPrice)}." +
+                (if (f.filled < l.qty) (if (ended) " The other ${l.qty - f.filled} did not go (${f.status.lowercase()}); that part is still open and its stops go back."
+                    else " The other ${l.qty - f.filled} is still working at Zerodha (order ${l.id}): check Kite.") else "")
+            f.status == "REJECTED" || f.status == "CANCELLED" -> {
+                // (Nothing sold: no grace, nor counted as going - the stops taken out for it go back on the next look.)
+                bossFoundAt.remove(key); bossFoundQty.remove(key); Broker.forgetFound(key)
+                "Your exit on $sym was ${f.status} by Zerodha${f.message.takeIf { it.isNotBlank() }?.let { " ($it)" } ?: ""}. The position is still " +
+                    "open; its stops go back."
+            }
+            else -> "Your exit on $sym is at Zerodha (order ${l.id}, ${f.status.lowercase()}), not filled yet: check Kite."
+        }
+        if (f != null && f.filled > 0) {
+            rec?.session?.let { day -> runCatching { Ledger.attachOrders(day, listOf(f.orderId), null, null) } }
+            if (source.startsWith(Origins.MANUAL)) runCatching {
+                com.optionslab.app.ira.BossTradeLog.filled("kite:${f.orderId}", sym, side == Kite.Side.BUY, live = true, entry = f.avgPrice, closing = true)
+            }
+        }
+        runCatching { Diag.record("zerodha", words) }
+        runCatching { com.optionslab.app.work.Alerts.post(words, if (f != null && f.filled > 0) com.optionslab.app.work.Alerts.Kind.SUCCESS
+            else com.optionslab.app.work.Alerts.Kind.ERROR, "Zerodha") }
+    }
+
+    /**
+     * 23 Nov 2026 (B6 review, eighth round): Boss's lost exits closing [side] on [symbol]'s [product] row, their quantity. Each is asked after
+     * first ([bossExitLost]: a search due starts, one found or given up on is settled now), so a size is never cut for one already known.
+     * Memory only.
+     */
+    fun bossLostQty(symbol: String, product: String, side: Kite.Side, exchange: String? = null): Int {
+        var n = 0
+        for (k in Broker.lostKeys(BOSS_LOST)) {
+            val parts = k.removePrefix(BOSS_LOST).split(':')
+            if (parts.size != 3 || parts[1] != symbol || parts[2] != product || (exchange != null && parts[0] != exchange)) continue
+            val o = Broker.lostOrder(k) ?: continue
+            // (Review: counted for as long as it is still looked for - Searching, whatever the count window: the order book may be failing.)
+            val still = runCatching { bossExitLost(parts[0], symbol, product) }.getOrDefault(true) && Broker.lostPending(k)
+            if (still && o.side == side) n += o.quantity
+        }
+        // (Found a moment ago: counted [BOSS_FOUND_SIZING_MS] more - a read begun just before it was found does not show it.)
+        val now = System.currentTimeMillis()
+        bossFoundQty.entries.removeIf { now - it.value.at >= BOSS_FOUND_SIZING_MS }
+        for ((k, f) in bossFoundQty) {
+            val parts = k.removePrefix(BOSS_LOST).split(':')
+            if (parts.size == 3 && parts[1] == symbol && parts[2] == product && (exchange == null || parts[0] == exchange) && f.side == side) n += f.qty
+        }
+        return n
+    }
+
+    /**
+     * 23 Nov 2026 (B6 review, eighth round, M1: Boss's lost exit was counted only by the square-offs - an arm's exit at its level, a strategy
+     * leg's, Pine's or a protection's target sale still sold the whole holding beside it): [held] (signed, as Zerodha holds it) less what
+     * his lost exits on the row may be selling - toward nothing, never past it. Every exit sale and stop size beside it asks this (the
+     * square-offs count it through [lostPendingProviders] instead). Memory only.
+     */
+    fun lessBossLost(held: Int, symbol: String, product: String, exchange: String? = null): Int {
+        if (held == 0) return 0
+        val lost = bossLostQty(symbol, product, if (held > 0) Kite.Side.SELL else Kite.Side.BUY, exchange)
+        if (lost <= 0) return held
+        return if (held > 0) (held - lost).coerceAtLeast(0) else (held + lost).coerceAtMost(0)
+    }
 
     /** 23 Nov 2026 (B6 review, seventh round): Boss's own exit on any product row of [exchange]:[symbol] still looked for ([bossExitLost]). */
     fun bossExitLostOn(exchange: String, symbol: String): Boolean {
         if (bossFoundAt.isNotEmpty()) System.currentTimeMillis().let { now -> bossFoundAt.entries.removeIf { now - it.value >= Broker.FOUND_COUNTED_MS } }
-        return Broker.lostKeys("bossexit:$exchange:$symbol:").any { k -> bossExitLost(exchange, symbol, k.substringAfterLast(':')) } ||
-            bossFoundAt.keys.any { k -> k.startsWith("bossexit:$exchange:$symbol:") && bossExitLost(exchange, symbol, k.substringAfterLast(':')) }
+        return Broker.lostKeys("$BOSS_LOST$exchange:$symbol:").any { k -> bossExitLost(exchange, symbol, k.substringAfterLast(':')) } ||
+            bossFoundAt.keys.any { k -> k.startsWith("$BOSS_LOST$exchange:$symbol:") && bossExitLost(exchange, symbol, k.substringAfterLast(':')) }
     }
 
     init {
         // (23 Nov 2026, B6 review, seventh round: Boss's own exit sale whose reply was lost is counted by the square-offs, as each book's own.)
-        lostPendingProviders[BOSS_OWNER] = { sym, product -> Broker.lostSales("bossexit:", sym, product) }
+        lostPendingProviders[BOSS_OWNER] = { sym, product -> Broker.lostSales(BOSS_LOST, sym, product) }
     }
 
     /**

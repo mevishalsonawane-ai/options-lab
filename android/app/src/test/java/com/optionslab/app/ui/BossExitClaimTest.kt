@@ -151,7 +151,8 @@ class BossExitClaimTest : RobolectricTest() {
         assertTrue("closed: no Kite advice (sixth round): $why", why.endsWith("so nothing of it is left to sell and nothing was sent."))
         assertEquals("nothing sent", placed, kite.placed.size)
         assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$ce:NRML").first)
-        assertEquals(null, SquareOffExit.exitClaimedBy("NFO", ce, "NRML"))
+        // (Eighth round: let go in the send's own finally, just after its words are shown - waited for briefly, never assumed done.)
+        BrokerArea.await("the row's claim let go", 3_000) { (SquareOffExit.exitClaimedBy("NFO", ce, "NRML") == null).takeIf { it } }
     }
 
     /**
@@ -175,7 +176,8 @@ class BossExitClaimTest : RobolectricTest() {
         assertTrue("nothing left to close, so no Kite advice: $why", why.endsWith("before its positions show it)."))
         assertEquals("the part sent, once", listOf("75"), sells().drop(before).map { it.form["quantity"] })
         assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$ce:NRML").first)
-        assertEquals(null, SquareOffExit.exitClaimedBy("NFO", ce, "NRML"))
+        // (Eighth round: let go in the send's own finally, just after its words are shown - waited for briefly, never assumed done.)
+        BrokerArea.await("the row's claim let go", 3_000) { (SquareOffExit.exitClaimedBy("NFO", ce, "NRML") == null).takeIf { it } }
     }
 
     /**
@@ -709,13 +711,21 @@ class BossExitClaimTest : RobolectricTest() {
             assertTrue(why, why.endsWith("If it must go now, close it in Kite."))
             assertEquals("nothing sold beside it", mine, kite.placed.size)
             assertEquals(75, kite.positions.getValue("NFO:$ce:NRML").first)
-            // (Seventh round: its taken-over mark ended - the protection never places its stop again beside the fired GTT's sale.)
-            assertFalse("its mark ended", Protections.isTakenOver("gtt:$gid"))
+            // (Eighth round, m2: the leg never filled, so its taken-over mark stays - and the protection's put-back counts the fired GTT's sale,
+            // working though Zerodha's book does not show it, as cover: nothing beside it.)
+            assertTrue("its mark kept", Protections.isTakenOver("gtt:$gid"))
             val gttsPlaced = kite.requests.count { it.method == "POST" && it.path == "/gtt/triggers" }
             com.optionslab.app.data.Market.testClock = com.optionslab.app.testing.MarketClockRule.clockAt(12, 5)   // past its first minute
             runBlocking { Protections.tick() }
             assertEquals("no stop or target placed beside the fired GTT's sale", mine, kite.placed.size)
             assertEquals("no GTT placed again either", gttsPlaced, kite.requests.count { it.method == "POST" && it.path == "/gtt/triggers" })
+            // That sale cancelled by Zerodha unfilled: the protection is placed again - never ended "NOT protected".
+            kite.reject(oid.get()!!, message = "Cancelled by the exchange", status = "CANCELLED")
+            runBlocking { Protections.tick() }
+            runBlocking { Protections.tick() }
+            val back = runBlocking { Protections.active() }.single()
+            assertTrue("placed again: $back", back.gttId != null || back.stopOrderId != null)
+            assertFalse(com.optionslab.app.work.Alerts.posted.any { it.text.contains("NOT protected") })
         } finally { com.optionslab.app.data.DayOco.resetForTest(); kite.keepDeletedGtts = false }
     }
 
@@ -1014,7 +1024,9 @@ class BossExitClaimTest : RobolectricTest() {
         try {
             m.sendPlan()
             val why = refused(m)
-            assertTrue(why, why.contains("the exit may have gone") && why.contains("Checking for 2 minutes - no stop is put back meanwhile"))
+            assertTrue(why, why.contains("the exit may have gone") && why.contains("Checking for 2 minutes - no stop goes back beside it meanwhile"))
+            // (Eighth round: told as an alert too, not only on the Trade screen.)
+            assertTrue(com.optionslab.app.work.Alerts.posted.any { it.text.startsWith("Zerodha's reply to your exit on $ce was lost") })
             assertEquals("its stop came out for it", "CANCELLED", kite.order(p.stopOrderId!!).status)
             assertTrue("looked for", Broker.lostPending(SquareOffExit.bossLostKey("NFO", ce, "NRML")))
             com.optionslab.app.data.Market.testClock = com.optionslab.app.testing.MarketClockRule.clockAt(12, 5)   // past its first minute
@@ -1037,5 +1049,101 @@ class BossExitClaimTest : RobolectricTest() {
         val answer = BrokerArea.await("Jarvis's answer", 40_000) { said.get() }
         assertTrue(answer, answer.startsWith("Zerodha's reply to your exit on $ce was lost; the exit may have gone."))
         assertFalse(answer, answer.contains("Zerodha refused"))
+    }
+
+    // ---- eighth round --------------------------------------------------------------------------------------------------------------
+
+    /**
+     * m2: the protection's GTT fires as the takeover deletes it, its sale filling half the position at once; the leg sells the rest and fills.
+     * Once the leg filled, the GTT's taken-over mark ends - nothing is put back beside the sales, and the account ends flat.
+     */
+    @Test fun aFiredGttsMarkEndsOnceTheLegFilled() {
+        com.optionslab.app.data.DayOco.resetForTest(on = true)
+        try {
+            kite.position(ce, 150, 90.0)
+            runBlocking { Protections.protectLive(ce, "NFO", "NRML", 75, 100.0, 90.0, null, 130.0) }
+            val gid = kite.gtts.keys.single()
+            val m = model()
+            m.planSquareOff(position(ce))
+            BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
+            kite.keepDeletedGtts = true
+            var claimed = 0
+            val oid = java.util.concurrent.atomic.AtomicReference<String?>()
+            fun arm() {
+                kite.afterNext("/gtt/triggers") {
+                    if (SquareOffExit.exitClaimedBy("NFO", ce, "NRML")?.startsWith("${SquareOffExit.BOSS_OWNER}#") == true && ++claimed == 2) {
+                        kite.quote("NFO:$ce", 95.0, 94.95, 95.05)                       // its stop leg's LIMIT fills at once
+                        oid.set(kite.triggerGtt(gid))
+                    } else arm()
+                }
+            }
+            arm()
+            m.sendPlan()
+            BrokerArea.await("the send", 40_000) { m.sending.value.takeIf { it is Load.Done || it is Load.Failed } }
+            assertTrue("it fired", oid.get() != null && kite.order(oid.get()!!).status == "COMPLETE")
+            assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$ce:NRML").first)
+            assertFalse("its mark ended with the leg's fill", Protections.isTakenOver("gtt:$gid"))
+            val placed = kite.placed.size
+            com.optionslab.app.data.Market.testClock = com.optionslab.app.testing.MarketClockRule.clockAt(12, 5)
+            runBlocking { Protections.tick() }
+            assertEquals("nothing put back", placed, kite.placed.size)
+        } finally { com.optionslab.app.data.DayOco.resetForTest(); kite.keepDeletedGtts = false }
+    }
+
+    /**
+     * m1 and the found path: Boss's exit reached Zerodha and filled, but its reply was unsure and the book did not show it. It is held while
+     * looked for; once the book shows it, he is told it went (with its fill) and it is booked as his order; held 20 s more, then not.
+     */
+    @Test fun bossesLostExitFoundFilledIsSaidBookedAndHeldBriefly() {
+        val m = model()
+        protectAndPlan(m)
+        kite.trailReads = 100_000                                              // his exit will not show in the order book
+        kite.nextPlace(reply = FakeKite.Reply.GENERAL_EXCEPTION_AFTER_ACCEPT)
+        m.sendPlan()
+        val why = refused(m)
+        assertTrue(why, why.contains("the exit may have gone"))
+        assertTrue("told as an alert too", com.optionslab.app.work.Alerts.posted.any { it.text.startsWith("Zerodha's reply to your exit on $ce was lost") })
+        val id = kite.orders.values.last { it.symbol == ce && it.side == "SELL" && it.type != "SL" }.id
+        val key = SquareOffExit.bossLostKey("NFO", ce, "NRML")
+        Broker.lostSearchInlineForTest = true; Broker.lostLookGapMsForTest = 0L
+        try {
+            assertTrue("held while looked for", SquareOffExit.bossExitLost("NFO", ce, "NRML"))
+            kite.showInBook()
+            assertTrue("found: held a moment more", SquareOffExit.bossExitLost("NFO", ce, "NRML"))
+            val said = BrokerArea.await("what became of it", 30_000) {
+                com.optionslab.app.work.Alerts.posted.firstOrNull { it.text.startsWith("Your exit on $ce went:") }?.text }
+            assertTrue(said, said.startsWith("Your exit on $ce went: SELL 75 at "))
+            BrokerArea.await("booked as his order", 10_000) { runBlocking { com.optionslab.app.data.Strategies.owners() }["kite:$id"] }
+            assertTrue(SquareOffExit.bossExitLost("NFO", ce, "NRML"))
+            SquareOffExit.ageBossFoundForTest(key, Broker.FOUND_COUNTED_MS)
+            assertFalse("then no longer held", SquareOffExit.bossExitLost("NFO", ce, "NRML"))
+            assertEquals("sold", 0, kite.positions.getValue("NFO:$ce:NRML").first)
+        } finally { Broker.lostSearchInlineForTest = false; Broker.lostLookGapMsForTest = null }
+    }
+
+    /** m1: found refused by Zerodha - said with its reason; the position is still open, so the hold ends at once and its stop goes back. */
+    @Test fun bossesLostExitFoundRejectedIsSaidAndItsStopGoesBack() {
+        val m = model()
+        val p = protectAndPlan(m)
+        kite.trailReads = 100_000
+        kite.nextPlace(FakeKite.Scenario(reply = FakeKite.Reply.GENERAL_EXCEPTION_AFTER_ACCEPT, outcome = FakeKite.Outcome.REJECT,
+            message = "Insufficient funds"))
+        m.sendPlan()
+        refused(m)
+        assertEquals("its stop came out for it", "CANCELLED", kite.order(p.stopOrderId!!).status)
+        Broker.lostSearchInlineForTest = true; Broker.lostLookGapMsForTest = 0L
+        try {
+            kite.showInBook()
+            SquareOffExit.bossExitLost("NFO", ce, "NRML")
+            val said = BrokerArea.await("what became of it", 30_000) {
+                com.optionslab.app.work.Alerts.posted.firstOrNull { it.text.startsWith("Your exit on $ce was REJECTED by Zerodha") }?.text }
+            assertTrue(said, said.contains("(Insufficient funds)") && said.endsWith("The position is still open; its stops go back."))
+            assertFalse("no hold once refused", SquareOffExit.bossExitLost("NFO", ce, "NRML"))
+            com.optionslab.app.data.Market.testClock = com.optionslab.app.testing.MarketClockRule.clockAt(12, 5)
+            runBlocking { Protections.tick() }
+            runBlocking { Protections.tick() }
+            assertEquals("its stop is back", listOf(75), restingStops(ce))
+            assertEquals(75, kite.positions.getValue("NFO:$ce:NRML").first)
+        } finally { Broker.lostSearchInlineForTest = false; Broker.lostLookGapMsForTest = null }
     }
 }

@@ -444,4 +444,23 @@ class OrbReRestTest : RobolectricTest() {
         assertEquals("none sent beside it while it is looked for", 1, slCount())
         assertTrue(marketSells.isEmpty())
     }
+
+    /**
+     * B6 review, eighth round (missing test): Boss's own exit on the contract whose reply was lost may be selling it - no stop put back beside
+     * it (the app watches the level meanwhile) until it is known; given up on after a good read 2 minutes on, put back.
+     */
+    @Test fun noStopIsPutBackWhileBossesLostExitMayBeSellingIt() {
+        val s = held("orb")
+        kite.reject(s, message = exchangeCancel, status = "CANCELLED")
+        Broker.lostSearchInlineForTest = true; Broker.lostLookGapMsForTest = 0L
+        val key = SquareOffExit.bossLostKey("NFO", sym, "MIS")
+        Broker.noteLost(key, Kite.Order(sym, Kite.Side.SELL, 30, 30, "MIS", "MARKET", null), emptyList(), "Your exit")
+        pass()
+        assertEquals("no stop beside his exit", 0, slCount())
+        assertTrue("nothing sold either", marketSells.isEmpty())
+        Broker.ageLostForTest(key, Broker.LOST_SEARCH_MS + 1_000)
+        pass()
+        pass()
+        assertEquals("put back once it is known not to have gone", 1, slCount())
+    }
 }
