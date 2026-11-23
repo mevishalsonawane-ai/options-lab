@@ -74,6 +74,9 @@ class TestApp : Application() {
         // 19 Nov 2026: the square-offs' 15 s gap per contract after an exit off (the older tests run passes back to back on purpose);
         // its own tests switch it on.
         com.optionslab.app.data.SquareOffExit.resetForTest(gap = 0L)
+        // 22 Nov 2026 (B6 review, third round): the exits an earlier test sent ([ExitCoordinator]'s registry, a minute's memory) are not
+        // this test's - a square-off's fresh read would miss them (another fake Kite's orders) - so each test starts with none, as a new process.
+        com.optionslab.app.data.ExitCoordinator.restartForTest()
         com.optionslab.app.data.WatchClock.resetForTest()
         IdleSampler.install()
         NetworkGuard.install()
@@ -212,7 +215,7 @@ class TestApp : Application() {
         com.optionslab.app.ira.IraHub.testLive = { emptyList() }
         com.optionslab.app.ira.IraHub.testFeed = { "" }
         // Caches from an earlier test (the files behind them are already gone with its directories).
-        Paper.loadInlineForTest = false; Paper.wipe(); Strategies.wipe(); OrbArms.wipe(); ShadowArms.wipe(); PineAuto.wipe(); Protections.wipe(); TradeBook.wipe(); Journal.wipe(); com.optionslab.app.data.Diag.wipe()
+        Paper.loadInlineForTest = false; Paper.wipe(); Strategies.wipe(); OrbArms.wipe(); OrbArms.forgetSalesBookedForTest(); ShadowArms.wipe(); PineAuto.wipe(); Protections.wipe(); TradeBook.wipe(); Journal.wipe(); com.optionslab.app.data.Diag.wipe()
         com.optionslab.app.data.MarketRecorder.wipe()
         com.optionslab.app.data.McxMarket.wipe()
         com.optionslab.app.data.McxPaperArms.wipe(); com.optionslab.app.data.McxPaperArms.testDaily = null

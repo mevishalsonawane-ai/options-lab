@@ -82,7 +82,7 @@ class ClockLaneSquareOffTest : RobolectricTest() {
 
     @After fun down() {
         FlatBySquareOff.liveOwner = { sym -> com.optionslab.app.data.ArmLive.ownerOf(sym) }
-        FlatBySquareOff.liveBooksReady = { com.optionslab.app.data.ArmLive.view.value.let { it.loaded && !it.unreadable } }
+        FlatBySquareOff.liveBooksReady = { com.optionslab.app.data.ArmLive.view.value.let { it.loaded && !it.unreadable } && com.optionslab.app.data.OrbArms.bookReadHint }
         ClockLane.resetForTest()
         WatchWorkers.resetForTest()
         ExitCoordinator.resetForTest()

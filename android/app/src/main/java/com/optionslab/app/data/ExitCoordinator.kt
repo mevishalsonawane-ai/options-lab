@@ -205,6 +205,34 @@ object ExitCoordinator {
     }.getOrDefault(false)
 
     /**
+     * 22 Nov 2026 (B6 review, third round): whether [read] - a FRESH read of the orders (a square-off's, under the row's claim) - misses an
+     * exit sent from here on [exchange]:[symbol] in the last minute ([ExitDesk.KEEP_MS]) whose id Zerodha gave: its book trails that order,
+     * so the lag guard cannot count its fill - the caller leaves the row to its next look. Whatever the switch says (only ever less is
+     * sent). A lost reply (no id) is left to its sender's own count ([SquareOffExit.lostPendingProviders]) - it may never have become an
+     * order. Said in the diary. Memory only.
+     */
+    fun missesAnswered(exchange: String, symbol: String, who: String, read: List<Broker.OrderRow>): Boolean = runCatching {
+        val key = ExitDesk.key(exchange, symbol)
+        val miss = registry.missingFrom(ExitRegistry.Kind.ORDER, key, orderRows(read)).filter { it.state == ExitRegistry.State.ANSWERED }
+        if (miss.isEmpty()) return@runCatching false
+        count { it.copy(readAgain = it.readAgain + 1) }
+        record("$who $key: a fresh read of the orders missed ${words(miss)}; left to the next look")
+        true
+    }.getOrDefault(false)
+
+    /**
+     * 22 Nov 2026 (B6 review, third round): the quantity of the exits on the [side] of [exchange]:[symbol] sent from here in the last
+     * minute that are still on their way or lost their reply (no id from Zerodha yet) and that [read] does not show - but the sales sent
+     * under a tag in [exceptBy] (a square-off's own, or a book that counts its own sales). A stop (SL, SL-M) counts whoever sent it: it
+     * may be resting where the read does not show it. Memory only.
+     */
+    fun unshownPending(exchange: String, symbol: String, side: String, read: List<Broker.OrderRow>, exceptBy: Set<String> = emptySet()): Int = runCatching {
+        registry.missingFrom(ExitRegistry.Kind.ORDER, ExitDesk.key(exchange, symbol), orderRows(read))
+            .filter { it.state != ExitRegistry.State.ANSWERED && it.side.equals(side, ignoreCase = true) &&
+                (it.by !in exceptBy || it.type == "SL" || it.type == "SL-M") }.sumOf { it.qty }
+    }.getOrDefault(0)
+
+    /**
      * 21 Oct, enhancement round 3 (idea 1): what Zerodha holds of [exchange]:[symbol] [product] (net, signed) for an exit sender,
      * from a positions read made AFTER its read of the orders ([orders], that whole read). An exit sent from here a moment ago
      * can show COMPLETE in the orders before the positions move ([ExitDesk.positionsLag]); then the sender would find nothing
@@ -213,9 +241,12 @@ object ExitCoordinator {
      * positions cannot be read (as the senders' own reads did). Memory and Zerodha's reads only (no disk, no settings).
      * [first]: a positions read the caller already made after [orders] (a pass over many contracts): used as the first read,
      * so a contract with no exit of ours just filled costs no read at all.
+     * 22 Nov 2026 (B6 review): [readAgain] false - for a caller holding a book's lock on its stop checks (the ORB family's stop put back
+     * at Zerodha): nothing is read again, neither the positions nor the orders - a fill the positions trail counts as sold at once (as
+     * after the last read again), so it only ever lowers what is held, and never waits.
      */
     suspend fun held(exchange: String, symbol: String, product: String, who: String, orders: List<Broker.OrderRow>,
-                     first: Broker.Positions? = null, forceLag: Boolean = false): Int {
+                     first: Broker.Positions? = null, forceLag: Boolean = false, readAgain: Boolean = true): Int {
         // 15 Nov, review: [forceLag] - the guard acts (reads again, then counts a trailing fill as sold) whatever its switch says, for a
         // caller putting a stop back after Boss's exit (Protections): it only ever lowers what is held, so what is placed.
         val guard = lagOn || forceLag
@@ -261,7 +292,13 @@ object ExitCoordinator {
         fun known(b: Broker.Positions): Broker.Positions = if (b.unknownForExit(symbol, product)) throw java.io.IOException("$symbol's positions row could not be read") else b
         if (!forceLag && mine.isEmpty() && fills.none { ExitDesk.filledRecently(it, now) }) return rows(known(first ?: Broker.positionBook())).sumOf { it.qty }
         var given = first
-        var (book, left) = ExitDesk.settleHeld(guard, { given?.also { given = null } ?: Broker.positionBook() }, ::lag) { how, n -> noteLag(key, who, how, n) }
+        var (book, left) = ExitDesk.settleHeld(guard, { given?.also { given = null } ?: Broker.positionBook() }, ::lag,
+            waits = if (readAgain) ExitDesk.REREAD_MS else LongArray(0)) { how, n ->
+            // (Not read again: said as it is - the trailing fill counted as sold at once.)
+            if (!readAgain && how == ExitDesk.Lag.SUBTRACTED) { count { it.copy(lagSubtracted = it.lagSubtracted + 1) }
+                record("$who $key: its positions read did not show $n filled by an exit; counted as sold (not read again)") }
+            else noteLag(key, who, how, n)
+        }
         if (converted) {
             // Review (round 5): the other product's row may show a fill that came AFTER the orders were read (Boss's MIS sell, an MIS
             // stop): that is not a conversion, and taking it as one would hide a real lag. On, the orders are read again (they lead
@@ -269,7 +306,7 @@ object ExitCoordinator {
             // this product's own lag stands, as before this round. Off (shadow): logged only, nothing read.
             val words = rowsWords(book, symbol, exchange)
             if (guard) {
-                val fresh = runCatching { Broker.orders(fresh = true) }.getOrNull()
+                val fresh = if (readAgain) runCatching { Broker.orders(fresh = true) }.getOrNull() else null
                 val again = runCatching {
                     if (fresh == null) lags(book, fills, allFills).first
                     else lags(book, fillsOf(fresh, oneProduct = true), fillsOf(fresh, oneProduct = false)).second

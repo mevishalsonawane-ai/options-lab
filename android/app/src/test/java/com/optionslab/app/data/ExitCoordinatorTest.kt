@@ -467,12 +467,16 @@ class ExitCoordinatorTest : RobolectricTest() {
         assertTrue(ExitCoordinator.countsForTest().lagSubtracted >= 1)
     }
 
-    @Test fun anExpiryPassWithNoExitOfOursJustFilledReadsThePositionsOnce() {
+    /**
+     * (22 Nov 2026, B6 review, third round: the square-off now works its sale out from a fresh read of the orders under the row's claim and
+     * a positions read after it - so one more read than the pass's own; still no read again when no exit of ours just filled.)
+     */
+    @Test fun anExpiryPassWithNoExitOfOursJustFilledReadsThePositionsOnceMoreUnderTheClaim() {
         ExitCoordinator.resetForTest(lagOn = true)
         kite.position(ce, 75, 20.0)
         kite.requests.clear()
         pass()
-        assertEquals(1, positionReads())
+        assertEquals("the pass's read, and one after the fresh orders read", 2, positionReads())
         assertEquals(75, sells())
     }
 

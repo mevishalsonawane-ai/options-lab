@@ -41,8 +41,14 @@ object ExpirySquareOff {
      * 19 Nov 2026 (second review of the clock lane: it runs this from the watch's first seconds, a restart at 15:06 included): whether
      * the arms' live book is read, as [FlatBySquareOff.liveBooksReady]. Until it is, every live position counts as an arm's (never
      * sold as Boss's own before the backstop) and the day is not marked done. Replaceable in tests.
+     * 22 Nov 2026 (B6 review): the ORB / Liquidity book read in this process too ([OrbArms.bookReadHint]) - its lost exit sales, kept in
+     * that book across a restart, are known only then ([SquareOffExit.lostPendingProviders]).
      */
-    @Volatile internal var liveBooksReady: () -> Boolean = { ArmLive.view.value.let { it.loaded && !it.unreadable } }
+    @Volatile internal var liveBooksReady: () -> Boolean = { ArmLive.view.value.let { it.loaded && !it.unreadable } && OrbArms.bookReadHint }
+
+    /** TEST ONLY (22 Nov 2026, B6 review): run after the live pass's reads of Zerodha's books, before it sends anything. Debug builds only. */
+    @Volatile internal var testAfterReads: (suspend () -> Unit)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }; field = v }
 
     /** What the owner was already told today ("day|what"), so a retry every pass does not repeat it. */
     private val told = HashSet<String>()
@@ -112,6 +118,7 @@ object ExpirySquareOff {
             val read = runCatching { Broker.orders() }.getOrElse { unread = true; return@runCatching }
             val working = read.filter { it.working }
             val positions = Broker.positionBook()
+            testAfterReads?.invoke()
             // 20 Nov 2026 (deep review): a row left out as malformed may be a contract expiring today: every row that was read is closed
             // as ever (only a contract whose own row was left out waits), and the pass counts as unread, so the day is not marked done and
             // the next pass looks again.
