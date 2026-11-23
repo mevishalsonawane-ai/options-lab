@@ -206,6 +206,9 @@ object PositionsFirst {
      * something, or one could not be read.
      */
     internal suspend fun restoreLive(): Boolean {
+        // (23 Nov 2026, B6 review, ninth round: the protections' marks first - Boss's own exits whose reply was lost, kept there, hold and
+        // count before any book below looks at its stops or exits.)
+        runCatching { Protections.loadMarksNow() }
         val books = ArrayList<Pair<String, suspend () -> Boolean>>()
         fun one(name: String, f: suspend () -> Boolean) { books += name to f }
         // 18 Oct: the paper strategies' live trades (their own book, [ArmLive]) - restored here, with their Zerodha stops, first.

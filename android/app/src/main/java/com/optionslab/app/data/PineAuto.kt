@@ -1279,6 +1279,13 @@ object PineAuto {
         // 22 Nov 2026 (B6 review): never beside an exit sale of this holding whose answer was lost and is still looked for ([lostExit]: it may
         // have filled - a stop now would rest on a flat contract). Its search's end puts the stop back when it should be.
         if (Broker.lostPending(lostExitKeyOf(item.id, h)) || foundSale(b, lostExitKeyOf(item.id, h)) != null) return h
+        // (23 Nov 2026, B6 review, ninth round: nor while Boss's own exit on the row whose reply was lost may be selling it - asked again on the
+        // next check; the app watches the level meanwhile.)
+        if (SquareOffExit.bossExitLost("NFO", sym, "MIS")) {
+            if (stopNotRested.size > 200) stopNotRested.clear()
+            stopNotRested += lostStopKey(item, h)
+            return h
+        }
         // (22 Nov 2026, B6 review: the contract's spec not read just now - tried again on the next checks, never left out silently.)
         val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: run { stopNotRested += lostStopKey(item, h); return h }
         // [at]: a stop put back where it rested (the profit lock may have moved it up: never lowered to the base).
@@ -1362,8 +1369,10 @@ object PineAuto {
                     return h.copy(stop = orphan.id, stopAt = orphan.trigger.takeIf { it > 0 } ?: trig)
                 }
             val others = sells.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
+            // (23 Nov 2026, B6 review, ninth round: less what Boss's own exit whose reply was lost may be selling.)
             val heldZ = runCatching { if (capToHeld) Broker.positionBook().net else Broker.positionsRecon().net }.getOrNull()
                 ?.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }?.sumOf { it.qty }
+                ?.let { SquareOffExit.lessBossLost(it, sym, "MIS", "NFO") }
             if (heldZ == null && capToHeld) { if (stopNotRested.size > 200) stopNotRested.clear(); stopNotRested += lostKey; return h }
             // (What Zerodha holds beyond this holding - other books' lots - is what the other sales may cover first; positions that
             // trail a fill, or cannot be read, count none, so the stop only ever rests for less, never more than held.)
@@ -1432,12 +1441,15 @@ object PineAuto {
             return h
         }
         if (covered == h.qty) { stopShort.remove(key); return h }
+        // (23 Nov 2026, B6 review, ninth round: never grown beside Boss's own exit whose reply was lost - asked again on the next check.)
+        if (SquareOffExit.bossExitLost("NFO", sym, "MIS")) return h
         val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return h
         val removingIds = b.removing.flatMap { it.ids.keys }.toSet()
         val others = book.filter { it.working && it.id != sid && it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side == "SELL" &&
             it.id !in removingIds }.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
         val heldZ = runCatching { Broker.positionBook().net }.getOrNull()
-            ?.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }?.sumOf { it.qty } ?: return h
+            ?.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }?.sumOf { it.qty }
+            ?.let { SquareOffExit.lessBossLost(it, sym, "MIS", "NFO") } ?: return h
         val lot = spec.lotSize.coerceAtLeast(1)
         val room = (minOf(h.qty, heldZ - others).coerceAtLeast(0) / lot) * lot
         if (room <= covered) return h

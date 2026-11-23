@@ -753,6 +753,20 @@ class ProtectionsB6Test : RobolectricTest() {
     }
 
     /**
+     * Ninth round: [Protections.mayOwn] - any id while the list is not read; once read, only an active protection's own stop or target, so
+     * Boss's exit from the app never puts the protections' hour-long mark on another book's order.
+     */
+    @Test fun onlyAProtectionsOwnOrdersMayBeItsOnceTheListIsRead() {
+        Protections.forgetMemoryForTest()
+        assertTrue("not read yet: may be", Protections.mayOwn("990000001"))
+        protect()
+        val p = active().single()
+        assertTrue(Protections.mayOwn(p.stopOrderId!!))
+        p.targetOrderId?.let { assertTrue(Protections.mayOwn(it)) }
+        assertFalse("another book's order", Protections.mayOwn("990000001"))
+    }
+
+    /**
      * Second round (nit with a safety effect): a read of the marks' file that fails for a moment (the Keystore) leaves them not loaded, and no
      * write replaces the file meanwhile; read later, its marks come back beside the new ones. One that fails authentication, or does not
      * parse, is set aside and the marks start afresh.
@@ -994,5 +1008,90 @@ class ProtectionsB6Test : RobolectricTest() {
         tick(); tick()
         assertEquals("put back for the 75 left, at once", listOf(75), stopQtys())
         assertEquals(75, held())
+    }
+
+    // ---- ninth round of the B6 review ----------------------------------------------------------------------------------------
+
+    /**
+     * MAJOR 1: a trailing protection put back for part beside Boss's lost exit, the price moved up meanwhile. The look that grows its stop
+     * ends there - the trail's modify on the look's older read would shrink it back - and the next look trails the grown stop: never shrunk.
+     */
+    @Test fun aTrailingStopGrownInALookKeepsItsGrownSize() {
+        kite.position(sym, 150, 100.0, product = "MIS")
+        val said = runBlocking { Protections.protectLive(sym, "NFO", "MIS", 150, 100.0, 90.0, 10.0, null) }
+        assertTrue(said, said.startsWith("Protected"))
+        val p = active().single()
+        at(12, 5)
+        Broker.lostSearchInlineForTest = true; Broker.lostLookGapMsForTest = 0L
+        SquareOffExit.noteBossLost(sell(75), kite.orders.keys.toList(), null, Origins.MANUAL)
+        Protections.noteTakenOver(listOf(p.stopOrderId!!))
+        runBlocking { Broker.cancel(p.stopOrderId!!) }
+        tick()
+        assertEquals(listOf(75), stopQtys())
+        kite.quote("NFO:$sym", 110.0, 109.95, 110.05)                       // the trail would move the stop up
+        Broker.ageLostForTest(SquareOffExit.bossLostKey("NFO", sym, "MIS"), Broker.LOST_SEARCH_MS + 1_000)
+        tick()
+        assertEquals("grown", listOf(150), stopQtys())
+        tick(); tick()
+        assertEquals("never shrunk back by the trail", listOf(150), stopQtys())
+        val q = active().single()
+        assertEquals(150, q.qty); assertEquals(null, q.whole)
+        assertTrue("trailed on the next look", kite.orders.values.single { it.symbol == sym && it.type == "SL" && it.working }.trigger > 90.0)
+    }
+
+    /**
+     * MAJOR 2: Boss's lost exit is counted at every moment of its hand-over - while its search writes down what it found, and between the
+     * look that takes it off and anything after - never nowhere in between.
+     */
+    @Test fun bossesFoundExitIsCountedThroughItsHandOver() {
+        kite.trailReads = 1_000                                              // his exit at Zerodha, its reply unsure, not in the book yet
+        val his = sell(75)
+        kite.nextPlace(reply = FakeKite.Reply.GENERAL_EXCEPTION_AFTER_ACCEPT)
+        runCatching { runBlocking { Broker.placeOrder(his, exit = true) } }
+        Broker.lostSearchInlineForTest = true; Broker.lostLookGapMsForTest = 0L
+        SquareOffExit.noteBossLost(his, kite.orders.keys.toList().dropLast(1), null, Origins.MANUAL)
+        assertEquals(75, SquareOffExit.bossLostQty(sym, "MIS", com.optionslab.engine.Kite.Side.SELL))
+        val seen = java.util.concurrent.ConcurrentHashMap<String, Int>()
+        Broker.lostFoundStepForTest = { step, key ->
+            if (key == SquareOffExit.bossLostKey("NFO", sym, "MIS")) seen[step] = Broker.lostQtyNow(SquareOffExit.BOSS_LOST, sym, "MIS",
+                com.optionslab.engine.Kite.Side.SELL, "NFO", 5_000L)
+        }
+        try {
+            kite.showInBook()
+            assertTrue(SquareOffExit.bossExitLost("NFO", sym, "MIS"))
+            assertEquals("counted while its search writes it down", 75, seen["found"])
+            assertEquals("counted as it is taken off", 75, seen["handed"])
+            assertEquals("and just after", 75, SquareOffExit.bossLostQty(sym, "MIS", com.optionslab.engine.Kite.Side.SELL))
+        } finally { Broker.lostFoundStepForTest = null }
+    }
+
+    /** Minor: the square-offs count Boss's lost exit on a short row too (a BUY). */
+    @Test fun theSquareOffsCountBossesLostBuyOnAShortRow() {
+        SquareOffExit.noteBossLost(com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.BUY, 75, 75, "MIS", "MARKET", null),
+            emptyList(), null, Origins.MANUAL)
+        assertEquals(75, SquareOffExit.lostPendingProviders.getValue(SquareOffExit.BOSS_OWNER)(sym, "MIS"))
+        assertEquals(0, SquareOffExit.lessBossLost(-75, sym, "MIS"))
+    }
+
+    /** Minor: the start's positions step reads Boss's lost exits back before any book looks - not only when the protections' list loads. */
+    @Test fun bossesLostExitIsBackFromTheStartsFirstStep() {
+        protect()
+        val key = SquareOffExit.bossLostKey("NFO", sym, "MIS")
+        SquareOffExit.noteBossLost(sell(75), kite.orders.keys.toList(), null, Origins.MANUAL)
+        Protections.restartForTest()
+        SquareOffExit.forgetBossLostForTest(); Broker.forgetLostForTest()
+        assertFalse(Broker.lostPending(key))
+        runBlocking { PositionsFirst.restoreLive() }
+        assertTrue("looked for again from the start", Broker.lostPending(key))
+    }
+
+    /** Minor: Erase everything forgets Boss's lost exits in Zerodha's lost-reply records too. */
+    @Test fun eraseForgetsBossesLostExits() {
+        SquareOffExit.noteBossLost(sell(75), emptyList(), null, Origins.MANUAL)
+        assertTrue(Broker.lostPending(SquareOffExit.bossLostKey("NFO", sym, "MIS")))
+        Protections.wipe()
+        assertFalse(Broker.lostPending(SquareOffExit.bossLostKey("NFO", sym, "MIS")))
+        assertEquals(0, SquareOffExit.bossLostQty(sym, "MIS", com.optionslab.engine.Kite.Side.SELL))
+        assertTrue(SquareOffExit.bossLostRecords().isEmpty())
     }
 }

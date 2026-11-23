@@ -83,7 +83,8 @@ object Ledger {
                     val net = shortFill - (wing ?: 0.0)
                     t.copy(credit = net, breakeven = t.strike - net, wingDebit = wing)
                 } else t
-                e.copy(row = e.row.copy(ticket = tk), orders = e.orders + orderIds)
+                // (23 Nov 2026, B6 review, ninth round: an order attached once - a found lost exit booked again never doubles it.)
+                e.copy(row = e.row.copy(ticket = tk), orders = (e.orders + orderIds).distinct())
             }
         })
     }

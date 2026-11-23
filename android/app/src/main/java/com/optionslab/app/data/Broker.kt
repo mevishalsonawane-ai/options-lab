@@ -2503,6 +2503,29 @@ object Broker {
     /** 20 Nov 2026 (delta review): how long ago the lost reply under [key] was noted (null: none kept). */
     fun lostAgeMs(key: String): Long? = lostWrites[key]?.let { System.currentTimeMillis() - it.sinceMs }
 
+    /**
+     * 23 Nov 2026 (B6 review, ninth round, MAJOR 2: Boss's found exit was counted nowhere between the look that took it off and its caller's
+     * own note of it): the lost replies under [prefix] on [symbol]'s [product] row closing [side] ([exchange]: that one only, when given),
+     * read in one go with the found hand-over ([foundHandover]) - each one still kept, whatever its age (its search may be failing; one given
+     * up on is no longer kept), and each one found within [foundMs], whether still kept or already taken. Memory only, never a wait.
+     */
+    fun lostQtyNow(prefix: String, symbol: String, product: String, side: Kite.Side, exchange: String?, foundMs: Long): Int {
+        val now = System.currentTimeMillis()
+        fun row(o: Kite.Order) = o.side == side && o.tradingSymbol == symbol && o.product == product && (exchange == null || o.exchange == exchange)
+        synchronized(foundHandover) {
+            val kept = lostWrites.entries.sumOf { (k, w) ->
+                if (k.startsWith(prefix) && row(w.order) && (w.foundId == null || now - w.foundAtMs < foundMs)) w.order.quantity else 0
+            }
+            return kept + foundLately.entries.sumOf { (k, v) -> if (k.startsWith(prefix) && row(v.first) && now - v.second < foundMs) v.first.quantity else 0 }
+        }
+    }
+
+    /** 23 Nov 2026 (B6 review, ninth round): every lost reply under [prefix] forgotten, kept or found (Erase everything). Memory only. */
+    fun forgetLostPrefix(prefix: String) {
+        lostWrites.keys.filter { it.startsWith(prefix) }.forEach { forgetLost(it) }
+        synchronized(foundHandover) { foundLately.keys.removeIf { it.startsWith(prefix) } }
+    }
+
     /** 23 Nov 2026 (B6 review, eighth round): the order kept under the lost reply [key], if any. Memory only. */
     fun lostOrder(key: String): Kite.Order? = lostWrites[key]?.order
 
@@ -2581,6 +2604,7 @@ object Broker {
                 if (foundLately.size > 200) foundLately.entries.removeIf { now - it.value.second > FOUND_COUNTED_MS }
                 foundLately[key] = w.order to (w.foundAtMs.takeIf { it > 0 } ?: now)
             }
+            lostFoundStepForTest?.invoke("handed", key)
             w.searching?.cancel()
             runCatching { Diag.record("zerodha", "${w.what} (${w.order.tradingSymbol}): its lost reply found in the book: order $found") }
             return LostLook.Found(found, w.order.quantity, w.order.triggerPrice).also { it.symbol = w.order.tradingSymbol }
@@ -2666,8 +2690,10 @@ object Broker {
                       val legSides: List<String> = emptyList(), val legQtys: List<Int> = emptyList(), val legProducts: List<String> = emptyList(),
                       /** 23 Nov 2026 (B6 review, fifth round): triggered, but Zerodha could not place its order (its result "failed", or refused). */
                       val placeFailed: Boolean = false,
-                      /** 23 Nov 2026 (B6 review, sixth round; B6-H): when it fired (its first order result's "timestamp", Zerodha's clock,
-                       *  "yyyy-MM-dd HH:mm:ss"); "" when not given. */
+                      /**
+                       * 23 Nov 2026 (B6 review, sixth round; B6-H): when it fired - its first order result's "timestamp" ("yyyy-MM-dd HH:mm:ss",
+                       * Zerodha's clock); "" when not given.
+                       */
                       val firedAt: String = "",
                       /** 23 Nov 2026 (B6-H round 3): when Zerodha last changed it (its "updated_at"; "" when not given). */
                       val updatedAt: String = "") {
@@ -2688,10 +2714,10 @@ object Broker {
             rows(g.optJSONArray("orders")).map { it.optString("transaction_type") },
             rows(g.optJSONArray("orders")).map { it.optInt("quantity") },
             rows(g.optJSONArray("orders")).map { it.optString("product") },
-            rows(g.optJSONArray("orders")).any { o -> o.optJSONObject("result")?.optJSONObject("order_result")?.let { r ->
+            placeFailed = rows(g.optJSONArray("orders")).any { o -> o.optJSONObject("result")?.optJSONObject("order_result")?.let { r ->
                 gttStr(r, "order_id").isBlank() && (gttStr(r, "status").equals("failed", ignoreCase = true) || gttStr(r, "rejection_reason").isNotBlank()) } == true },
-            rows(g.optJSONArray("orders")).firstNotNullOfOrNull { o -> o.optJSONObject("result")?.let { gttStr(it, "timestamp") }?.takeIf { it.isNotBlank() } }.orEmpty(),
-            g.optString("updated_at").takeIf { it != "null" } ?: "")
+            firedAt = rows(g.optJSONArray("orders")).firstNotNullOfOrNull { o -> o.optJSONObject("result")?.let { gttStr(it, "timestamp") }?.takeIf { it.isNotBlank() } }.orEmpty(),
+            updatedAt = g.optString("updated_at").takeIf { it != "null" } ?: "")
     }.sortedByDescending { it.created }.also { ExitCoordinator.gttsRead(it) }
 
     /**
