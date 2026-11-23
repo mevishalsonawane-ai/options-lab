@@ -2687,8 +2687,13 @@ object Broker {
                       val legSides: List<String> = emptyList(), val legQtys: List<Int> = emptyList(), val legProducts: List<String> = emptyList(),
                       /** 23 Nov 2026 (B6 review, fifth round): triggered, but Zerodha could not place its order (its result "failed", or refused). */
                       val placeFailed: Boolean = false,
-                      /** 23 Nov 2026 (B6 review, sixth round): when it fired (its first order result's "timestamp", "yyyy-MM-dd HH:mm:ss"); "" when not. */
-                      val firedAt: String = "") {
+                      /**
+                       * 23 Nov 2026 (B6 review, sixth round; B6-H): when it fired - its first order result's "timestamp" ("yyyy-MM-dd HH:mm:ss",
+                       * Zerodha's clock); "" when not given.
+                       */
+                      val firedAt: String = "",
+                      /** 23 Nov 2026 (B6-H round 3): when Zerodha last changed it (its "updated_at"; "" when not given). */
+                      val updatedAt: String = "") {
         val active: Boolean get() = status.lowercase() == "active"
         /** The quantity this GTT, while active, would send on [side] in [product] (its first leg: a single-leg stop). */
         fun covers(side: String, product: String): Int =
@@ -2706,9 +2711,10 @@ object Broker {
             rows(g.optJSONArray("orders")).map { it.optString("transaction_type") },
             rows(g.optJSONArray("orders")).map { it.optInt("quantity") },
             rows(g.optJSONArray("orders")).map { it.optString("product") },
-            rows(g.optJSONArray("orders")).any { o -> o.optJSONObject("result")?.optJSONObject("order_result")?.let { r ->
+            placeFailed = rows(g.optJSONArray("orders")).any { o -> o.optJSONObject("result")?.optJSONObject("order_result")?.let { r ->
                 gttStr(r, "order_id").isBlank() && (gttStr(r, "status").equals("failed", ignoreCase = true) || gttStr(r, "rejection_reason").isNotBlank()) } == true },
-            rows(g.optJSONArray("orders")).firstNotNullOfOrNull { o -> o.optJSONObject("result")?.let { gttStr(it, "timestamp") }?.takeIf { it.isNotBlank() } }.orEmpty())
+            firedAt = rows(g.optJSONArray("orders")).firstNotNullOfOrNull { o -> o.optJSONObject("result")?.let { gttStr(it, "timestamp") }?.takeIf { it.isNotBlank() } }.orEmpty(),
+            updatedAt = g.optString("updated_at").takeIf { it != "null" } ?: "")
     }.sortedByDescending { it.created }.also { ExitCoordinator.gttsRead(it) }
 
     /**
@@ -2841,6 +2847,15 @@ object Broker {
         val hist = call("GET", "/orders/${Kite.enc(orderId)}", budgetMs = budgetMs) as JSONArray
         if (hist.length() == 0) return null
         return orderRow(hist.getJSONObject(hist.length() - 1)).takeIf { it.id.isNotBlank() }
+    }
+
+    /**
+     * 23 Nov 2026 (B6-H round 4): every state Kite keeps of order [orderId] (GET /orders/{id}), oldest first - e.g. whether a modify ever
+     * took at the exchange. Throws when it cannot be read.
+     */
+    suspend fun orderHistory(orderId: String): List<OrderRow> {
+        val hist = call("GET", "/orders/${Kite.enc(orderId)}") as JSONArray
+        return (0 until hist.length()).map { orderRow(hist.getJSONObject(it)) }
     }
 
     /** One order's latest state (last entry of its history), or null if Kite has none yet. */

@@ -207,7 +207,8 @@ notes; match the surrounding code.
   own cancel, and with blank or unrecognised words, is Boss's: never put back, the app sells at the level. Exchange / RMS / market
   protection words, or a cancel outside market hours, are Zerodha's: put back. A GTT "deleted" with no app mark is Boss's. The app's own
   cancels (arm exits and Boss's manual exit from the app) are marked before they go and queued to be saved in the book before the cancel
-  goes, so a restart does not misread them (one written just after, while the book is busy, can be misread only in that moment).
+  goes, so a restart does not misread them (one written just after, while the book is busy, can be misread only in that moment). The
+  saved strategies' leg stops (SL orders and GTTs) follow the same rule (23 Nov), one Boss's manual exit from the app took out included.
   (22 Nov) The protections' marks (a square-off's, Boss's exit from the app, an app-watched target's sale) are saved the same way. Any
   mark whose cancel never took (refused, or its stop still seen working well after the cancel) ends, so Boss's later cancel of it is his.
   A protection's stop that its target's sale finds already cancelled (Zerodha refuses the app's cancel) is not the app's: its mark ends,

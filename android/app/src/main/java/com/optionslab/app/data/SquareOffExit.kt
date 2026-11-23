@@ -519,6 +519,8 @@ internal object SquareOffExit {
      * own one, as Boss's exit from the app marks them: the protections ([Protections.noteTakenOver]: a stop or target, or a day GTT,
      * found gone while the position is still held is placed again), the arms' live book ([ArmLive.markOwnCancels]) and the ORB /
      * Liquidity book ([OrbArms.markOwnCancels]). Memory at once; none of them waits on a book's lock or the disk.
+     * 23 Nov 2026 (B6-H): the saved strategies' book too ([Strategies.markOwnCancels]), so a leg's stop taken out here and found cancelled
+     * while the leg is still held rests again - never read as Boss's own cancel in Kite.
      */
     private suspend fun markTaken(exchange: String, symbol: String, ids: List<String>, gtts: List<String>) {
         if (ids.isEmpty() && gtts.isEmpty()) return
@@ -527,6 +529,7 @@ internal object SquareOffExit {
         val armIds = runCatching { ArmLive.view.value.let { v -> ids.filter { id -> !v.loaded || v.open.any { it.stopOrderId == id } } } }.getOrDefault(ids)
         runCatching { ArmLive.markOwnCancels(armIds) }
         runCatching { OrbArms.markOwnCancels(ids.filter { OrbArms.mayOwnStop(it) }) }
+        runCatching { Strategies.markOwnCancels(ids) }
     }
 
     /** 20 Nov 2026: [markTaken]'s marks taken back for [ids] whose cancel did not take (still working): a later cancel of them is Boss's. */
@@ -535,6 +538,7 @@ internal object SquareOffExit {
         runCatching { Protections.forgetTakenOver(ids) }
         runCatching { ArmLive.unmarkOwnCancels(ids) }
         runCatching { OrbArms.unmarkOwnCancels(ids) }
+        runCatching { Strategies.unmarkOwnCancels(ids) }
     }
 
     /**
