@@ -709,6 +709,13 @@ class BossExitClaimTest : RobolectricTest() {
             assertTrue(why, why.endsWith("If it must go now, close it in Kite."))
             assertEquals("nothing sold beside it", mine, kite.placed.size)
             assertEquals(75, kite.positions.getValue("NFO:$ce:NRML").first)
+            // (Seventh round: its taken-over mark ended - the protection never places its stop again beside the fired GTT's sale.)
+            assertFalse("its mark ended", Protections.isTakenOver("gtt:$gid"))
+            val gttsPlaced = kite.requests.count { it.method == "POST" && it.path == "/gtt/triggers" }
+            com.optionslab.app.data.Market.testClock = com.optionslab.app.testing.MarketClockRule.clockAt(12, 5)   // past its first minute
+            runBlocking { Protections.tick() }
+            assertEquals("no stop or target placed beside the fired GTT's sale", mine, kite.placed.size)
+            assertEquals("no GTT placed again either", gttsPlaced, kite.requests.count { it.method == "POST" && it.path == "/gtt/triggers" })
         } finally { com.optionslab.app.data.DayOco.resetForTest(); kite.keepDeletedGtts = false }
     }
 
@@ -878,7 +885,8 @@ class BossExitClaimTest : RobolectricTest() {
         val searches = Broker.callerSearchesForTest.get()
         m.sendPlan()
         val why = refused(m)
-        assertTrue(why, why.contains("No matching order was found at Zerodha; check the order book before trying again."))
+        assertTrue(why, why.startsWith("Zerodha's reply to your exit on $ce was lost") && why.contains("the exit may have gone") &&
+            why.endsWith("Don't send it again; check Kite."))
         assertEquals("no second search of its own", searches, Broker.callerSearchesForTest.get())
         // (Review: that sale may still exist - a second tap at once is held back beside it, named as his own earlier exit.)
         val sells = kite.placed.count { it.form["transaction_type"] == "SELL" }
@@ -886,7 +894,148 @@ class BossExitClaimTest : RobolectricTest() {
         BrokerArea.await("the exit planned again") { (m.plan.value as? Load.Done)?.value?.takeIf { m.sending.value == Load.Idle } }
         m.sendPlan()
         val again = refused(m)
-        assertTrue(again, again.contains("your own earlier exit of 75 on $ce"))
+        // (Seventh round: held back as his earlier exit that may have gone, while it is looked for.)
+        assertTrue(again, again.contains("your earlier exit on $ce may have gone (Zerodha's reply to it was lost)"))
         assertEquals("never a second sale beside it", sells, kite.placed.count { it.form["transaction_type"] == "SELL" })
+    }
+
+    // ---- seventh round --------------------------------------------------------------------------------------------------------------
+
+    /** The working stop orders on [sym], as (quantity) each. */
+    private fun restingStops(sym: String) = kite.orders.values.filter { it.symbol == sym && it.type == "SL" && it.working }.map { it.qty }
+
+    /**
+     * #1: a contract in two freeze slices with its protection's stops, then another contract. The first slice takes the stops out and fills;
+     * the second is refused (a book cannot tell yet whether a sale of its own is going). The send ends there - the other contract is not
+     * sent while the rest has no stop - Boss is told, and the stops go back for what is left.
+     */
+    @Test fun aLaterSliceRefusedAfterItsStopsCameOutEndsTheSend() {
+        val pe = BrokerArea.symbol("NIFTY", expiry, 24_500.0, "PE")
+        kite.quote("NFO:$pe", 50.0, 49.95, 50.05)
+        kite.position(pe, 75, 40.0)
+        kite.position(ce, 2700, 90.0)
+        val said = runBlocking { Protections.protectLive(ce, "NFO", "NRML", 2700, 100.0, 85.0, null, null) }
+        assertTrue(said, said.startsWith("Protected"))
+        assertEquals(2700, restingStops(ce).sum())
+        val m = model()
+        m.planSquareOffList(listOf(position(ce), position(pe)), "Square off")
+        val plan = BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
+        assertEquals(listOf(ce to 1800, ce to 900, pe to 75), plan.legs.map { it.tradingSymbol to it.quantity })
+        // Once the first slice's sale went, a book cannot tell yet whether a sale of its own on it is going.
+        kite.afterNext("/orders/regular") { SquareOffExit.lostPendingProviders["test"] = { s, _ -> if (s == ce) -1 else 0 } }
+        try {
+            m.sendPlan()
+            val why = refused(m)
+            assertTrue(why, why.startsWith("Legs 1 to 1 went. Not sent: ") && why.contains("cannot tell yet"))
+            assertTrue(why, why.contains("The legs after it were not sent: its stops, taken out for it, go back first."))
+            assertEquals("the first slice only", listOf(ce to "1800"), kite.placed.filter { it.form["transaction_type"] == "SELL" && it.form["order_type"] != "SL" }
+                .map { it.form["tradingsymbol"] to it.form["quantity"] })
+            assertEquals("the other contract not sent", 75, kite.positions.getValue("NFO:$pe:NRML").first)
+            assertEquals(900, kite.positions.getValue("NFO:$ce:NRML").first)
+        } finally { SquareOffExit.lostPendingProviders.remove("test") }
+        // Its stops go back for the 900 left (the send is over: hands off no more; past the protections' first minute).
+        com.optionslab.app.data.Market.testClock = com.optionslab.app.testing.MarketClockRule.clockAt(12, 5)
+        runBlocking { Protections.tick() }
+        runBlocking { Protections.tick() }
+        assertEquals("a stop for what is left", 900, restingStops(ce).sum())
+    }
+
+    /**
+     * #1, the same for BUY slices: a short in two freeze slices with its protection's buy-back stop, then a long's sale. The first slice takes the
+     * stop out and fills; the second is refused (the first is not in Zerodha's book yet). The send ends - the long is not sold while the rest of
+     * the short has no stop - Boss is told, and the stop goes back for what is left once the book shows the first.
+     */
+    @Test fun aLaterBuySliceRefusedAfterItsStopsCameOutEndsTheSend() {
+        val pe = BrokerArea.symbol("NIFTY", expiry, 24_500.0, "PE")
+        kite.quote("NFO:$pe", 50.0, 49.95, 50.05)
+        kite.position(pe, -2700, 60.0)
+        val said = runBlocking { Protections.protectLive(pe, "NFO", "NRML", -2700, 50.0, 65.0, null, null) }
+        assertTrue(said, said.startsWith("Protected"))
+        assertEquals(2700, restingStops(pe).sum())
+        val m = model()
+        m.planSquareOffList(listOf(position(pe), position(ce)), "Square off")
+        val plan = BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
+        assertEquals(listOf(Triple(pe, "BUY", 1800), Triple(pe, "BUY", 900), Triple(ce, "SELL", 75)),
+            plan.legs.map { Triple(it.tradingSymbol, it.side.name, it.quantity) })
+        val mine = kite.placed.size
+        kite.trailReads = 100_000                                            // the first slice's buy will not show in the order book
+        m.sendPlan()
+        val why = refused(m)
+        assertTrue(why, why.startsWith("Legs 1 to 1 went. Not sent: your previous leg on $pe"))
+        assertTrue(why, why.contains("The legs after it were not sent: its stops, taken out for it, go back first."))
+        assertEquals("the first slice only", listOf(Triple(pe, "BUY", "1800")),
+            kite.placed.drop(mine).map { Triple(it.form["tradingsymbol"], it.form["transaction_type"], it.form["quantity"]) })
+        assertEquals("the long not sold", 75, kite.positions.getValue("NFO:$ce:NRML").first)
+        assertEquals(-900, kite.positions.getValue("NFO:$pe:NRML").first)
+        // Its stop goes back for the 900 left once the book shows the first slice (past the protections' first minute).
+        kite.showInBook()
+        com.optionslab.app.data.Market.testClock = com.optionslab.app.testing.MarketClockRule.clockAt(12, 5)
+        runBlocking { Protections.tick() }
+        runBlocking { Protections.tick() }
+        assertEquals("a buy-back stop for what is left", 900, restingStops(pe).sum())
+        assertEquals("still short 900, never long", -900, kite.positions.getValue("NFO:$pe:NRML").first)
+    }
+
+    /**
+     * #2: the stop filled as the takeover took it out, so Zerodha shows the contract closed: its leg is done (nothing to put back), and the
+     * safe leg after it still goes - never "its stops go back first".
+     */
+    @Test fun aContractClosedByItsStopAsItCameOutLetsTheNextLegGo() {
+        val pe = BrokerArea.symbol("NIFTY", expiry, 24_500.0, "PE")
+        kite.quote("NFO:$pe", 50.0, 49.95, 50.05)
+        kite.position(pe, 75, 40.0)
+        val said = runBlocking { Protections.protectLive(ce, "NFO", "NRML", 75, 100.0, 85.0, null, 130.0) }
+        assertTrue(said, said.startsWith("Protected"))
+        val p = runBlocking { Protections.active() }.single()
+        val m = model()
+        m.planSquareOffList(listOf(position(ce), position(pe)), "Square off")
+        BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
+        kite.positionsTrailReads = 100_000
+        kite.afterNext("/orders/regular/${p.stopOrderId}") { kite.fill(p.stopOrderId!!, 85.0) }  // it triggered as the cancel went
+        m.sendPlan()
+        val why = partSent(m)
+        assertTrue(why, why.startsWith("$ce: not sent - your stop at Zerodha filled as it came out (75 sold)"))
+        assertTrue(why, why.endsWith(". $pe: all 75 sent."))
+        assertFalse(why, why.contains("go back first"))
+        assertEquals("the next leg went", listOf(pe to "75"), kite.placed.filter { it.form["transaction_type"] == "SELL" && it.form["tag"] == "iraalgo" }
+            .map { it.form["tradingsymbol"] to it.form["quantity"] })
+        assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$ce:NRML").first)
+    }
+
+    /**
+     * #4: Boss's exit whose reply was unsure (Kite's GeneralException, nothing in the book) may have gone: said so, looked for, and the stop
+     * taken out for it is not put back while it is - only once a good read 2 minutes on did not show it.
+     */
+    @Test fun bossesLostExitHoldsTheStopsPutBackUntilItIsKnown() {
+        val m = model()
+        val p = protectAndPlan(m)
+        kite.nextPlace(reply = FakeKite.Reply.GENERAL_EXCEPTION)
+        Broker.lostSearchInlineForTest = true; Broker.lostLookGapMsForTest = 0L
+        try {
+            m.sendPlan()
+            val why = refused(m)
+            assertTrue(why, why.contains("the exit may have gone") && why.contains("Checking for 2 minutes - no stop is put back meanwhile"))
+            assertEquals("its stop came out for it", "CANCELLED", kite.order(p.stopOrderId!!).status)
+            assertTrue("looked for", Broker.lostPending(SquareOffExit.bossLostKey("NFO", ce, "NRML")))
+            com.optionslab.app.data.Market.testClock = com.optionslab.app.testing.MarketClockRule.clockAt(12, 5)   // past its first minute
+            runBlocking { Protections.tick() }
+            assertEquals("no stop put back while it may be selling", 0, restingStops(ce).size)
+            Broker.ageLostForTest(SquareOffExit.bossLostKey("NFO", ce, "NRML"), Broker.LOST_SEARCH_MS + 1_000)
+            runBlocking { Protections.tick() }
+            runBlocking { Protections.tick() }
+            assertEquals("put back once a good read 2 minutes on did not show it", listOf(75), restingStops(ce))
+        } finally { Broker.lostSearchInlineForTest = false; Broker.lostLookGapMsForTest = null }
+    }
+
+    /** #5: Jarvis says the send's own words as they are - a lost exit is never put to Boss as "Zerodha refused". */
+    @Test fun jarvisSaysTheSendsOwnWordsWithoutZerodhaRefused() {
+        val m = model()
+        com.optionslab.app.ira.IraActions.attach(m)
+        kite.nextPlace(reply = FakeKite.Reply.GENERAL_EXCEPTION)
+        val said = java.util.concurrent.atomic.AtomicReference<String?>()
+        Thread { said.set(runBlocking { com.optionslab.app.ira.IraActions.closeLiveSymbol(ce) }) }.start()
+        val answer = BrokerArea.await("Jarvis's answer", 40_000) { said.get() }
+        assertTrue(answer, answer.startsWith("Zerodha's reply to your exit on $ce was lost; the exit may have gone."))
+        assertFalse(answer, answer.contains("Zerodha refused"))
     }
 }

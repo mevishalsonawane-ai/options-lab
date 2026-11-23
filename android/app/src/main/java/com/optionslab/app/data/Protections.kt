@@ -511,6 +511,8 @@ object Protections {
         var covered = 0
         var rested = 0
         var why: String? = null
+        // (23 Nov 2026, B6 review, seventh round: the slice whose stop may be resting - [STOP_LOST] - never said as "not protected".)
+        var lostQ = 0
         var targetMissed: String? = null
         var one: Item? = null
         // 22 Nov 2026 (B6 review, M5): intraday, each slice rests only its stop; its target is the app's ([Item.appTarget], as one order's).
@@ -528,6 +530,7 @@ object Protections {
                         note = STOP_LOST, auto = auto, appTarget = target != null)
                     list += item; save(list)
                     Broker.noteLost(lostStopKey(item), e.order, sent, "$symbol: its protection's stop", liveOnly = true)
+                    lostQ = q
                     why = "Zerodha's answer to one slice's stop was unsure: it may be resting, and the app looks for it"
                 } catch (e: Exception) {
                     if (e is kotlinx.coroutines.CancellationException) throw e
@@ -562,15 +565,26 @@ object Protections {
             covered += q
             rested++
         }
-        val shown = one ?: return "Not protected: ${why ?: "nothing could be placed"}"
+        // (Seventh round: the part with no stop is what is neither covered nor maybe covered by the slice looked for.)
+        val bare = total - covered - lostQ
+        val shown = one ?: run {
+            if (lostQ == 0) return "Not protected: ${why ?: "nothing could be placed"}"
+            val rest = if (bare > 0) " The other $bare has NO stop: set it again once that is known, or close it in Trade." else ""
+            if (bare > 0) unprotected("$symbol: $bare of $total has no stop at Zerodha (the stop for $lostQ may be resting: its answer was unsure).$rest")
+            return "$symbol: Zerodha's answer to its stop for $lostQ of $total was unsure, so it may be resting at Zerodha. The app looks for it - " +
+                "about 2 minutes at most - and places no other stop beside it meanwhile; check Kite's order book.$rest"
+        }
         val kind = if (s0 != null) "stop" else "target"
         val missed = (targetMissed?.let { " The target was not placed on every slice ($it); their stops rest at Zerodha." } ?: "") +
             (if (anyAppTarget) " $TARGET_BY_APP" else "")
         if (covered < total) {
-            unprotected("$symbol: only $covered of $total is protected at Zerodha. The $kind for the other ${total - covered} could not be " +
+            val maybe = if (lostQ > 0) " (the stop for $lostQ more may be resting: its answer was unsure, and the app looks for it)" else ""
+            if (bare <= 0) return "Protected $symbol at Zerodha in $rested slice${if (rested == 1) "" else "s"} of at most $freeze (the exchange's freeze " +
+                "quantity): ${shown.describe()} for $covered of $total$maybe.$missed"
+            unprotected("$symbol: only $covered of $total is protected at Zerodha$maybe. The $kind for the other $bare could not be " +
                 "placed ($why). That part has NO stop: set one for it yourself, or close it in Trade.")
             return "Partly protected $symbol at Zerodha: ${shown.describe()} for $covered of $total only (in $rested order${if (rested == 1) "" else "s"} " +
-                "of at most $freeze, the exchange's freeze quantity); the other ${total - covered} is NOT protected ($why).$missed"
+                "of at most $freeze, the exchange's freeze quantity)$maybe; the other $bare is NOT protected ($why).$missed"
         }
         return "Protected $symbol at Zerodha in $rested slices of at most $freeze (the exchange's freeze quantity): ${shown.describe()}.$missed"
     }
@@ -880,9 +894,13 @@ object Protections {
     private fun mustShowFor(ids: Collection<String>): Map<String, Int>? =
         ids.filter { exitDone(it) }.flatMap { exitOrders[it].orEmpty().entries }.associate { it.key to it.value }.takeIf { it.isNotEmpty() }
 
-    /** 15 Nov, review (F1): whether the order book [book] shows every one of [must] COMPLETE with its quantity filled. */
+    /**
+     * 15 Nov, review (F1): whether the order book [book] shows every one of [must] COMPLETE with its quantity filled. 23 Nov 2026 (B6 review,
+     * seventh round: an exit that filled part and then ended - cancelled or refused for the rest - never shows COMPLETE, and the stop waited the
+     * whole [EXIT_DONE_MS]): one that ended with its fill shown counts too.
+     */
     private fun bookShows(book: Collection<Broker.OrderRow>, must: Map<String, Int>?): Boolean =
-        must.isNullOrEmpty() || must.all { (id, q) -> book.any { it.id == id && it.status == "COMPLETE" && it.filled >= q } }
+        must.isNullOrEmpty() || must.all { (id, q) -> book.any { it.id == id && it.status in GONE && it.filled >= q } }
 
     private val exitFilled = java.util.concurrent.ConcurrentHashMap<String, Long>()
     private const val EXIT_DONE_MS = 120_000L
@@ -930,6 +948,9 @@ object Protections {
             // broker would be forgotten while it can still fill.
             list.replaceAll { if (it.id == id) it.copy(note = REMOVING) else it }
             save(list)
+            // (23 Nov 2026, B6 review, seventh round: one whose stop may be resting - looked for, and cancelled once found.)
+            if (p.note == STOP_LOST) return@withLock "${p.symbol}: its stop may be resting at Zerodha (its answer was unsure). The protection stays " +
+                "listed while the app looks for it - about 2 minutes at most - and cancels it once found; check Kite's order book."
             return@withLock "${p.symbol}: its stop or target could not be confirmed cancelled. The protection stays listed and is cancelled again on every pass until the broker confirms."
         }
         list.replaceAll { if (it.id == id) it.copy(active = false, note = note) else it }
@@ -944,7 +965,10 @@ object Protections {
         for ((i, p) in list.withIndex()) {
             if (!p.active || p.live != live || p.symbol != symbol || p.exchange != exchange) continue
             list[i] = if (cancelOrders(p, "position_closed")) p.copy(active = false, note = "position closed") else p.copy(note = REMOVING).also {
-                Alerts.error("$symbol: its protection's stop or target could not be confirmed cancelled; it is cancelled again on every pass.", "Protection")
+                // (23 Nov 2026, B6 review, seventh round: one whose stop may be resting - looked for, and cancelled once found.)
+                if (p.note == STOP_LOST) Alerts.error("$symbol: its protection's stop may be resting at Zerodha (its answer was unsure); the app " +
+                    "looks for it and cancels it once found - check Kite's order book.", "Protection")
+                else Alerts.error("$symbol: its protection's stop or target could not be confirmed cancelled; it is cancelled again on every pass.", "Protection")
             }
             changed = true
         }
@@ -962,6 +986,9 @@ object Protections {
         // exit cancelled): left behind, it would sell what is no longer held.
         if (p.live && p.gttId != null && !gttGone(p, cancelFired = true)) gone = false
         val today = Market.today().atStartOfDay(com.optionslab.engine.IST).toInstant().toEpochMilli()
+        // (23 Nov 2026, B6 review, seventh round: one whose stop may be resting - [STOP_LOST], no order id - removed by Boss, the square-off or
+        // an unhedged cover was ended with nothing to cancel, and a stop found later was left to sell what is no longer held: [lostStopGone].)
+        if (p.live && p.stopOrderId == null && p.gttId == null && p.stop != null && p.id >= today && !lostStopGone(p)) gone = false
         for (id in listOfNotNull(p.stopOrderId, p.targetOrderId)) {
             if (p.live) {
                 if (p.id < today) continue
@@ -975,6 +1002,46 @@ object Protections {
             }
         }
         return gone
+    }
+
+    /**
+     * 23 Nov 2026 (B6 review, seventh round): whether [p]'s stop that may be resting ([STOP_LOST]) is known gone, for its removal ([cancelOrders]).
+     * Its lost reply asked after ([Broker.lookLost]). Found: cancelled now and confirmed (not confirmed: noted again, so the next pass finds it
+     * and cancels it again). Still looked for: not gone - the protection is kept being removed and asked again each pass. Given up on (a good
+     * read 2 minutes on did not show it), or none was ever lost: gone. None kept for one that was (a restart: memory only): looked for again
+     * from when it went.
+     */
+    private suspend fun lostStopGone(p: Item): Boolean {
+        val key = lostStopKey(p)
+        if (!Broker.lostPending(key)) {
+            // (Only a lost stop's protection is removed with no order at all: one with none placed is ended at once, never kept removing.)
+            if (p.note != STOP_LOST && !(p.note == REMOVING && p.targetOrderId == null)) return true
+            noteLostStop(p)
+            return false
+        }
+        return when (val l = Broker.lookLost(key)) {
+            is Broker.LostLook.Found -> {
+                if (runCatching { Broker.orderState(l.id)?.status }.getOrNull() !in GONE) runCatching { Broker.cancel(l.id) }
+                (runCatching { Broker.orderState(l.id)?.status }.getOrNull() in GONE).also { done ->
+                    runCatching { Diag.record("protection", "${p.symbol}: its unsure stop found (order ${l.id}) as its protection was removed: " +
+                        if (done) "cancelled" else "not confirmed cancelled yet - asked again next pass") }
+                    if (!done) noteLostStop(p)
+                }
+            }
+            Broker.LostLook.Searching -> false
+            else -> true
+        }
+    }
+
+    /** 23 Nov 2026 (B6 review, sixth round): [p]'s stop that may be resting noted lost again, from when it went (its id is that time). */
+    private fun noteLostStop(p: Item) {
+        val side = if (p.qty > 0) Kite.Side.SELL else Kite.Side.BUY
+        val s0 = p.stop ?: return
+        val o = Kite.Order(p.symbol, side, abs(p.qty), p.lotSize, p.product, "SL", stopLimit(s0, side, p.tick), p.tick, p.exchange,
+            "iraprotect", triggerPrice = s0)
+        val sent = runCatching { java.time.Instant.ofEpochMilli(p.id).atZone(com.optionslab.engine.IST).toLocalDateTime() }.getOrNull()
+        Broker.noteLost(lostStopKey(p), o, siblings(p).flatMap { listOfNotNull(it.stopOrderId, it.targetOrderId) }, "${p.symbol}: its protection's stop",
+            liveOnly = true, sinceMs = p.id, sentAt = sent)
     }
 
     /** The clock of the ids and the first-minute check (the market's: one clock, tests included). */
@@ -1262,7 +1329,7 @@ object Protections {
             // marked until it is placed, so every try is made the same careful way.
             if (!closed && takenOver.containsKey("gtt:$gid")) {
                 if (exitFilled.containsKey("gtt:$gid")) settleExits(runCatching { passOrders(stream = false) }.getOrNull())
-                if (ArmLive.handsOffNow(p.exchange, p.symbol) || (exitDone("gtt:$gid") && !dayQtyKnown(p))) return p
+                if (ArmLive.noStopBeside(p.exchange, p.symbol) || (exitDone("gtt:$gid") && !dayQtyKnown(p))) return p
                 val next = placeDayExits(p.copy(gttId = null), net, lagSafe = true, mustShow = mustShowFor(listOf("gtt:$gid")))
                 if (next.active && next.gttId == null && next.stopOrderId == null && next.targetOrderId == null) return p
                 takenOver.remove("gtt:$gid")
@@ -1382,7 +1449,8 @@ object Protections {
         val cover = p.copy(qty = net.sign() * minOf(abs(net), abs(p.qty)))
         // 6 Nov: Boss is exiting this contract by hand ([ArmLive.handsOff]): nothing placed beside his sale (asked again next look,
         // without using up a GTT try).
-        if (ArmLive.handsOffNow(p.exchange, p.symbol)) return p.copy(qty = cover.qty)
+        // (23 Nov 2026, B6 review, seventh round: nor while Boss's own exit on it whose reply was lost may be selling.)
+        if (ArmLive.noStopBeside(p.exchange, p.symbol)) return p.copy(qty = cover.qty)
         if (!ordersNow && dayOco(cover) && (gttTries[p.id] ?: 0) < GTT_TRIES) {
             when (val r = restDayGtt(cover, net, lagSafe, mustShow)) {
                 is DayGtt.Placed -> return r.item
@@ -1423,6 +1491,9 @@ object Protections {
                                         mustShow: Map<String, Int>? = null): Item? {
         // (23 Nov 2026, B6 review, fourth round: under its own name, [STOP_CLAIM_OWNER], so Boss is told a stop is going in, not a sale.)
         val owner = if (SquareOffExit.exitClaimedBy(p00.exchange, p00.symbol, p00.product) == CLAIM_OWNER) CLAIM_OWNER else STOP_CLAIM_OWNER
+        // (23 Nov 2026, B6 review, seventh round: Boss's own exit on it whose reply was lost may be selling - nothing put back beside it
+        // until it is found or given up on.)
+        if (SquareOffExit.bossExitLost(p00.exchange, p00.symbol, p00.product)) return p00
         val claim = SquareOffExit.claimExit(p00.exchange, p00.symbol, p00.product, owner) ?: return p00
         try { return restAgainClaimed(p00, net0, said, lagSafe, mustShow) } finally { claim.release() }
     }
@@ -1433,7 +1504,8 @@ object Protections {
     /** [restAgainInTurn] with the row's exit claim held. */
     private suspend fun restAgainClaimed(p00: Item, net0: Int, said: String?, lagSafe: Boolean, mustShow: Map<String, Int>?): Item? {
         // 6 Nov: Boss is exiting this contract by hand ([ArmLive.handsOff]): nothing placed beside his sale (asked again next look).
-        if (ArmLive.handsOffNow(p00.exchange, p00.symbol)) return p00
+        // (23 Nov 2026, B6 review, seventh round: nor while his exit on it whose reply was lost may be selling.)
+        if (ArmLive.noStopBeside(p00.exchange, p00.symbol)) return p00
         // (23 Nov 2026, B6 review, sixth round: another protection's stop on it may be resting - nothing placed beside it until that is known.)
         if (stopMaybeResting(cache, p00.exchange, p00.symbol, exceptId = p00.id) != null) return p00
         val side = if (p00.qty > 0) Kite.Side.SELL else Kite.Side.BUY
@@ -2193,19 +2265,15 @@ object Protections {
         return when (val l = Broker.lookLost(key)) {
             is Broker.LostLook.Found -> {
                 runCatching { Strategies.tagOwner("kite:${l.id}", "Protection · stop") }
-                Alerts.post("${p.symbol}: its stop, whose answer from Zerodha was unsure, is resting at Zerodha (order ${l.id}): watched as its stop" +
+                // (Seventh round, review: found may mean filled too - said as found, its state the next look's.)
+                Alerts.post("${p.symbol}: its stop, whose answer from Zerodha was unsure, was found at Zerodha (order ${l.id}): watched as its stop" +
                     (if (p.target != null) "; its target is watched by the app." else "."), Alerts.Kind.SUCCESS, "Protection")
                 p.copy(stopOrderId = l.id, note = "")
             }
             Broker.LostLook.Searching -> p
             null -> {
-                val side = if (p.qty > 0) Kite.Side.SELL else Kite.Side.BUY
-                val s0 = p.stop ?: return p.copy(note = "")
-                val o = Kite.Order(p.symbol, side, abs(p.qty), p.lotSize, p.product, "SL", stopLimit(s0, side, p.tick), p.tick, p.exchange,
-                    "iraprotect", triggerPrice = s0)
-                val sent = runCatching { java.time.Instant.ofEpochMilli(p.id).atZone(com.optionslab.engine.IST).toLocalDateTime() }.getOrNull()
-                Broker.noteLost(key, o, siblings(p).flatMap { listOfNotNull(it.stopOrderId, it.targetOrderId) }, "${p.symbol}: its protection's stop",
-                    liveOnly = true, sinceMs = p.id, sentAt = sent)
+                if (p.stop == null) return p.copy(note = "")
+                noteLostStop(p)
                 p
             }
             Broker.LostLook.GaveUp -> {
@@ -2339,7 +2407,7 @@ object Protections {
             }
             if (net == null || net == 0 || net.sign() != p.qty.sign()) return p     // not read (or its first minute): next pass
             if (stream) return p                                                     // the regular look places (never a stream look)
-            if (ArmLive.handsOffNow(p.exchange, p.symbol)) return p                  // Boss's exit is still going
+            if (ArmLive.noStopBeside(p.exchange, p.symbol)) return p                 // Boss's exit is still going (or may be: its reply lost)
             // (22 Nov 2026, B6 review: nor beside a square-off's sale on its way - its gap; the next look reads the books again. Second round,
             // m-2: nor while another seller holds the row's claim - a square-off whose stops take longer to come out than its gap.)
             if (SquareOffExit.inGap(p.exchange, p.symbol, p.product) || rowClaimedByOther(p)) return p
@@ -2457,7 +2525,8 @@ object Protections {
                 // Never more than this protection covered: lots added since, or another owner's lots (an arm's trade with its own
                 // GTT), are not this protection's to sell (second review).
                 // 6 Nov: Boss is exiting this contract by hand ([ArmLive.handsOff]): nothing placed beside his sale (next look).
-                if (ArmLive.handsOffNow(p.exchange, p.symbol)) return p
+                // (23 Nov 2026, B6 review, seventh round: nor while his exit on it whose reply was lost may be selling.)
+                if (ArmLive.noStopBeside(p.exchange, p.symbol)) return p
                 val again = p.copy(qty = net.sign() * minOf(abs(net), abs(p.qty)), gttId = null)
                 // 21 Oct, enhancement round 4 (idea 1): [DayOco] on, as one GTT; not placed, the day's two orders as before.
                 var refused = false

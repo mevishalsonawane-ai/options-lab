@@ -700,4 +700,57 @@ class ArmLiveB6Test : RobolectricTest() {
                 "iraalgoexpiry", "${SquareOffExit.BOSS_OWNER}#ab12cd34", null))
             assertFalse("$o", SquareOffExit.isStopOwner(o))
     }
+
+    // ---- seventh round of the B6 review ----------------------------------------------------------------------------------------
+
+    /**
+     * #4: Boss's own exit on the arm's row whose reply was lost may be selling - the arm leaves the contract alone (hands off) and never rests
+     * its stop again beside it while it is looked for; given up on after a good read 2 minutes on, the stop goes back.
+     */
+    @Test fun theArmsStopIsNotRestedAgainWhileBossesLostExitMayBeSelling() {
+        ArmLive.entered(ask(donchian, "boss"))
+        watch()
+        val sid = view().openReal.single().stopOrderId!!
+        runBlocking { ArmLive.markOwnCancels(listOf(sid)) }                   // his exit's takeover: marked, then cancelled
+        runBlocking { Broker.cancel(sid) }
+        val key = SquareOffExit.bossLostKey("NFO", sym, "MIS")
+        Broker.lostSearchInlineForTest = true; Broker.lostLookGapMsForTest = 0L
+        Broker.noteLost(key, com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, 30, 30, "MIS", "MARKET", null), listOf(sid), "Your exit")
+        assertTrue("no stop placed while it may be selling", ArmLive.noStopBeside("NFO", sym))
+        assertFalse("the arm's own watch goes on (only stops are held)", ArmLive.handsOffNow("NFO", sym))
+        later(20); watch()
+        later(20); watch()
+        assertEquals("no stop beside his exit", 0, kite.orders.values.count { it.working && it.side == "SELL" })
+        assertEquals("its level watched by the app", 170.0, view().openReal.single().stopTrigger!!, 1e-9)
+        assertTrue("still looked for", Broker.lostPending(key))
+        Broker.ageLostForTest(key, Broker.LOST_SEARCH_MS + 1_000)
+        later(5); watch()
+        later(5); watch()
+        assertFalse("given up on", Broker.lostPending(key))
+        assertFalse(ArmLive.noStopBeside("NFO", sym))
+        assertEquals("its stop rested again", 1, kite.orders.values.count { it.working && it.side == "SELL" && it.type == "SL" })
+        assertEquals(30, held())
+    }
+
+    /**
+     * Seventh round, review: while Boss's lost exit is looked for, the arm's level is still watched at full cadence (the open-positions rule) -
+     * the price through its stop, the app sells there itself; only its stop is not rested beside his exit.
+     */
+    @Test fun theArmStillSellsAtItsLevelWhileBossesLostExitIsLookedFor() {
+        ArmLive.entered(ask(donchian, "boss-level"))
+        watch()
+        val sid = view().openReal.single().stopOrderId!!
+        runBlocking { ArmLive.markOwnCancels(listOf(sid)) }
+        runBlocking { Broker.cancel(sid) }
+        val key = SquareOffExit.bossLostKey("NFO", sym, "MIS")
+        Broker.lostSearchInlineForTest = true; Broker.lostLookGapMsForTest = 0L
+        Broker.noteLost(key, com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, 30, 30, "MIS", "MARKET", null), listOf(sid), "Your exit")
+        later(20); watch()
+        assertEquals("no stop beside his exit", 0, kite.orders.values.count { it.working && it.side == "SELL" })
+        val before = marketSells()
+        kite.quote("NFO:$sym", 169.0, 168.95, 169.05)                      // at its level: the app sells there itself
+        later(5); watch()
+        assertEquals("sold at its level", before + 1, marketSells())
+        assertEquals(0, held())
+    }
 }

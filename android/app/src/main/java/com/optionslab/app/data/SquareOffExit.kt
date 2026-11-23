@@ -107,7 +107,7 @@ internal object SquareOffExit {
     }
 
     /** TEST ONLY. */
-    internal fun resetForTest(gap: Long = GAP_MS) { placedAt.clear(); clock = System::currentTimeMillis; gapMs = gap; claims.clear(); skips.clear(); soldAt.clear(); chasing.clear() }
+    internal fun resetForTest(gap: Long = GAP_MS) { placedAt.clear(); clock = System::currentTimeMillis; gapMs = gap; claims.clear(); skips.clear(); soldAt.clear(); chasing.clear(); bossFoundAt.clear() }
 
     /**
      * 23 Nov 2026 (B6 follow-ups, round 2): by position row ("EXCHANGE:SYMBOL:PRODUCT"), the square-off passes chasing a blocked MARKET
@@ -221,6 +221,48 @@ internal object SquareOffExit {
 
     /** 22 Nov 2026 (B6 review, second round): the name Boss's own exit from the app claims a row by ([claimExit]; AppModel's takeover). */
     const val BOSS_OWNER = "boss"
+
+    /**
+     * 23 Nov 2026 (B6 review, seventh round): the key Boss's own exit on a position row is looked for under when its reply was lost or
+     * unsure ([Broker.noteLost], AppModel) - the exit may have gone.
+     */
+    fun bossLostKey(exchange: String, symbol: String, product: String) = "bossexit:$exchange:$symbol:$product"
+
+    /**
+     * 23 Nov 2026 (B6 review, seventh round): Boss's own exit on the row whose reply was lost or unsure is still looked for - it may be
+     * selling: no stop is placed or put back on the row meanwhile (the protections' put-back, an arm's, an ORB / Liquidity or a strategy
+     * leg's stop, a manual position's cover); the arms' and the books' level watches and their own exits go on as ever. Asking starts the
+     * background search when one is due ([Broker.lookLost]): memory only, never a read or a wait here. Found, or given up on after a good
+     * read 2 minutes on: no longer held.
+     */
+    fun bossExitLost(exchange: String, symbol: String, product: String): Boolean {
+        val key = bossLostKey(exchange, symbol, product)
+        val now = System.currentTimeMillis()
+        return when (Broker.lookLost(key)) {
+            Broker.LostLook.Searching -> true
+            // (Review: found - in Zerodha's book from now on, where the stops' own checks count it - held [Broker.FOUND_COUNTED_MS] more, so
+            // a read begun just before it was found never puts a stop back beside it.)
+            is Broker.LostLook.Found -> { bossFoundAt[key] = now; true }
+            else -> {
+                val at = bossFoundAt[key] ?: return false
+                // (Review: dropped once its time is up - the map never grows with the day's found exits.)
+                (now - at < Broker.FOUND_COUNTED_MS).also { held -> if (!held) bossFoundAt.remove(key, at) }
+            }
+        }
+    }
+    private val bossFoundAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /** 23 Nov 2026 (B6 review, seventh round): Boss's own exit on any product row of [exchange]:[symbol] still looked for ([bossExitLost]). */
+    fun bossExitLostOn(exchange: String, symbol: String): Boolean {
+        if (bossFoundAt.isNotEmpty()) System.currentTimeMillis().let { now -> bossFoundAt.entries.removeIf { now - it.value >= Broker.FOUND_COUNTED_MS } }
+        return Broker.lostKeys("bossexit:$exchange:$symbol:").any { k -> bossExitLost(exchange, symbol, k.substringAfterLast(':')) } ||
+            bossFoundAt.keys.any { k -> k.startsWith("bossexit:$exchange:$symbol:") && bossExitLost(exchange, symbol, k.substringAfterLast(':')) }
+    }
+
+    init {
+        // (23 Nov 2026, B6 review, seventh round: Boss's own exit sale whose reply was lost is counted by the square-offs, as each book's own.)
+        lostPendingProviders[BOSS_OWNER] = { sym, product -> Broker.lostSales("bossexit:", sym, product) }
+    }
 
     /**
      * 23 Nov 2026 (B6 follow-ups, item 2; one rule with B6-B's): the owners that hold a row only while a stop goes in at Zerodha - no sale

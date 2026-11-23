@@ -301,7 +301,9 @@ internal object IraActions {
             is com.optionslab.app.ui.Load.Done -> (m.sendNote.value?.let { "$it " } ?: "") + "Sent to Zerodha: ${p.title}. " +
                 sent.value.joinToString("; ") { "${it.status} ${it.filled} at ${"%.2f".format(it.avgPrice)}" +
                     (com.optionslab.app.data.Origins.shortId(it.orderId)?.let { id -> " (order $id)" } ?: "") }
-            is com.optionslab.app.ui.Load.Failed -> "Zerodha refused: ${sent.why}"
+            // (23 Nov 2026, B6 review, seventh round: the app's own words as they are - most are its own refusals, not Zerodha's, and the
+            // ones that are Zerodha's say so themselves.)
+            is com.optionslab.app.ui.Load.Failed -> sent.why
             else -> "Sent; Zerodha has not confirmed yet - see the Trade tab."
         }
     }

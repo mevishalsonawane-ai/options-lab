@@ -258,6 +258,46 @@ class ProtectionsB6Test : RobolectricTest() {
         assertEquals("once", 1, restingStops())
     }
 
+    /**
+     * Seventh round (review): an unsure stop's protection removed while its stop is looked for is kept being removed - never ended with nothing
+     * to cancel - and the stop, once the book shows it, is cancelled: no stop left to sell what is no longer held.
+     */
+    @Test fun anUnsureStopFoundAfterItsProtectionWasRemovedIsCancelled() {
+        Broker.lostSearchInlineForTest = true; Broker.lostLookGapMsForTest = 0L
+        kite.trailReads = 1_000                                              // in the book only later
+        kite.nextPlace(reply = FakeKite.Reply.GENERAL_EXCEPTION_AFTER_ACCEPT)
+        protect()
+        val p = active().single()
+        assertEquals(Protections.STOP_LOST, p.note)
+        val said = runBlocking { Protections.remove(p.id) }
+        assertTrue(said, said.contains("its stop may be resting at Zerodha") && said.contains("cancels it once found"))
+        assertEquals("kept, being removed", 1, active().size)
+        at(12, 5)
+        tick()
+        assertEquals("still kept while it is looked for", 1, active().size)
+        assertEquals(1, restingStops())
+        kite.showInBook()
+        tick()
+        assertEquals("the stop found is cancelled", 0, restingStops())
+        assertTrue("then ended", active().isEmpty())
+    }
+
+    /** Seventh round: one whose stop never reached Zerodha, removed - ended once a good read 2 minutes on did not show it; nothing placed. */
+    @Test fun anUnsureStopNeverFoundEndsItsRemovalAfterTheWindow() {
+        Broker.lostSearchInlineForTest = true; Broker.lostLookGapMsForTest = 0L
+        kite.nextPlace(reply = FakeKite.Reply.GENERAL_EXCEPTION)
+        protect()
+        val p = active().single()
+        runBlocking { Protections.removeSymbol(true, "NFO", sym) }
+        at(12, 5)
+        tick()
+        assertEquals("kept while it is looked for", 1, active().size)
+        Broker.ageLostForTest("protstop:${p.id}", Broker.LOST_SEARCH_MS + 1_000)
+        tick()
+        assertTrue("ended", active().isEmpty())
+        assertEquals("nothing resting", 0, restingStops())
+    }
+
     /** The sale refused outright: the stop is put back at once, the target still the app's. */
     @Test fun aRefusedTargetSalePutsTheStopBackAtOnce() {
         protect()
