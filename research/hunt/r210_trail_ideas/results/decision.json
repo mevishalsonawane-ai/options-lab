@@ -1,0 +1,290 @@
+{
+ "m_total": 4826,
+ "tests": {
+  "R72-HU": {
+   "passes": false,
+   "fails": [
+    "BH q 1 > 0.1"
+   ],
+   "folds_won": [
+    "F1",
+    "F2",
+    "F3",
+    "F4"
+   ],
+   "q": 1.0,
+   "p": 0.004199580041995801,
+   "p_normal": 0.004997688485801523,
+   "q_within_study": 0.04497919637221371
+  },
+  "R72-HUNT": {
+   "passes": false,
+   "fails": [
+    "walk-forward: beat V5 in 2 of 4 folds (< 3)",
+    "design: worst month -78,935 worse than V5's -26,420",
+    "BH q 1 > 0.1"
+   ],
+   "folds_won": [
+    "F1",
+    "F4"
+   ],
+   "q": 1.0,
+   "p": 0.33396660333966605,
+   "p_normal": 0.3319245868280308,
+   "q_within_study": 0.7508125979735952
+  },
+  "R72-HP": {
+   "passes": false,
+   "fails": [
+    "BH q 1 > 0.1"
+   ],
+   "folds_won": [
+    "F1",
+    "F2",
+    "F3",
+    "F4"
+   ],
+   "q": 1.0,
+   "p": 0.0035996400359964,
+   "p_normal": 0.004535390937053818,
+   "q_within_study": 0.04497919637221371
+  },
+  "R72-CH": {
+   "passes": false,
+   "fails": [
+    "design: net 233,919 not above V5's 237,089",
+    "walk-forward: beat V5 in 2 of 4 folds (< 3)",
+    "BH q 1 > 0.1"
+   ],
+   "folds_won": [
+    "F1",
+    "F2"
+   ],
+   "q": 1.0,
+   "p": 0.6651334866513349,
+   "p_normal": 0.6831657729995178,
+   "q_within_study": 0.9617126946629334
+  },
+  "R72-F15": {
+   "passes": false,
+   "fails": [
+    "design: net 162,555 not above V5's 237,089",
+    "walk-forward: beat V5 in 1 of 4 folds (< 3)",
+    "BH q 1 > 0.1"
+   ],
+   "folds_won": [
+    "F1"
+   ],
+   "q": 1.0,
+   "p": 0.9083091690830917,
+   "p_normal": 0.9082842116261038,
+   "q_within_study": 0.9617126946629334
+  },
+  "R72-F60": {
+   "passes": false,
+   "fails": [
+    "design: net 155,008 not above V5's 237,089",
+    "walk-forward: beat V5 in 0 of 4 folds (< 3)",
+    "BH q 1 > 0.1"
+   ],
+   "folds_won": [],
+   "q": 1.0,
+   "p": 0.9028097190280971,
+   "p_normal": 0.9074699118847847,
+   "q_within_study": 0.9617126946629334
+  },
+  "R51-HU": {
+   "passes": false,
+   "fails": [
+    "design: worst month -38,007 worse than V5's -36,762",
+    "BH q 1 > 0.1"
+   ],
+   "folds_won": [
+    "F1",
+    "F2",
+    "F3",
+    "F4"
+   ],
+   "q": 1.0,
+   "p": 0.0337966203379662,
+   "p_normal": 0.032624138718070884,
+   "q_within_study": 0.146808624231319
+  },
+  "R51-HUNT": {
+   "passes": false,
+   "fails": [
+    "design: worst month -54,438 worse than V5's -36,762",
+    "BH q 1 > 0.1"
+   ],
+   "folds_won": [
+    "F1",
+    "F2",
+    "F3"
+   ],
+   "q": 1.0,
+   "p": 0.3271672832716728,
+   "p_normal": 0.33369448798826457,
+   "q_within_study": 0.7508125979735952
+  },
+  "R51-HP": {
+   "passes": false,
+   "fails": [
+    "design: worst month -38,007 worse than V5's -36,762",
+    "BH q 1 > 0.1"
+   ],
+   "folds_won": [
+    "F1",
+    "F2",
+    "F3",
+    "F4"
+   ],
+   "q": 1.0,
+   "p": 0.0301969803019698,
+   "p_normal": 0.030787033322595445,
+   "q_within_study": 0.146808624231319
+  },
+  "R51-CH": {
+   "passes": false,
+   "fails": [
+    "design: net 112,509 not above V5's 124,786",
+    "walk-forward: beat V5 in 2 of 4 folds (< 3)",
+    "BH q 1 > 0.1"
+   ],
+   "folds_won": [
+    "F1",
+    "F4"
+   ],
+   "q": 1.0,
+   "p": 0.8709129087091291,
+   "p_normal": 0.88226304377738,
+   "q_within_study": 0.9617126946629334
+  },
+  "R51-F15": {
+   "passes": false,
+   "fails": [
+    "design: net 62,376 not above V5's 124,786",
+    "walk-forward: beat V5 in 1 of 4 folds (< 3)",
+    "BH q 1 > 0.1"
+   ],
+   "folds_won": [
+    "F1"
+   ],
+   "q": 1.0,
+   "p": 0.8513148685131486,
+   "p_normal": 0.8554340488434968,
+   "q_within_study": 0.9617126946629334
+  },
+  "R51-F60": {
+   "passes": false,
+   "fails": [
+    "design: net 42,747 not above V5's 124,786",
+    "walk-forward: beat V5 in 1 of 4 folds (< 3)",
+    "BH q 1 > 0.1"
+   ],
+   "folds_won": [
+    "F3"
+   ],
+   "q": 1.0,
+   "p": 0.894010598940106,
+   "p_normal": 0.8927152930017044,
+   "q_within_study": 0.9617126946629334
+  },
+  "LIQ-HU": {
+   "passes": false,
+   "fails": [
+    "walk-forward: beat V5 in 2 of 4 folds (< 3)",
+    "design: worst month -15,881 worse than V5's -10,129",
+    "BH q 1 > 0.1"
+   ],
+   "folds_won": [
+    "F2",
+    "F4"
+   ],
+   "q": 1.0,
+   "p": 0.261973802619738,
+   "p_normal": 0.26308479242151256,
+   "q_within_study": 0.7508125979735952
+  },
+  "LIQ-HUNT": {
+   "passes": false,
+   "fails": [
+    "design: worst month -22,187 worse than V5's -10,129",
+    "BH q 1 > 0.1"
+   ],
+   "folds_won": [
+    "F1",
+    "F2",
+    "F3",
+    "F4"
+   ],
+   "q": 1.0,
+   "p": 0.13108689131086892,
+   "p_normal": 0.12690692269677611,
+   "q_within_study": 0.456864921708394
+  },
+  "LIQ-HP": {
+   "passes": false,
+   "fails": [
+    "walk-forward: beat V5 in 2 of 4 folds (< 3)",
+    "design: worst month -16,223 worse than V5's -10,129",
+    "BH q 1 > 0.1"
+   ],
+   "folds_won": [
+    "F2",
+    "F4"
+   ],
+   "q": 1.0,
+   "p": 0.4036596340365963,
+   "p_normal": 0.40205945863128484,
+   "q_within_study": 0.8041189172625697
+  },
+  "LIQ-CH": {
+   "passes": false,
+   "fails": [
+    "design: net 217,058 not above V5's 218,210",
+    "walk-forward: beat V5 in 2 of 4 folds (< 3)",
+    "design: worst month -12,618 worse than V5's -10,129",
+    "BH q 1 > 0.1"
+   ],
+   "folds_won": [
+    "F2",
+    "F3"
+   ],
+   "q": 1.0,
+   "p": 0.5236476352364764,
+   "p_normal": 0.5257493985451089,
+   "q_within_study": 0.9463489173811961
+  },
+  "LIQ-F15": {
+   "passes": false,
+   "fails": [
+    "design: net 168,000 not above V5's 218,210",
+    "walk-forward: beat V5 in 0 of 4 folds (< 3)",
+    "design: worst month -16,831 worse than V5's -10,129",
+    "BH q 1 > 0.1"
+   ],
+   "folds_won": [],
+   "q": 1.0,
+   "p": 0.9858014198580142,
+   "p_normal": 0.9829946624601256,
+   "q_within_study": 0.9829946624601256
+  },
+  "LIQ-F60": {
+   "passes": false,
+   "fails": [
+    "design: net 178,787 not above V5's 218,210",
+    "walk-forward: beat V5 in 1 of 4 folds (< 3)",
+    "design: worst month -12,055 worse than V5's -10,129",
+    "BH q 1 > 0.1"
+   ],
+   "folds_won": [
+    "F3"
+   ],
+   "q": 1.0,
+   "p": 0.8974102589741025,
+   "p_normal": 0.9035455870400595,
+   "q_within_study": 0.9617126946629334
+  }
+ },
+ "survivors": []
+}

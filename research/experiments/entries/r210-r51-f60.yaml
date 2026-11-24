@@ -3,7 +3,7 @@ title: 'R210 R51 Donchian 20 + Supertrend: current exits + 60-minute trend filte
   (V5)'
 family: daily-filters
 date: '2026-11-24'
-doc: research/hunt/r210_trail_ideas/PREREG.md
+doc: research/hunt/r210_trail_ideas/results/RESULT.md
 hypothesis: 'current exits + 60-minute trend filter (close vs EMA(20)) beats current exits (V5; Liquidity: breakeven at +10%
   / +Rs 1,000) on R51 Donchian 20 + Supertrend: higher net on the design years (1 Nov 2024 - 31 Mar 2026), in at least 3 of
   4 walk-forward folds, worst month not worse, BH q <= 0.10 (m = 4,826); then, read once, higher net and a worst month not
@@ -26,10 +26,12 @@ model_or_rule: 'current exits + 60-minute trend filter (close vs EMA(20)) (basel
   at +10% / +Rs 1,000))'
 settings: research/hunt/r210_trail_ideas/r210cfg.py; PREREG.md section 3
 prereg: research/hunt/r210_trail_ideas/PREREG.md
-variants_tried: null
+variants_tried: 1
 results:
-  summary: pre-registered on 24 Nov 2026; not run yet (the data run follows the push of PREREG.md)
+  summary: 'design 1262 tr, 61.33% win, Rs 42,747, worst month Rs -21,592, DD Rs 68,703 (V5 2240 tr, 61.88% win, Rs 124,786,
+    worst month Rs -36,762, DD Rs 85,937); folds beaten F3; sign-flip p 0.8940, BH q 1 (m = 4,826). Fails the design gate:
+    design: net 42,747 not above V5''s 124,786; walk-forward: beat V5 in 1 of 4 folds (< 3); BH q 1 > 0.1. Holdout not read.'
   costs: dated Zerodha charges, R17 fills and slippage, 1 lot
 holdout_read: false
-verdict: proposed
+verdict: rejected
 notes: Research only; nothing in the app changes. Idea from a third-party prompt-only skill pack (no backtests).
