@@ -2612,7 +2612,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      * still held is put back, never read as his cancel in Kite: the protections ([com.optionslab.app.data.Protections.noteTakenOver], only
      * their own orders - [com.optionslab.app.data.Protections.mayOwn]: no other book's order carries their hour-long mark), the arms' book,
      * the ORB / Liquidity book (each only its own stops, or every id while that book is not read yet) and the saved strategies' (which keeps
-     * only its own). Pine watches its own level. Memory at once; each book writes its marks off this path.
+     * only its own). Memory at once; each book writes its marks off this path.
+     * 24 Nov 2026 (B6-I round 6): Pine's too ([com.optionslab.app.data.PineAuto.markOwnCancels]: only its holdings' stops), so a script's stop
+     * taken out for his exit is the app's to put back if his exit leaves it held - never read as gone from Zerodha.
      */
     private suspend fun markOwnExits(ids: List<String>): OwnExitMarks {
         val prot = ids.filter { com.optionslab.app.data.Protections.mayOwn(it) }
@@ -2622,11 +2624,14 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val orbIds = ids.filter { com.optionslab.app.data.OrbArms.mayOwnStop(it) }
         runCatching { com.optionslab.app.data.OrbArms.markOwnCancels(orbIds) }
         runCatching { com.optionslab.app.data.Strategies.markOwnCancels(ids) }
-        return OwnExitMarks(prot, armIds, orbIds, ids)
+        val pineIds = ids.filter { com.optionslab.app.data.PineAuto.mayOwnStop(it) }
+        runCatching { com.optionslab.app.data.PineAuto.markOwnCancels(pineIds) }
+        return OwnExitMarks(prot, armIds, orbIds, ids, pineIds)
     }
 
     /** 23 Nov 2026 (B6 review, ninth round): what [markOwnExits] marked, book by book ([unmarkOwnExits] takes back only these). */
-    private class OwnExitMarks(val protections: List<String>, val arms: List<String>, val orb: List<String>, val strategies: List<String>)
+    private class OwnExitMarks(val protections: List<String>, val arms: List<String>, val orb: List<String>, val strategies: List<String>,
+                               val pine: List<String> = emptyList())
 
     /** 23 Nov 2026 (B6 review, ninth round): [m]'s marks taken back, each in the book it was made in - a cancel Zerodha refused outright cancelled nothing of the app's. */
     private suspend fun unmarkOwnExits(m: OwnExitMarks) {
@@ -2634,6 +2639,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         runCatching { com.optionslab.app.data.ArmLive.unmarkOwnCancels(m.arms) }
         runCatching { com.optionslab.app.data.OrbArms.unmarkOwnCancels(m.orb) }
         runCatching { com.optionslab.app.data.Strategies.unmarkOwnCancels(m.strategies) }
+        runCatching { com.optionslab.app.data.PineAuto.unmarkOwnCancels(m.pine) }
     }
 
     /**

@@ -812,4 +812,20 @@ class ArmLiveB6Test : RobolectricTest() {
         assertEquals(0, expirySells())
         assertEquals("flat, never short", 0, held(s))
     }
+
+    /**
+     * 24 Nov 2026 (B6-I round 6, item 2): the orders an arm's due exit may cancel to make room - a plain LIMIT of Boss's by the one tag rule (no
+     * tag, another app's, his own "iraalgo" from the app's order screen), never one the app sent by itself, never one in [mine] (its own, and
+     * the orders a fired GTT of the app's - or one not known to be his - placed), never a stop.
+     */
+    @Test fun anArmsExitCancelsOnlyBosssOwnLimitsByTheOneTagRule() {
+        fun row(tag: String, type: String = "LIMIT", status: String = "OPEN", id: String = "o1") =
+            Broker.OrderRow(id, "NIFTY26N0925150CE", "SELL", 75, 0, 250.0, 0.0, status, "", "", product = "MIS", type = type, tag = tag)
+        for (t in listOf("", "iraalgo", "sensibull")) assertTrue("his: '$t'", ArmLive.cancellable(row(t), emptySet()))
+        for (t in listOf("iraarm", "iraorb", "iraprotect", "irapine", "iraalgostrat", "iraalgoexpiry", "iraalgoflat"))
+            assertFalse("the app's: '$t'", ArmLive.cancellable(row(t), emptySet()))
+        assertFalse("a GTT's order of the app's, or one not known to be his", ArmLive.cancellable(row(""), setOf("o1")))
+        assertFalse("never a stop", ArmLive.cancellable(row("", type = "SL", status = "TRIGGER PENDING"), emptySet()))
+        assertFalse("never one no longer working", ArmLive.cancellable(row("", status = "COMPLETE"), emptySet()))
+    }
 }

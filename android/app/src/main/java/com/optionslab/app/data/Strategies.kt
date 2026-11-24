@@ -65,7 +65,34 @@ object Strategies {
         // 23 Nov 2026 (B6 follow-ups, item 2): the square-offs subtract a live exit sale whose answer was lost and is still looked for
         // ([LOST] ids, [Broker.lostSales]) and take no stop out beside it. Only those are counted there - not a sale on its way - so the
         // strategies' tag is not one the square-offs leave to that count: one of their sales not in their read holds the row back.
-        SquareOffExit.lostPendingProviders[CLAIM_OWNER] = { sym, product -> Broker.lostSales(LOST + "x", sym, product) }
+        SquareOffExit.lostPendingProviders[CLAIM_OWNER] = { sym, product -> lostPending(sym, product) }
+        // (24 Nov 2026, B6-I round 6: a lost exit saved in the book is not known until the book is read - [lostPending].)
+        lostUnknownUntil = System.currentTimeMillis() + ArmLive.LOST_LET_GO_MS
+    }
+
+    /**
+     * 24 Nov 2026 (B6-I round 6, final integration review: the provider answered 0 before the book was read, and a lost exit kept in it from
+     * before a restart was not counted): the strategies' live exit sales whose answer was lost and that are still looked for on [symbol]'s
+     * [product] row ([Broker.lostSales], [LOST] ids - taken back from the book as it is read: [restoreLostExits]); -1 (not known) for a row a
+     * strategy leg may hold ([ArmLive.armsMayHold]: an option or a future) while the book is not read yet in its first [ArmLive.LOST_LET_GO_MS]
+     * after the start, or for as long after it was set aside as damaged - the most such a sale stays unseen in Zerodha's own books, as the
+     * arms' live book's ([ArmLive.unsettledSales]). Memory only.
+     */
+    internal fun lostPending(symbol: String, product: String): Int {
+        val wall = System.currentTimeMillis()
+        if ((wall < lostAsideUntil || (cache == null && wall < lostUnknownUntil)) && ArmLive.armsMayHold(symbol, product)) return -1
+        return Broker.lostSales(LOST + "x", symbol, product)
+    }
+    /** 24 Nov 2026 (B6-I round 6): until when (wall clock) a lost exit saved in a book not read yet in this process is not known ([lostPending]). */
+    @Volatile private var lostUnknownUntil = 0L
+    /** 24 Nov 2026 (B6-I round 6): until when (wall clock) a lost exit kept in a book set aside as damaged is not known ([lostPending]). */
+    @Volatile private var lostAsideUntil = 0L
+
+    /** TEST ONLY: as a process that started [ms] ago with its book not read yet ([lostPending]); the file is kept. Debug builds only. */
+    internal fun startedForTest(ms: Long) {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }
+        cache = null
+        lostUnknownUntil = System.currentTimeMillis() - ms + ArmLive.LOST_LET_GO_MS
     }
 
     data class LogLine(val at: Long, val strategy: String, val kind: String, val message: String, val severity: String)
@@ -129,6 +156,13 @@ object Strategies {
          * "<the leg's entry order id>|<stop id>|<when>". Never put back for that leg's entry; the run watches its level and sells there.
          */
         val bossStops: LinkedHashMap<String, String> = LinkedHashMap(),
+        /**
+         * 24 Nov 2026 (B6-I round 6, final integration review: kept in memory only, a restart inside its search forgot it - the square-offs
+         * sold beside it and the run sent the exit again): each live exit sale whose answer was lost and that is still looked for, by its lost
+         * id ([LOST] "x"): the order as sent, what it may never be taken for, and when it was noted and sent ([Broker.noteLost]). Taken back
+         * into the search as the book is read ([restoreLostExits]); dropped once found, given up on, or not today's.
+         */
+        val lostExits: LinkedHashMap<String, JSONObject> = LinkedHashMap(),
     ) {
         /** 26 Oct: the [wipeGen] this book was read in; a book from before "Erase everything" is never saved or kept again. */
         @Volatile var gen: Int = 0
@@ -284,10 +318,16 @@ object Strategies {
                     o.optJSONObject("ownCancels")?.let { m -> m.keys().asSequence().map { it to m.optLong(it, 0L) }.filter { it.second > 0L }
                         .sortedBy { it.second }.forEach { (k, v) -> put(k, v) } }
                 },
-                bossStops = LinkedHashMap<String, String>().apply { o.optJSONObject("bossStops")?.let { m -> m.keys().forEach { k -> put(k, m.getString(k)) } } })
+                bossStops = LinkedHashMap<String, String>().apply { o.optJSONObject("bossStops")?.let { m -> m.keys().forEach { k -> put(k, m.getString(k)) } } },
+                // 24 Nov 2026 (B6-I round 6): the lost exits still looked for (never at the cost of the book: one that cannot be read is left out).
+                lostExits = LinkedHashMap<String, JSONObject>().apply {
+                    runCatching { o.optJSONObject("lostExits")?.let { m -> m.keys().forEach { k -> m.optJSONObject(k)?.let { put(k, it) } } } }
+                })
         }.getOrNull()
         if (b == null && file.exists()) {
             Vault.setAside(file)
+            // (24 Nov 2026, B6-I round 6: a lost exit kept in the book set aside is not known - the square-offs wait as for the arms' book.)
+            lostAsideUntil = System.currentTimeMillis() + ArmLive.LOST_LET_GO_MS
             Notifier.post(app, 2015, Notifier.APPROVAL, "Strategies could not be read",
                 "The saved strategies and runs were set aside. If a live run was open, check your Zerodha positions now.", "strategy")
         }
@@ -299,9 +339,50 @@ object Strategies {
         }
         // 26 Oct: a read that began before "Erase everything" is not kept (its pass saves nothing: [save]).
         loaded.gen = gen
+        // 24 Nov 2026 (B6-I round 6): the lost exits saved with it, read before the book is shown to anyone (one not today's, or unreadable,
+        // dropped) ...
+        val lost = runCatching { lostExitsOf(loaded) }.getOrDefault(emptyList())
         val kept = synchronized(writeOrder) { (gen == wipeGen).also { if (it) cache = loaded } }
         if (kept) { hint(loaded); if (gen != wipeGen) clearHints() }
+        // ... and taken back into the search - only for the book kept ([restoreLostExits]).
+        if (kept) runCatching { restoreLostExits(lost) }
         return loaded
+    }
+
+    /**
+     * 24 Nov 2026 (B6-I round 6): the lost exit sales saved with [bk] ([Book.lostExits]) taken back as the book is read (after a restart): each
+     * one's hold and search window go on from when it was first noted and sent ([Broker.noteLost] - the same one, if this process still keeps
+     * it), so the square-offs count it ([lostPending]) and the run's status reads find it or give up on it as before the restart. Only one sent
+     * today; any other is dropped (and written in the diary).
+     */
+    private fun restoreLostExits(lost: List<LostExit>) {
+        for (l in lost) Broker.noteLost(l.key, l.order, l.known, l.what, sinceMs = l.since, sentAt = l.sentAt)
+    }
+
+    /** 24 Nov 2026 (B6-I round 6): one lost exit as kept with the book ([Book.lostExits]), read back. */
+    private class LostExit(val key: String, val order: Kite.Order, val known: List<String>, val what: String, val since: Long,
+                           val sentAt: java.time.LocalDateTime)
+
+    /** [bk]'s lost exits sent today, read back; any other (an earlier day's, or unreadable) dropped from it and written in the diary. */
+    private fun lostExitsOf(bk: Book): List<LostExit> {
+        val today = runCatching { Market.now().toLocalDate() }.getOrElse { LocalDate.now() }
+        val out = ArrayList<LostExit>()
+        for ((key, r) in bk.lostExits.toMap()) {
+            val l = runCatching {
+                val sentAt = java.time.LocalDateTime.parse(r.getString("sentAt"))
+                if (sentAt.toLocalDate() != today) return@runCatching null
+                val o = Kite.Order(r.getString("sym"), Kite.Side.valueOf(r.optString("side", "SELL")), r.getInt("qty"), r.optInt("lot", 1),
+                    r.optString("product", "MIS"), r.optString("type", "MARKET"), null, r.optDouble("tick", 0.05), r.optString("exchange", "NFO"),
+                    "iraalgostrat")
+                val known = r.optJSONArray("known")?.let { a -> (0 until a.length()).map { a.getString(it) } }.orEmpty()
+                LostExit(key, o, known, r.optString("what", "A strategy's exit"), r.getLong("since"), sentAt)
+            }.getOrNull()
+            if (l != null) out += l else {
+                bk.lostExits.remove(key)
+                runCatching { Diag.record("strategy", "$key: a lost exit sale saved before the restart was not taken back (not today's, or unreadable)") }
+            }
+        }
+        return out
     }
 
     private fun clearHints() { runningHint = false; exposureHint = emptyList(); stopHintDay = null; stopHintAt = null; mcxHint = null; ownCancelsHint = emptySet(); stopIdsHint = emptySet()
@@ -399,6 +480,9 @@ object Strategies {
         if (b.ownCancels.isNotEmpty()) o.put("ownCancels", JSONObject().apply { b.ownCancels.forEach { (k, v) -> put(k, v) } })
         while (b.bossStops.size > 200) b.bossStops.remove(b.bossStops.keys.first())
         if (b.bossStops.isNotEmpty()) o.put("bossStops", JSONObject().apply { b.bossStops.forEach { (k, v) -> put(k, v) } })
+        // 24 Nov 2026 (B6-I round 6): the lost exits still looked for (bounded: the newest 50).
+        while (b.lostExits.size > 50) b.lostExits.remove(b.lostExits.keys.first())
+        if (b.lostExits.isNotEmpty()) o.put("lostExits", JSONObject().apply { b.lostExits.forEach { (k, v) -> put(k, v) } })
         return o.toString().toByteArray(Charsets.UTF_8)
     }
 
@@ -1086,8 +1170,20 @@ object Strategies {
                         (if (e is Broker.KiteUnsure) null else runCatching { Broker.findRecentRetrying(o, known().map { it.removePrefix("kite:") }) }.getOrNull())
                             ?: run {
                                 val lostId = LOST + (if (exit) "x" else "e") + lostSeq.incrementAndGet()
-                                Broker.noteLost(lostId, o, known().map { it.removePrefix("kite:") }, "Strategy ${def.name}: its ${if (exit) "exit" else "entry"}")
+                                val seen = known().map { it.removePrefix("kite:") }
+                                val what = "Strategy ${def.name}: its ${if (exit) "exit" else "entry"}"
+                                val since = System.currentTimeMillis()
+                                val sentAt = runCatching { Market.now().toLocalDateTime() }.getOrElse { java.time.LocalDateTime.now() }
+                                Broker.noteLost(lostId, o, seen, what, sinceMs = since, sentAt = sentAt)
                                 b.owners[lostId] = ownerLabel(def, order)
+                                // 24 Nov 2026 (B6-I round 6): an exit's kept with the book - written on its own writer now - so a restart in
+                                // its window keeps it looked for and counted by the square-offs ([Book.lostExits], [restoreLostExits]).
+                                if (exit) {
+                                    b.lostExits[lostId] = JSONObject().put("sym", o.tradingSymbol).put("exchange", o.exchange).put("side", o.side.name)
+                                        .put("qty", o.quantity).put("lot", o.lotSize).put("tick", o.tickSize).put("product", o.product).put("type", o.orderType)
+                                        .put("since", since).put("sentAt", sentAt.toString()).put("what", what).put("known", JSONArray(seen.takeLast(300)))
+                                    runCatching { saveSoon(b) }
+                                }
                                 return@runBlocking StrategyHost.Placed.Accepted(lostId, "UNKNOWN", 0, null,
                                     "Zerodha's answer was lost (${e.message}); looking for the order in its book")
                             }
@@ -1129,15 +1225,22 @@ object Strategies {
                 is Broker.LostLook.Found -> {
                     lostFound[brokerId] = l.id
                     b.owners["kite:${l.id}"] = b.owners[brokerId] ?: def.name
+                    // (24 Nov 2026, B6-I round 6: found - no longer kept with the book.)
+                    if (b.lostExits.remove(brokerId) != null) runCatching { saveSoon(b) }
                     l.id
                 }
                 Broker.LostLook.Searching -> return@runBlocking StrategyHost.Status("UNKNOWN", 0, null, "looking for the order in Zerodha's book")
                 // Given up on (Boss told): not placed - the book would have shown it long before.
-                Broker.LostLook.GaveUp -> return@runBlocking StrategyHost.Status("REJECTED", 0, null, "Zerodha's answer was lost and the order was not found in its book")
+                Broker.LostLook.GaveUp -> {
+                    if (b.lostExits.remove(brokerId) != null) runCatching { saveSoon(b) }
+                    return@runBlocking StrategyHost.Status("REJECTED", 0, null, "Zerodha's answer was lost and the order was not found in its book")
+                }
                 // (Review: a lost id from before a restart - nothing left in memory to look for. An EXIT reads as rejected, so the run
                 // sends it again - always capped by what Zerodha holds less the exits working, so never into a short. An ENTRY stays
                 // UNKNOWN, never taken as refused and never sent again, and Boss is told once to check the order book.)
                 null -> {
+                    // (24 Nov 2026, B6-I round 6: one kept with the book is taken back as the book is read; one that was not is no longer kept.)
+                    if (brokerId.startsWith(LOST + "x") && b.lostExits.remove(brokerId) != null) runCatching { saveSoon(b) }
                     if (brokerId.startsWith(LOST + "x")) return@runBlocking StrategyHost.Status("REJECTED", 0, null,
                         "its answer was lost before a restart; sent again, capped by what Zerodha holds")
                     if (restartedLost.add(brokerId)) runCatching {
@@ -2635,17 +2738,20 @@ object Strategies {
                 growNext[k]?.let { System.currentTimeMillis() < it } != true) {
                 val lot = ref.lot.coerceAtLeast(1)
                 // (Never read again here - a trailing fill counts as sold at once, so no wait under this book's lock: [ExitCoordinator.held].)
+                // (24 Nov 2026, B6-I round 6, final integration review: less what Boss's own exit on the row whose reply was lost may be selling
+                // - [SquareOffExit.lessBossLost], as every exit and stop size beside it - and no grow at all while that exit is still looked for.)
                 val heldNow = runCatching {
                     ExitCoordinator.held(ex, kiteSym, product, "strategy ${def.name} stop", orders.values.toList(), first = book, forceLag = true, readAgain = false)
-                }.getOrNull()
+                }.getOrNull()?.let { SquareOffExit.lessBossLost(it, kiteSym, product, ex) }
                 val to = heldNow?.let { minOf(leg.qty, (it * dir - others).coerceAtLeast(0) / lot * lot) } ?: 0
                 val trig = cur.split('|').getOrNull(1)?.toDoubleOrNull()
                 val px = q.firstOrNull { it.symbol == leg.symbol }?.ltp
+                val handsOff = ArmLive.handsOffNow(ex, kiteSym) || SquareOffExit.bossExitLost(ex, kiteSym, product)
                 // (B6-H round 4: an SL order's history as it stands before the grow - read before the row is claimed - so whether the grow
                 // took is later judged on what came after it alone, [grownThenBack]. Not read: judged on its whole history.)
-                val histBefore = if (so != null && to > covers && !ArmLive.handsOffNow(ex, kiteSym))
+                val histBefore = if (so != null && to > covers && !handsOff)
                     runCatching { Broker.orderHistory(so.id).size }.getOrNull() else null
-                val rowClaim = if (to <= covers || ArmLive.handsOffNow(ex, kiteSym) || (gid != null && (trig == null || px == null))) null
+                val rowClaim = if (to <= covers || handsOff || (gid != null && (trig == null || px == null))) null
                     else SquareOffExit.claimExit(ex, kiteSym, product, CLAIM_STOP_OWNER)
                 val growSentAt = marketMs()
                 // (No room by the lag-guarded read: looked at again in a minute, not on every look.)
@@ -2924,6 +3030,8 @@ object Strategies {
         clearHints(); notRestedAt.clear(); legFlatSince.clear(); gttBareSince.clear(); earlyWaitSince.clear(); earlyWaitSaid.clear()
         // (23 Nov 2026, B6-H: the stop marks kept in memory, and the grow-backs' waits, go too; the book's own go with its file.)
         ownCancelsSoon.clear(); ownCancelsGone.clear(); squareMarks.clear(); growNext.clear(); growRefusedSaid.clear(); keepFromToday = null
+        // (24 Nov 2026, B6-I round 6: erased - no lost exit is kept in a book any more: [lostPending] knows them all.)
+        lostUnknownUntil = 0L; lostAsideUntil = 0L
         written.forget()
         filesForErase().forEach { runCatching { it.delete() } }
     }
@@ -2932,7 +3040,7 @@ object Strategies {
     internal fun holdsForErase(): Boolean = runCatching {
         cache?.let { b -> b.defs.isNotEmpty() || b.runs.isNotEmpty() || b.history.isNotEmpty() || b.log.isNotEmpty() || b.owners.isNotEmpty() ||
             b.pending.isNotEmpty() || b.autoApprove.isNotEmpty() || b.brokerIds.isNotEmpty() || b.legStops.isNotEmpty() || b.stoppedDay != null || b.mcxStoppedDay != null ||
-            b.ownCancels.isNotEmpty() || b.bossStops.isNotEmpty() } == true || ownCancelsSoon.isNotEmpty() ||
+            b.ownCancels.isNotEmpty() || b.bossStops.isNotEmpty() || b.lostExits.isNotEmpty() } == true || ownCancelsSoon.isNotEmpty() ||
             runningHint || exposureHint.isNotEmpty() || stopHintDay != null || mcxHint != null
     }.getOrDefault(true)
 
@@ -2945,6 +3053,9 @@ object Strategies {
 
     /** TEST ONLY: the book read from its file again on the next call (as after a restart); the file is kept. */
     internal fun forgetCacheForTest() { cache = null }
+
+    /** TEST ONLY (24 Nov 2026, B6-I round 6): the lost exits kept with the book ([Book.lostExits]). */
+    internal suspend fun lostExitsForTest(): Set<String> = lock.withLock { book().lostExits.keys.toSet() }
 
     @Suppress("unused") private fun today(): LocalDate = Market.today()
 }

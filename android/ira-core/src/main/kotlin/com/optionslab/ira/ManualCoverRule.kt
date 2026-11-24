@@ -374,6 +374,12 @@ object ManualCoverRule {
     fun bossTag(tag: String): Boolean = !appTag(tag)
 
     /**
+     * 24 Nov 2026 (B6-I round 6): a tag that an order a GTT placed when it fired may carry - none, or Zerodha's "gtt" - so whose such an order
+     * is (the app's GTT or Boss's) is told by the GTT list, never by its tag.
+     */
+    fun gttTag(tag: String): Boolean = tag.isBlank() || tag.trim().equals("gtt", ignoreCase = true)
+
+    /**
      * 23 Nov 2026 (B6-I round 2): a reported fill waits this long before it is covered, and Zerodha's orders and GTTs are read again then
      * inside the contract's exit turn, so a stop Boss sets at once himself wins and the app places nothing (still immediate next to the
      * old 20-60 s).
@@ -502,6 +508,24 @@ object ManualCoverRule {
         contractWorking -> Skip.WORKING_ORDER to "$CHECKED_AGAIN: ${Skip.WORKING_ORDER.words}"
         !gttsRead -> null to "$CHECKED_AGAIN: Zerodha's GTTs not read"
         contractGtt -> Skip.GTT to "$CHECKED_AGAIN: ${Skip.GTT.words}"
+        else -> null
+    }
+
+    /**
+     * 24 Nov 2026 (B6-I round 6, final integration review: Boss's sale that filled between the look outside the lock and the placing passed
+     * the last check - it refused only on working orders - and the stop rested on a flat row): the rest of the last check, INSIDE the
+     * protections' lock, with the position row claimed. [claimedBy]: the words for another seller holding the row's claim (null: the claim
+     * was taken); [bossExiting]: Boss is exiting it himself, or his exit on it whose reply was lost may be selling; [heldRead]: what Zerodha
+     * holds was read (lag-guarded) from the last check's own orders read; [held] of the [need] the stop is to cover; [soldSince]: that read
+     * shows a sale on the contract that filled since the look outside the lock read the orders. Null: place. Never a rule Boss is told of:
+     * looked at again soon.
+     */
+    fun precheckRow(claimedBy: String?, bossExiting: Boolean, heldRead: Boolean, held: Int, need: Int, soldSince: Boolean): Pair<Skip?, String>? = when {
+        claimedBy != null -> null to "$CHECKED_AGAIN: busy ($claimedBy is selling it)"
+        bossExiting -> null to "$CHECKED_AGAIN: you are exiting it yourself"
+        !heldRead -> null to "$CHECKED_AGAIN: what Zerodha holds could not be read"
+        soldSince -> null to "$CHECKED_AGAIN: a sale on it filled a moment ago"
+        held < need -> null to "$CHECKED_AGAIN: Zerodha holds less than seen ($held of $need)"
         else -> null
     }
 

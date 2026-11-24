@@ -2762,8 +2762,11 @@ object ArmLive {
     private suspend fun freeBlocked(p: Pos, want: Int, why: String, blockers: List<Broker.OrderRow>, held: Int, claim: RowClaim): Freed {
         // (The orders a fired GTT put in carry no tag either - an arm's, a protection's, Liquidity's - and are never taken for Boss's: a
         // GTT list that cannot be read leaves nothing cancellable.)
-        val gttOrders = if (blockers.none { it.type == "LIMIT" && it.tag.isBlank() }) emptySet()
-            else runCatching { Broker.gtts().flatMap { it.orderIds }.toSet() }.getOrNull()
+        // (24 Nov 2026, B6-I round 6: by the protections' rule for whose a fired GTT's order is - [Protections.gttOrdersNotBosss]: the app's own
+        // GTTs', and any not known to be his; one of his own GTTs is his, as his plain LIMIT.)
+        // (With no tag, or Zerodha's "gtt": [com.optionslab.ira.ManualCoverRule.gttTag] - told apart by the GTT list, never by the tag.)
+        val gttOrders = if (blockers.none { it.type == "LIMIT" && com.optionslab.ira.ManualCoverRule.gttTag(it.tag) }) emptySet()
+            else runCatching { Protections.gttOrdersNotBosss(p.exchange, p.symbol, Broker.gtts()) }.getOrNull()
         val mine = known().toSet() + (gttOrders ?: blockers.map { it.id })
         fun words(rows: List<Broker.OrderRow>) = rows.joinToString { "${it.type} ${it.side.lowercase()} ${ExitQty.remaining(it.qty, it.filled, it.pending)}" +
             (if (it.type == "LIMIT") " @ %.2f".format(Locale.ENGLISH, it.price) else "") + " (${it.tag.ifBlank { "yours" }}, ${it.id})" }
@@ -2807,14 +2810,19 @@ object ArmLive {
 
     /** 18 Nov 2026 (audit A1, review): what the app will do when the exit is due, by the orders that take the stop's room ([foreign]). */
     private fun coveredWords(foreign: List<Broker.OrderRow>): String =
-        if (foreign.any { it.type == "LIMIT" && !it.tag.startsWith("ira", ignoreCase = true) && it.tag !in SquareOffExit.TAGS })
+        if (foreign.any { it.type == "LIMIT" && com.optionslab.ira.ManualCoverRule.bossTag(it.tag) })
             "when the exit is due it cancels your LIMIT first and sells."
         else "it cannot cancel ${if (foreign.size > 1) "those orders" else "that order"} for you: cancel ${if (foreign.size > 1) "them" else "it"} " +
             "in Kite, or the exit cannot sell when it is due."
 
-    /** 18 Nov 2026 (audit A1): an exit order the arm may cancel when its own exit is due: a plain LIMIT of no part of the app. */
-    private fun cancellable(o: Broker.OrderRow, mine: Set<String>): Boolean =
-        o.working && o.type == "LIMIT" && !o.tag.startsWith("ira", ignoreCase = true) && o.tag !in SquareOffExit.TAGS && o.id !in mine
+    /**
+     * 18 Nov 2026 (audit A1): an exit order the arm may cancel when its own exit is due: a plain LIMIT of no part of the app.
+     * 24 Nov 2026 (B6-I round 6, final integration review): Boss's by the one tag rule ([com.optionslab.ira.ManualCoverRule.bossTag]) - no tag,
+     * another app's, or his own "iraalgo" from the app's order screen (it was never counted as his) - never one the app sent by itself; and
+     * never an order a fired GTT of the app's placed, nor one not known to be his ([mine], from [Protections.gttOrdersNotBosss]).
+     */
+    internal fun cancellable(o: Broker.OrderRow, mine: Set<String>): Boolean =
+        o.working && o.type == "LIMIT" && com.optionslab.ira.ManualCoverRule.bossTag(o.tag) && o.id !in mine
 
     /** 18 Nov 2026 (audit A1): [freeBlocked]'s cancels, in the contract's exit turn, each confirmed out on a fresh read. */
     private suspend fun cancelBlockers(p: Pos, ids: List<String>, why: String, mine: Set<String>): Freed {

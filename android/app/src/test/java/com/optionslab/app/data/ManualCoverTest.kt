@@ -777,4 +777,86 @@ class ManualCoverTest : RobolectricTest() {
         later(25); look(); later(25); look()
         assertEquals("covered once it is known not to have gone", listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
     }
+
+    // ---- 24 Nov 2026 (B6-I round 6, final integration review: a stop placed on a position Boss had just sold) --------------------------
+
+    /** Runs [f] just before the last check's own orders read, inside the protections' lock: the look's check outside it has read the books. */
+    private fun beforeTheLastCheck(f: () -> Unit) { kite.afterNext("/quote") { kite.afterNext("/orders") { kite.beforeNext("/orders") { f() } } } }
+
+    /** Runs [f] once the look's check outside the protections' lock has read Zerodha's orders - before the lock and its last check. */
+    private fun afterTheCheckOutside(f: () -> Unit) { kite.afterNext("/quote") { kite.afterNext("/orders") { f() } } }
+
+    /**
+     * MAJOR: Boss sells all of it in Kite between the look outside the lock and the placing, and it fills at once - the last check reads what
+     * is held from its own orders read: nothing is placed on the flat row, and nothing later.
+     */
+    @Test fun bossesKiteSaleFilledBetweenTheCheckAndThePlacingLeavesNoStop() {
+        look(); later(25)
+        beforeTheLastCheck { kite.soldInKite(sym, 130, 126.0, product = "NRML") }
+        look()
+        assertTrue("nothing placed on a flat row: ${kite.placed.map { it.form }}", kite.placed.isEmpty())
+        assertTrue(runBlocking { Protections.active() }.isEmpty())
+        assertTrue(Diag.lines().joinToString("\n"), Diag.lines().any { it.contains("checked again before placing: a sale on it filled a moment ago") })
+        assertEquals("never left holding the row", null, SquareOffExit.exitClaimedBy("NFO", sym, "NRML"))
+        later(25); look(); later(25); look()
+        assertTrue(kite.placed.isEmpty())
+    }
+
+    /** MAJOR: his sale of part of it fills there - nothing is placed for what is no longer held; the next looks cover what is left. */
+    @Test fun bossesPartSaleFilledBetweenTheCheckAndThePlacingIsNeverCoveredAsHeld() {
+        look(); later(25)
+        beforeTheLastCheck { kite.soldInKite(sym, 65, 126.0, product = "NRML") }
+        look()
+        assertTrue("nothing placed for 130: ${kite.placed.map { it.form }}", kite.placed.isEmpty())
+        // (A minute between attempts; the new size seen twice, 20 s apart.)
+        later(25); look(); later(40); look()
+        assertEquals("what is left covered", listOf("65", "65"), kite.placed.map { it.form["quantity"] })
+    }
+
+    /**
+     * MAJOR: Boss's exit from the app takes the row (its claim, his hands-off) while the cover is being placed, and sells it - no stop is placed
+     * beside it, and none after it filled.
+     */
+    @Test fun bossesInAppExitDuringTheCoverLeavesNoStop() {
+        look(); later(25)
+        var his: SquareOffExit.ExitClaim? = null
+        afterTheCheckOutside { his = SquareOffExit.claimExit("NFO", sym, "NRML", "${SquareOffExit.BOSS_OWNER}#1"); ArmLive.handsOff("NFO", sym) }
+        try {
+            look()
+            assertTrue("his claim taken", his != null)
+            assertTrue("nothing placed beside his exit: ${kite.placed.map { it.form }}", kite.placed.isEmpty())
+            assertTrue(Diag.lines().joinToString("\n"), Diag.lines().any { it.contains("checked again before placing: busy (your exit from the app is selling it)") })
+            kite.soldInKite(sym, 130, 126.0, product = "NRML", tag = "iraalgo")
+        } finally { his?.release() }
+        ArmLive.handsBack("NFO", sym)
+        later(25); look(); later(25); look()
+        assertTrue(kite.placed.isEmpty())
+        assertTrue(runBlocking { Protections.active() }.isEmpty())
+    }
+
+    /**
+     * MAJOR: his hands-off begins while the cover is being placed (no claim yet) - nothing placed beside it; once his exit is over and the
+     * position is still held, it is covered.
+     */
+    @Test fun bossesHandsOffDuringTheCoverHoldsItUntilHisExitIsOver() {
+        look(); later(25)
+        afterTheCheckOutside { ArmLive.handsOff("NFO", sym) }
+        look()
+        assertTrue(kite.placed.isEmpty())
+        assertTrue(Diag.lines().joinToString("\n"), Diag.lines().any { it.contains("checked again before placing: you are exiting it yourself") })
+        ArmLive.handsBack("NFO", sym)
+        later(25); look(); later(40); look()
+        assertEquals("covered once his exit is over", listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
+    }
+
+    /** MAJOR: the row's claim is held while the stop and target go in, and let go after - another seller never sells beside them meanwhile. */
+    @Test fun theRowIsClaimedWhileTheCoverGoesIn() {
+        look(); later(25)
+        val seen = ArrayList<String?>()
+        kite.afterNext("/orders/regular") { seen += SquareOffExit.exitClaimedBy("NFO", sym, "NRML") }
+        look()
+        assertEquals(listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
+        assertEquals("held by the protections' stop while it went in", listOf<String?>(Protections.STOP_CLAIM_OWNER), seen)
+        assertEquals("let go after", null, SquareOffExit.exitClaimedBy("NFO", sym, "NRML"))
+    }
 }

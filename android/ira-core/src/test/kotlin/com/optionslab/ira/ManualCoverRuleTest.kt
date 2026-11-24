@@ -160,6 +160,32 @@ class ManualCoverRuleTest {
         assertTrue(ManualCoverRule.UNHEDGED in ManualCoverRule.NATURAL_ENDS, "taking one off never blocks covering again")
     }
 
+    /** 24 Nov 2026 (B6-I round 6): Boss's own orders by their tag, and the tags a fired GTT's order may carry (told apart by the GTT list). */
+    @Test fun bossesTagsAndAFiredGttsTags() {
+        for (t in listOf("", "iraalgo", "IRAALGO", "sensibull", "gtt")) assertTrue(ManualCoverRule.bossTag(t), "his: '$t'")
+        for (t in listOf("iraorb", "irapine", "iraprotect", "iraalgostrat", "iraarm", "iraalgoexpiry", "iraalgoflat", "iranew"))
+            assertFalse(ManualCoverRule.bossTag(t), "the app's: '$t'")
+        for (t in listOf("", " ", "gtt", "GTT")) assertTrue(ManualCoverRule.gttTag(t), "may be a GTT's: '$t'")
+        for (t in listOf("iraalgo", "sensibull", "iraprotect")) assertFalse(ManualCoverRule.gttTag(t), "never a GTT's: '$t'")
+    }
+
+    /** 24 Nov 2026 (B6-I round 6): the row's part of the last check - another seller, Boss exiting, what is held, a sale filled since. */
+    @Test fun theRowsLastCheckInsideTheLock() {
+        fun pc(by: String? = null, boss: Boolean = false, read: Boolean = true, held: Int = 130, need: Int = 130, sold: Boolean = false) =
+            ManualCoverRule.precheckRow(by, boss, read, held, need, sold)
+        assertNull(pc(), "held in full, nothing sold since: placed")
+        assertNull(pc(held = 195), "more held than covered: placed")
+        for ((r, words) in listOf(pc(by = "the expiry square-off") to "the expiry square-off is selling it", pc(boss = true) to "exiting it yourself",
+                pc(read = false) to "could not be read", pc(sold = true) to "filled a moment ago", pc(held = 0) to "0 of 130",
+                pc(held = 65) to "65 of 130")) {
+            assertNull(r!!.first, r.second); assertTrue(r.second.contains(words), r.second)
+            assertTrue(r.second.startsWith(ManualCoverRule.CHECKED_AGAIN), r.second)
+            assertFalse(ManualCoverRule.definiteRefusal("Not protected: ${r.second}"), "never a refusal: ${r.second}")
+        }
+        // (A sale filled since outweighs a positions read that still shows it held.)
+        assertTrue(pc(sold = true, held = 130)!!.second.contains("filled a moment ago"))
+    }
+
     @Test fun theOpenTicketsLegsAreLeftAlone() {
         assertTrue(ManualCoverRule.isTicketLeg("NIFTY", 24_000.0, "PE", "NIFTY", 24_000.0, 23_800.0), "the short leg")
         assertTrue(ManualCoverRule.isTicketLeg("NIFTY", 23_800.0, "PE", "NIFTY", 24_000.0, 23_800.0), "the wing")

@@ -192,6 +192,52 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         assertTrue(AutomationSupport.alerts().toString(), AutomationSupport.alerts().any { "your own sell order on $sym" in it && "waits for it" in it })
     }
 
+    /** 24 Nov 2026 (B6-I round 6, item 2): Boss's own sell placed from the app's order screen ("iraalgo") is his too - cancelled first, then sold. */
+    @Test fun aStopExitCancelsBosssOwnSellFromTheAppsOrderScreenToo() {
+        val s1 = stopOrder(30, 160.0, 152.0)
+        state(listOf(position("orb", 30, 200.0, "E1", s1, 160.0)))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        val his = kite.restingInKite(sym, "SELL", 30, 250.0, tag = "iraalgo")
+        kite.quote("NFO:$sym", 150.0, 149.95, 150.05)
+        kite.requests.clear()
+        pass()
+        assertEquals("his order out first", "CANCELLED", kite.order(his).status)
+        assertEquals(listOf("30"), marketSells().map { it.form["quantity"] })
+        assertTrue(AutomationSupport.alerts().toString(), AutomationSupport.alerts().any { "your own sell order on $sym" in it && "It was cancelled" in it })
+    }
+
+    /**
+     * 24 Nov 2026 (B6-I round 6, item 2): an order a GTT of the app's own placed when it fired (a protection's, a strategy leg's: no tag of the
+     * app's) is never taken for Boss's - never cancelled for this exit; the trade's stop rests and nothing is sold beside it.
+     */
+    @Test fun aStopExitNeverCancelsAnOrderAGttOfTheAppsPlaced() = gttOfTheApps("")
+
+    /** The same with the tag Zerodha may give such an order ("gtt"): told apart by the GTT list, never by its tag. */
+    @Test fun aStopExitNeverCancelsAnOrderAGttOfTheAppsPlacedTaggedGtt() = gttOfTheApps("gtt")
+
+    private fun gttOfTheApps(tag: String) {
+        val s1 = stopOrder(30, 160.0, 152.0)
+        state(listOf(position("orb", 30, 200.0, "E1", s1, 160.0)))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        val gid = 8_801L
+        kite.gtts[gid] = org.json.JSONObject().put("id", gid).put("type", "single").put("status", "active").put("created_at", "2026-11-24 10:00:00")
+            .put("condition", org.json.JSONObject().put("exchange", "NFO").put("tradingsymbol", sym)
+                .put("trigger_values", org.json.JSONArray().put(250.0)).put("last_price", 245.0))
+            .put("orders", org.json.JSONArray().put(org.json.JSONObject().put("exchange", "NFO").put("tradingsymbol", sym)
+                .put("transaction_type", "SELL").put("quantity", 30).put("product", "MIS").put("price", 250.0)))
+        Protections.noteAppGttForTest(gid)                                  // one of the app's own GTTs
+        kite.quote("NFO:$sym", 150.0, 149.95, 150.05)
+        val fired = kite.triggerGtt(gid)                                    // its LIMIT rests (no tag of the app's)
+        assertEquals("OPEN", kite.order(fired).status)
+        kite.orders[fired] = kite.order(fired).let { o -> FakeKite.Order(o.id, o.symbol, o.exchange, o.side, o.qty, o.product, o.type, o.price, o.trigger, tag, o.status) }
+        kite.requests.clear()
+        pass()
+        assertEquals("never cancelled as Boss's", "OPEN", kite.order(fired).status)
+        assertEquals("TRIGGER PENDING", kite.order(s1).status)
+        assertTrue("nothing cancelled, nothing sold", kite.requests.none { it.method != "GET" })
+        assertTrue(AutomationSupport.alerts().toString(), AutomationSupport.alerts().none { "your own sell order on $sym" in it })
+    }
+
     /** 18 Nov 2026 (audit: B2): at the target, Boss's own sell covering the lot is left alone: Boss is told, the stop rests, nothing sold. */
     @Test fun aTargetNeverCancelsBosssOwnSellAndTellsHim() {
         val s1 = stopOrder(30, 160.0, 152.0)

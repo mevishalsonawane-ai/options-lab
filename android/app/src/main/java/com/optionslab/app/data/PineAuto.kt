@@ -119,7 +119,33 @@ object PineAuto {
         // 23 Nov 2026 (B6 follow-ups, item 2): the square-offs subtract a live holding's exit sale whose answer was lost and is still looked
         // for ([lostExit], [Broker.lostSales]) and take no stop out beside it. Only those are counted there - not a sale on its way - so
         // Pine's tag is not one the square-offs leave to that count: one of its sales not in their read holds the row back as another sender's.
-        SquareOffExit.lostPendingProviders[CLAIM_OWNER] = { sym, product -> Broker.lostSales(LOST_EXIT, sym, product) }
+        SquareOffExit.lostPendingProviders[CLAIM_OWNER] = { sym, product -> lostPending(sym, product) }
+        // (24 Nov 2026, B6-I round 6: a lost exit saved in the book is not known until the book is read - [lostPending].)
+        lostUnknownUntil = System.currentTimeMillis() + ArmLive.LOST_LET_GO_MS
+    }
+
+    /**
+     * 24 Nov 2026 (B6-I round 6, final integration review: the provider answered 0 before the book was read, so a lost exit saved in it from
+     * before a restart was not counted): the scripts' live exit sales whose answer was lost and that are still looked for on [symbol]'s
+     * [product] row ([Broker.lostSales] - taken back from the book as it is read: [restoreLostSales]); -1 (not known) for a row a script may
+     * hold (an NSE option, intraday: [ArmLive.armsMayHold]) while the book is not read yet in its first [ArmLive.LOST_LET_GO_MS] after the
+     * start, or for as long after it was set aside as damaged - as the arms' live book's ([ArmLive.unsettledSales]). Memory only.
+     */
+    internal fun lostPending(symbol: String, product: String): Int {
+        val wall = System.currentTimeMillis()
+        if ((wall < lostAsideUntil || (cache == null && wall < lostUnknownUntil)) && product == "MIS" && ArmLive.armsMayHold(symbol, product)) return -1
+        return Broker.lostSales(LOST_EXIT, symbol, product)
+    }
+    /** 24 Nov 2026 (B6-I round 6): until when (wall clock) a lost exit saved in a book not read yet in this process is not known ([lostPending]). */
+    @Volatile private var lostUnknownUntil = 0L
+    /** 24 Nov 2026 (B6-I round 6): until when (wall clock) a lost exit kept in a book set aside as damaged is not known ([lostPending]). */
+    @Volatile private var lostAsideUntil = 0L
+
+    /** TEST ONLY: as a process that started [ms] ago with its book not read yet ([lostPending]); the file is kept. Debug builds only. */
+    internal fun startedForTest(ms: Long) {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }
+        synchronized(this) { cache = null }
+        lostUnknownUntil = System.currentTimeMillis() - ms + ArmLive.LOST_LET_GO_MS
     }
 
     private fun book(): Book {
@@ -167,7 +193,11 @@ object PineAuto {
             bk
         }.getOrNull()
         // 26 Oct: a read the erase refused ([Vault.Erasing]) is not a damaged file: never set aside (it is being deleted).
-        if (b == null && file.exists() && !Vault.isErasing) Vault.setAside(file)
+        if (b == null && file.exists() && !Vault.isErasing) {
+            Vault.setAside(file)
+            // (24 Nov 2026, B6-I round 6: a lost exit kept in the book set aside is not known - the square-offs wait as for the arms' book.)
+            lostAsideUntil = System.currentTimeMillis() + ArmLive.LOST_LET_GO_MS
+        }
         // 26 Oct: read before an erase that came meanwhile ([wipe]): not kept, not shown (its pass's saves are then dropped).
         return (b ?: Book()).also { bk ->
             val kept = synchronized(this) { (gen == wipes).also { if (it) { cache = bk; publish(bk) } } }
@@ -535,6 +565,9 @@ object PineAuto {
             cache = null; written.forget(); _held.value = emptyMap(); _log.value = emptyList()
             stopNoted.clear(); removingHint = false; flatSince.clear(); flatAlertSaid.clear(); reentrySaid.clear()
             ownCancels.clear(); ownCancelAt.clear(); ownRestDue.clear(); lostExitWhy.clear(); pendingWrite.set(null); bookedSales.clear(); notedOnce.clear()
+            squareMarks.clear()
+            // (24 Nov 2026, B6-I round 6: erased - no lost exit is kept in a book any more: [lostPending] knows them all.)
+            lostUnknownUntil = 0L; lostAsideUntil = 0L
         }
         // (22 Nov 2026, B6 review: the lost sales and buys still looked for under its keys forgotten with it - never one a later holding reads.)
         runCatching { (Broker.lostKeys("pineexit:") + Broker.lostKeys("pinebuy:")).forEach { Broker.forgetLost(it) } }
@@ -988,7 +1021,7 @@ object PineAuto {
 
     /** TEST ONLY: forget which late candles were told (a new process starts without them). */
     internal fun forgetStaleForTest() { staleSaid.clear(); stopNotRested.clear(); stopShort.clear(); topUpAt.clear(); topUpGapMsForTest = null
-        ownCancels.clear(); ownCancelAt.clear(); ownRestDue.clear(); lostExitWhy.clear(); bookedSales.clear(); notedOnce.clear() }
+        ownCancels.clear(); ownCancelAt.clear(); ownRestDue.clear(); lostExitWhy.clear(); bookedSales.clear(); notedOnce.clear(); squareMarks.clear() }
 
     /** The option a signal [target] backs ("CE" / "PE"), or null: none (flat, or short with no put). */
     private fun wantFor(item: PineScripts.Item, target: Int): String? = when {
@@ -2342,6 +2375,47 @@ object PineAuto {
         // (Zerodha's refusal: it did not take - a later cancel of it is not the app's. A lost answer may have taken: kept marked.)
         if (Broker.definite(e)) { ownCancels -= oid; ownCancelAt.remove(oid) }
         return false
+    }
+
+    /**
+     * 24 Nov 2026 (B6-I round 6, final integration review: a script's stop that a square-off or Boss's exit from the app took out was read as
+     * gone from Zerodha - Boss's or the exchange's - so it was never put back, WHO CANCELLED A STOP): [ids], resting orders a square-off
+     * ([SquareOffExit]) or Boss's exit from the app (AppModel) is about to take out, marked the app's own cancel here - before the cancel goes -
+     * for the holdings' own stops only ([mayOwnStop]; every id while the book is not read yet), as the other books mark theirs. Such a stop found
+     * cancelled while still held, with no sale since, rests again ([ownRestAgain]); a mark whose cancel never took ends as any own cancel's does
+     * ([ownCancelsSeenWorking]). Memory at once; handed to the book's writer when its lock is free, else saved with its next save. Never waits.
+     */
+    internal fun markOwnCancels(ids: Collection<String>) {
+        val mine = ids.filter { mayOwnStop(it) }
+        if (mine.isEmpty()) return
+        val at = marketMs()
+        for (id in mine) {
+            // (One this module marked itself - its own exit's cancel - stays its own: never taken back by [unmarkOwnCancels].)
+            if (!ownCancel(id)) squareMarks += id
+            ownCancels += id
+            ownCancelAt[id] = at
+        }
+        marksSoon()
+    }
+
+    /** 24 Nov 2026 (B6-I round 6): [markOwnCancels]' marks taken back for [ids] whose cancel did not take (still working): a later cancel of them is Boss's. */
+    internal fun unmarkOwnCancels(ids: Collection<String>) {
+        val gone = ids.filter { squareMarks.remove(it) }
+        if (gone.isEmpty()) return
+        for (id in gone) { ownCancels -= id; ownCancelAt.remove(id) }
+        marksSoon()
+    }
+
+    /** 24 Nov 2026 (B6-I round 6): whether [id] may be a live holding's resting stop - any id while the book is not read yet. Memory only. */
+    internal fun mayOwnStop(id: String): Boolean = cache == null || _held.value.values.any { it.live && it.stop == id }
+
+    /** 24 Nov 2026 (B6-I round 6): the marks [markOwnCancels] made (and only those), so [unmarkOwnCancels] never takes back one of the scripts' own. */
+    private val squareMarks: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    /** The marks handed to the book's writer now when its lock is free (encoded under it); else they go with the book's next save. */
+    private fun marksSoon() {
+        if (!lock.tryLock()) return
+        try { cache?.let { runCatching { saveSoon(it) } } } finally { lock.unlock() }
     }
 
     /**

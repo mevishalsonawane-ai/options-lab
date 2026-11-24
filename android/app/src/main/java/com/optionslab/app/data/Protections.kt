@@ -2031,16 +2031,37 @@ object Protections {
      * of his beside the app's automatic stop comes out of it there, and a position he closed is read at once ([soldLately]).
      */
     fun bossSaleReported(exchange: String, symbol: String, product: String, filled: Boolean) {
-        if (filled) {
-            // (The market's clock, as the protections' ids: [soldLately] counts only a sale since the protection was set.)
-            val now = nowMs()
-            if (bossSold.size > 200) bossSold.entries.removeIf { now - it.value > BOSS_SOLD_MS }
-            bossSold["$exchange:$symbol:$product"] = now
-        }
+        if (filled) bossSoldNoted(exchange, symbol, product)
         lookSoon()
     }
     private val bossSold = java.util.concurrent.ConcurrentHashMap<String, Long>()
     private const val BOSS_SOLD_MS = 120_000L
+
+    /**
+     * 24 Nov 2026 (B6-I round 6, final integration review: Boss's sale that filled while [ManualCover] was placing a cover came on the stream
+     * before the protection existed, so it was dropped, and the stop rested on a flat row through its first minute): Boss's own sale on
+     * [exchange]:[symbol] [product] reported filled on the stream, noted whatever is protected now ([soldLately] counts it for a protection
+     * whose cover's look began before it). Memory only, no look asked - safe on the stream's thread.
+     */
+    fun bossSoldNoted(exchange: String, symbol: String, product: String) {
+        // (The market's clock, as the protections' ids: [soldLately] counts only a sale since the protection's cover began.)
+        val now = nowMs()
+        if (bossSold.size > 200) bossSold.entries.removeIf { now - it.value > BOSS_SOLD_MS }
+        bossSold["$exchange:$symbol:$product"] = now
+    }
+
+    /**
+     * 24 Nov 2026 (B6-I round 6): when [ManualCover]'s look that is covering a row began (the market's clock), by "EXCHANGE:SYMBOL:PRODUCT" -
+     * set just before its cover goes ([noteCoverLook]), so a sale of Boss's that filled after that look began counts for the protection it
+     * sets ([soldLately]). Memory only, bounded.
+     */
+    private val coverLookAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /** 24 Nov 2026 (B6-I round 6): [ManualCover]'s look covering [exchange]:[symbol] [product] began at [at] ([coverLookAt]). Memory only. */
+    fun noteCoverLook(exchange: String, symbol: String, product: String, at: Long) {
+        if (coverLookAt.size > 200) { val now = nowMs(); coverLookAt.entries.removeIf { now - it.value !in 0 until BOSS_SOLD_MS } }
+        coverLookAt["$exchange:$symbol:$product"] = at
+    }
 
     /**
      * 23 Nov 2026 (B6-I round 3, review: "the app's stop already rests" was said at once, while the app might be taking it out): Boss's own
@@ -2099,8 +2120,14 @@ object Protections {
      * own sale on [p]'s contract reported filled in the last two minutes - its first minute is no reason not to read what is held then (two
      * agreeing reads still decide it closed).
      */
-    // (Review: only a sale reported after this protection was set - one before it, a re-entry's, never.)
-    private fun soldLately(p: Item): Boolean = p.auto && bossSold["${p.exchange}:${p.symbol}:${p.product}"]?.let { it >= p.id && nowMs() - it in 0 until BOSS_SOLD_MS } == true
+    // (Review: only a sale reported after this protection was set - one before it, a re-entry's, never. 24 Nov 2026, round 6: or after the
+    // look that set it began - [coverLookAt], at most two minutes before it was set: a sale that filled while its cover was being placed.)
+    private fun soldLately(p: Item): Boolean {
+        if (!p.auto) return false
+        val key = "${p.exchange}:${p.symbol}:${p.product}"
+        val since = coverLookAt[key]?.takeIf { p.id - it in 0 until BOSS_SOLD_MS } ?: p.id
+        return bossSold[key]?.let { it >= since && nowMs() - it in 0 until BOSS_SOLD_MS } == true
+    }
 
     /**
      * 23 Nov 2026 (B6-I round 3, review: Boss's target beside the app's stop filled, the stream's report of it missed, and the app's stop rested
@@ -3423,9 +3450,24 @@ object Protections {
      * Round 4: the GTT ids of the app's own that a fired order on [p]'s contract could be from ([appGttsSeen] and the live ones). Memory.
      * Round 5, final gate: every saved protection's - ended ones too - so after a restart one that fired is still known by its own record.
      */
-    private fun appGttIds(p: Item): Set<Long> = cache.orEmpty().mapNotNull { it.gttId }.toSet() +
-        dayGttMarks(p.exchange, p.symbol).mapNotNull { it.removePrefix("gtt:").toLongOrNull() } + appGttsSeen +
+    private fun appGttIds(p: Item): Set<Long> = appGttIdsOn(p.exchange, p.symbol)
+
+    /** [appGttIds] for any contract ([exchange]:[symbol]), with or without a protection on it. Memory only. */
+    private fun appGttIdsOn(exchange: String, symbol: String): Set<Long> = cache.orEmpty().mapNotNull { it.gttId }.toSet() +
+        dayGttMarks(exchange, symbol).mapNotNull { it.removePrefix("gtt:").toLongOrNull() } + appGttsSeen +
         runCatching { ArmLive.gttIdsHint() }.getOrDefault(emptySet()) + Strategies.gttIdsHint
+
+    /**
+     * 24 Nov 2026 (B6-I round 6, final integration review: an arm's exit cancelled an untagged LIMIT as Boss's, which a GTT of the app's own -
+     * a protection's or a strategy leg's - had placed when it fired): the orders on [exchange]:[symbol] that a GTT in [gtts] placed when it
+     * fired and that are not known to be Boss's - one of the app's own GTTs ([appGttIdsOn]), or one not known to be his ([hisGttKnown]: after
+     * a restart a fired GTT of the app's cannot be told from his). Such an order has no tag, as his own in Kite has; another book never takes
+     * it for his. Memory and [gtts] only.
+     */
+    internal fun gttOrdersNotBosss(exchange: String, symbol: String, gtts: List<Broker.GttRow>): Set<String> {
+        val app = appGttIdsOn(exchange, symbol)
+        return gtts.filter { it.exchange == exchange && it.symbol == symbol && (it.id in app || !hisGttKnown(it)) }.flatMap { it.orderIds }.toSet()
+    }
 
     /**
      * 23 Nov 2026 (B6-I round 2): Boss's own exits beside an automatic protection - his working sells ([orders]) and active GTTs ([gtts]),
@@ -3938,7 +3980,7 @@ object Protections {
         // (23 Nov 2026, B6 review, eighth round: Boss's lost exits kept beside the marks go with them.)
         runCatching { SquareOffExit.forgetBossLostForErase() }
         // (23 Nov 2026, B6-I: the automatic protections being taken out for Boss's own exit, and the levels he moved, said.)
-        bossExits.clear(); bossMovedSaid.clear(); bossShrinkSaid.clear(); appMoves.clear(); bossSold.clear(); shrunkFor.clear(); autoKeysHint = emptySet()
+        bossExits.clear(); bossMovedSaid.clear(); bossShrinkSaid.clear(); appMoves.clear(); bossSold.clear(); coverLookAt.clear(); shrunkFor.clear(); autoKeysHint = emptySet()
         // (Round 3.)
         appGttsSeenAt.clear(); hisTargetsSeen.clear(); bossRefused.clear(); shrunkHis.clear(); hisGttsSeenAt.clear()
         filesForErase().forEach { runCatching { it.delete() } }
@@ -3964,6 +4006,6 @@ object Protections {
     internal suspend fun holdLockForTest(release: kotlinx.coroutines.CompletableDeferred<Unit>) { lock.withLock { release.await() } }
 
     internal fun forgetMemoryForTest() { resetFollowUpForTest(); cache = null; published = null; gttTries.clear(); flatSince.clear(); synchronized(this) { lastId = 0L }
-        bossExits.clear(); bossMovedSaid.clear(); bossShrinkSaid.clear(); appMoves.clear(); bossSold.clear(); shrunkFor.clear()
+        bossExits.clear(); bossMovedSaid.clear(); bossShrinkSaid.clear(); appMoves.clear(); bossSold.clear(); coverLookAt.clear(); shrunkFor.clear()
         appGttsSeenAt.clear(); hisTargetsSeen.clear(); bossRefused.clear(); shrunkHis.clear(); hisGttsSeenAt.clear() }
 }

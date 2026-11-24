@@ -360,10 +360,13 @@ object ManualCover {
 
     /** 23 Nov 2026 (B6-I round 2): [onOrderUpdate]'s sale of Boss's (memory only, on the stream's thread). */
     private fun bossSale(u: com.optionslab.ira.OrderUpdate.Update) {
+        val status = u.status.uppercase()
+        // (24 Nov 2026, B6-I round 6: a filled sale is noted whatever is protected now - a cover may be going on that row this moment, and
+        // the protection it sets counts this sale as soon as it exists: [Protections.soldLately].)
+        if (status == "COMPLETE") Protections.bossSoldNoted(u.exchange, u.symbol, u.product)
         val autos = Protections.autoKeysHint
         if (autos.isEmpty()) return
         val key = "${u.exchange}:${u.symbol}"
-        val status = u.status.uppercase()
         val working = status !in com.optionslab.ira.OrderUpdate.TERMINAL
         if (key in autos) {
             when {
@@ -699,8 +702,9 @@ object ManualCover {
             }
             if (ArmLive.noStopBeside(p.exchange, p.symbol)) continue
             val g = grows[p.lookKey]
-            if (g != null) { if (grow(d, p.copy(qty = qty, avg = row.avg, last = row.last), g, names)) next = ManualCoverRule.FollowUp.READ_FAILED; continue }
-            if (cover(d, p.copy(qty = qty, avg = row.avg, last = row.last), now, names)) next = ManualCoverRule.FollowUp.READ_FAILED
+            // (24 Nov 2026, B6-I round 6: with when this look began - a sale of Boss's that filled after it counts for what it sets.)
+            if (g != null) { if (grow(d, p.copy(qty = qty, avg = row.avg, last = row.last), g, names, now00)) next = ManualCoverRule.FollowUp.READ_FAILED; continue }
+            if (cover(d, p.copy(qty = qty, avg = row.avg, last = row.last), now, names, now00)) next = ManualCoverRule.FollowUp.READ_FAILED
         }
         return next
     }
@@ -857,7 +861,7 @@ object ManualCover {
     }
 
     /** True when a read it needed failed (the lot and tick, the price): nothing was tried, and the look is made again soon ([run]). */
-    private suspend fun cover(d: String, p0: ManualCoverRule.Pos, now: Long, names: Map<String, String>): Boolean {
+    private suspend fun cover(d: String, p0: ManualCoverRule.Pos, now: Long, names: Map<String, String>, lookAt: Long = now): Boolean {
         val k = "$d|${p0.lookKey}"
         val key = "${p0.exchange}:${p0.symbol}"
         // 7 Nov, review: the lot and tick read with a deadline (protectLive then finds them in the day's memory); not read: next look.
@@ -887,23 +891,28 @@ object ManualCover {
         }
         // 7 Nov, third review: checked again OUTSIDE the protections' lock (these reads may be slow): the underlying's shorts, working
         // sells, futures and stock, and what is held. Anything found: nothing sent, not an attempt, never a refusal.
-        val outside = recheck(p, spec.lotSize, names)
+        // (24 Nov 2026, B6-I round 6: the sales on the contract as this check read them - one filled after it is caught inside the lock.)
+        val sells = HashMap<String, Int>()
+        val outside = recheck(p, spec.lotSize, names, sells = sells)
         if (outside != null) {
             outside.first?.let { countLeftAlone(d, p, it) }
             runCatching { Diag.record("protection", "Manual position ${p.symbol} (${p.qty}): stop and target not placed: ${outside.second}") }
             return false
         }
-        // Inside the lock only the short last check ([lastCheck]); the contract's turn, when taken, is held until the orders are sent.
+        // Inside the lock only the short last check ([lastCheck]); the contract's turn and its row's claim, when taken, are held until the
+        // orders are sent.
         var left: ManualCoverRule.Skip? = null
         var pass: com.optionslab.ira.ExitTurns.Pass? = null
+        var claim: SquareOffExit.ExitClaim? = null
         synchronized(mem) { attempts[k] = (attempts[k] ?: 0) + 1; lastAttempt[k] = now }
         val result = try {
             runCatching {
+                Protections.noteCoverLook(p.exchange, p.symbol, p.product, lookAt)
                 Protections.protectLive(p.symbol, p.exchange, p.product, p.qty, p.last, stop, null, target, auto = true, precheck = {
-                    lastCheck(p, reportedDone()) { pass = it }?.let { (why, words) -> left = why; words }
+                    lastCheck(p, reportedDone(), p.qty, sells) { t, c -> pass = t; claim = c }?.let { (why, words) -> left = why; words }
                 })
             }.getOrElse { "Not protected: ${it.message}" }
-        } finally { pass?.leave() }
+        } finally { pass?.leave(); claim?.release() }
         left?.let { countLeftAlone(d, p, it) }
         // Zerodha's answer to a day GTT lost: the protection is kept and looked for on the next pass, so it counts as placed.
         val placed = result.startsWith("Protected ") || runCatching { Protections.forSymbol(true, p.symbol) }.getOrNull() != null
@@ -959,7 +968,8 @@ object ManualCover {
      * never more than is held less what is covered ([recheck] with it as working). One try per reported buy; a definite refusal is said
      * loudly (those lots have no stop from the app). True when a read it needed failed.
      */
-    private suspend fun grow(d: String, p0: ManualCoverRule.Pos, g: Pair<Int, Double?>, names: Map<String, String>): Boolean {
+    private suspend fun grow(d: String, p0: ManualCoverRule.Pos, g: Pair<Int, Double?>, names: Map<String, String>,
+                             lookAt: Long = Market.now().toInstant().toEpochMilli()): Boolean {
         val key = p0.key
         val (covered, stop) = g
         val extra = p0.qty - covered
@@ -977,7 +987,8 @@ object ManualCover {
             noteLast("NOT covered: ${p.symbol}, $extra of ${p0.qty} held (at or close to its stop)")
             return false
         }
-        val outside = recheck(p, spec.lotSize, names, working = covered)
+        val sells = HashMap<String, Int>()
+        val outside = recheck(p, spec.lotSize, names, working = covered, sells = sells)
         if (outside != null) {
             outside.first?.let { countLeftAlone(d, p0, it) }
             runCatching { Diag.record("protection", "Manual position ${p.symbol}: the $extra added not covered: ${outside.second}") }
@@ -986,15 +997,18 @@ object ManualCover {
         }
         var left: ManualCoverRule.Skip? = null
         var pass: com.optionslab.ira.ExitTurns.Pass? = null
+        var claim: SquareOffExit.ExitClaim? = null
         // (Round 3: what it saw covered goes in too - inside the protections' lock what is added is capped at what is held then less what the
         // app's protection covers then, so a raise of its stop meanwhile never makes them cover more than is held.)
+        // (24 Nov 2026, B6-I round 6: inside the lock, what is held must still be all it saw - what the app covers and the lots added.)
         val added = try {
             runCatching {
+                Protections.noteCoverLook(p.exchange, p.symbol, p.product, lookAt)
                 Protections.addAutoSlices(p.symbol, p.exchange, p.product, extra, last, covered) { own ->
-                    lastCheck(p, reportedDone() + own) { pass = it }?.let { (why, words) -> left = why; words }
+                    lastCheck(p, reportedDone() + own, p0.qty, sells) { t, c -> pass = t; claim = c }?.let { (why, words) -> left = why; words }
                 }
             }.getOrElse { Protections.AddResult("Not protected: ${it.message}") }
-        } finally { pass?.leave() }
+        } finally { pass?.leave(); claim?.release() }
         val result = added.words
         left?.let { countLeftAlone(d, p0, it) }
         // (Review: a read that failed inside - the lot and tick, the books in the exit turn, the turn busy - keeps its reported buy and is tried
@@ -1036,9 +1050,12 @@ object ManualCover {
      * 7 Nov, second and third review: the check just before placing, OUTSIDE the protections' lock (bounded reads). Null: go on;
      * else the reason (and the rule it falls under, when it is one Boss is told of).
      */
-    private suspend fun recheck(p: ManualCoverRule.Pos, lot: Int, names: Map<String, String>, working: Int = 0): Pair<ManualCoverRule.Skip?, String>? {
+    private suspend fun recheck(p: ManualCoverRule.Pos, lot: Int, names: Map<String, String>, working: Int = 0,
+                                sells: MutableMap<String, Int>? = null): Pair<ManualCoverRule.Skip?, String>? {
         val again = ManualCoverRule.CHECKED_AGAIN
         val orders = Broker.within(8_000) { Broker.orders() } ?: return null to "$again: Zerodha's orders could not be read"
+        // (24 Nov 2026, B6-I round 6: what each sale on the contract had filled when read here - [lastCheck] looks for one filled since.)
+        sells?.putAll(orders.filter { it.side == "SELL" && it.exchange == p.exchange && it.symbol == p.symbol }.associate { it.id to it.filled })
         val positions = Broker.within(8_000) { Broker.positionBook() } ?: return null to "$again: Zerodha's positions could not be read"
         val equity = equityFor(listOf(p.symbol)) ?: return null to "$again: the holdings could not be read"
         val tracked = withTimeoutOrNull(3_000) { runCatching { trackedIds(Protections.active()) }.getOrNull() }
@@ -1056,20 +1073,41 @@ object ManualCover {
      * its orders and GTTs, each read with a 2.5 s deadline (not read: nothing, never a refusal); nothing working or active on it
      * (23 Nov 2026: but Boss's own buys the stream reported done, [done], [reportedDone]).
      */
-    private suspend fun lastCheck(p: ManualCoverRule.Pos, done: Set<String>, keep: (com.optionslab.ira.ExitTurns.Pass) -> Unit): Pair<ManualCoverRule.Skip?, String>? {
+    private suspend fun lastCheck(p: ManualCoverRule.Pos, done: Set<String>, need: Int, sells: Map<String, Int>,
+                                  keep: (com.optionslab.ira.ExitTurns.Pass, SquareOffExit.ExitClaim) -> Unit): Pair<ManualCoverRule.Skip?, String>? {
         if (!(loaded && on)) return ManualCoverRule.precheckInLock(false, true, true, false, true, false)
         val turn = ExitCoordinator.tryEnter(p.exchange, p.symbol, WHO) ?: return ManualCoverRule.precheckInLock(true, false, true, false, true, false)
+        var claim: SquareOffExit.ExitClaim? = null
         // 7 Nov, fourth review: the turn is always given back if anything throws before it is handed on (a cancellation too).
         try {
+            // 24 Nov 2026 (B6-I round 6, final integration review: Boss sold in Kite or from the app between the look outside the lock and
+            // here, it filled at once, and the stop went onto a flat row): the position row claimed as the protections' stop going in
+            // ([Protections.STOP_CLAIM_OWNER], held with the turn until the orders are sent) - another seller on it (a square-off, an arm's
+            // exit, Boss's exit from the app): nothing placed; and nothing while Boss is exiting it himself or his lost exit may be selling.
+            claim = SquareOffExit.claimExit(p.exchange, p.symbol, p.product, Protections.STOP_CLAIM_OWNER)
+            val other = if (claim == null) SquareOffExit.claimWords(SquareOffExit.exitClaimedBy(p.exchange, p.symbol, p.product)) else null
+            ManualCoverRule.precheckRow(other, claim != null && ArmLive.noStopBeside(p.exchange, p.symbol), true, need, need, false)?.let {
+                claim?.release(); claim = null; turn.leave(); return it
+            }
             // (Round 3: a read of its own, never one already on its way.)
             val orders = Broker.within(2_500) { ExitCoordinator.orders(p.exchange, p.symbol, WHO, fresh = true) }
             val gtts = if (orders == null) null else Broker.within(2_500) { ExitCoordinator.gtts(p.exchange, p.symbol, WHO) }
-            val r = ManualCoverRule.precheckInLock(true, true, orders != null,
+            var r = ManualCoverRule.precheckInLock(true, true, orders != null,
                 orders?.any { it.working && it.exchange == p.exchange && it.symbol == p.symbol && it.id !in done } == true, gtts != null,
                 gtts?.any { it.active && it.exchange == p.exchange && it.symbol == p.symbol } == true)
-            if (r == null) keep(turn) else turn.leave()
+            // (Round 6: what Zerodha holds, from this read of the orders - lag-guarded, so a sale that filled a moment ago and that the positions
+            // still trail counts as sold - at least what the stop is to cover, and no sale on the contract filled since the look outside.)
+            if (r == null && orders != null) {
+                val held = Broker.within(2_500) { ExitCoordinator.held(p.exchange, p.symbol, p.product, WHO, orders, forceLag = true) }
+                val soldSince = orders.any { it.side == "SELL" && it.exchange == p.exchange && it.symbol == p.symbol && it.filled > (sells[it.id] ?: 0) }
+                r = ManualCoverRule.precheckRow(null, false, held != null, held ?: 0, need, soldSince)
+            }
+            val c = claim
+            if (r == null && c != null) keep(turn, c) else { c?.release(); turn.leave() }
+            claim = null
             return r
         } catch (e: Throwable) {
+            claim?.release()
             turn.leave()
             throw e
         }

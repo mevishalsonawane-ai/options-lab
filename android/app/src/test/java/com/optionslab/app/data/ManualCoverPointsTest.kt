@@ -1197,4 +1197,69 @@ class ManualCoverPointsTest : RobolectricTest() {
         assertTrue("made well after this run began", Protections.hisGttKnownForTest(g(6_402L)))
         assertFalse("its time not told: not known", Protections.hisGttKnownForTest(g(6_403L).copy(created = "")))
     }
+
+    // ---- 24 Nov 2026 (B6-I round 6, final integration review) ------------------------------------------------------------------------
+
+    /**
+     * Item 2: whose a fired GTT's order is, for another book's cancel ([Protections.gttOrdersNotBosss]) - the app's own GTTs' and any not known
+     * to be his are never his; one known to be his is his. Only this contract's.
+     */
+    @Test fun aFiredGttsOrderIsBosssOnlyWhenItsGttIsKnownToBeHis() {
+        val fmt = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        val madeAt = java.time.LocalDateTime.now(com.optionslab.engine.IST).withNano(0)
+        val madeMs = madeAt.atZone(com.optionslab.engine.IST).toInstant().toEpochMilli()
+        fun g(id: Long, order: String) = Broker.GttRow(id, "single", "triggered", "NFO", sym, listOf(120.0), 126.0, "", madeAt.format(fmt), orderIds = listOf(order))
+        Broker.serverOffsetMsForTest = 0L
+        Protections.trackedSinceForTest = madeMs - 10 * 60_000L              // made well after this run began: known to be his
+        Protections.noteAppGttForTest(7_101L)                                // one of the app's own
+        val gtts = listOf(g(7_101L, "a1"), g(7_102L, "b1"), g(7_103L, "c1").copy(created = ""), g(7_104L, "d1").copy(symbol = "NIFTY26N0925200CE"))
+        assertEquals("the app's own and the one not known to be his", setOf("a1", "c1"), Protections.gttOrdersNotBosss("NFO", sym, gtts))
+        Protections.trackedSinceForTest = madeMs                             // made as this run began: not known to be his
+        assertEquals(setOf("a1", "b1", "c1"), Protections.gttOrdersNotBosss("NFO", sym, gtts))
+        Protections.seeHisGttsForTest(listOf(7_102L))                        // seen active as his
+        assertEquals(setOf("a1", "c1"), Protections.gttOrdersNotBosss("NFO", sym, gtts))
+    }
+
+    /**
+     * MAJOR: Boss's sale fills while the app's stop is going in - after the last check read his position held, before the protection exists -
+     * and the stream says so then. Noted all the same, and counted from when the cover's look began: in its first minute the protections read
+     * what is held at once, and the stop comes out of the flat row.
+     */
+    @Test fun bossesSaleFilledWhileTheCoverGoesInTakesItsStopOutInItsFirstMinute() {
+        val id = kite.boughtInKite(sym, 130, 125.35)
+        kite.afterNext("/orders/regular") {
+            val sold = kite.soldInKite(sym, 130, 127.0)
+            update(sold, "COMPLETE", 130, side = "SELL")
+        }
+        update(id, "COMPLETE", 130)
+        Background.await("covered") { runBlocking { Protections.active() }.isNotEmpty() }
+        settled()
+        val p = runBlocking { Protections.active() }.single()
+        assertEquals("the app's stop rests", "TRIGGER PENDING", kite.order(p.stopOrderId!!).status)
+        tick()                                                              // its first minute
+        Background.await("the app's stop out of the flat row") { kite.order(p.stopOrderId!!).status == "CANCELLED" }
+        Background.await("its protection ended") { runBlocking { Protections.active() }.isEmpty() }
+        assertEquals("position closed", runBlocking { Protections.endedSince(0) }.single { it.id == p.id }.note)
+    }
+
+    /**
+     * MAJOR (lots added): Boss adds 65, then sells 65 and it fills between the slices' check outside the lock and their placing - nothing is
+     * added beside the app's stop, which already covers all he holds.
+     */
+    @Test fun lotsAddedThenSoldBeforeTheyAreCoveredAreNeverCovered() {
+        val id = kite.boughtInKite(sym, 130, 125.35)
+        update(id, "COMPLETE", 130)
+        Background.await("covered") { kite.placed.isNotEmpty() }
+        settled()
+        val more = kite.boughtInKite(sym, 65, 125.35)
+        // (The look's own check reads the orders, then the slices' check before the lock; the sale fills just before the last check's read.)
+        kite.afterNext("/quote") { kite.afterNext("/orders") { kite.afterNext("/orders") { kite.beforeNext("/orders") { kite.soldInKite(sym, 65, 126.0) } } } }
+        update(more, "COMPLETE", 65, qty = 65)
+        Background.await("looked at") { Diag.lines().any { it.contains("the 65 added not covered") } }
+        settled()
+        assertTrue(Diag.lines().joinToString("\n"), Diag.lines().any { it.contains("the 65 added not covered") && it.contains("a sale on it filled a moment ago") })
+        assertEquals("nothing added: ${kite.placed.map { it.form }}", 1, kite.placed.size)
+        assertEquals(130, runBlocking { Protections.active() }.sumOf { it.qty })
+        assertEquals("never left holding the row", null, SquareOffExit.exitClaimedBy("NFO", sym, "MIS"))
+    }
 }

@@ -527,6 +527,8 @@ internal object SquareOffExit {
      * Liquidity book ([OrbArms.markOwnCancels]). Memory at once; none of them waits on a book's lock or the disk.
      * 23 Nov 2026 (B6-H): the saved strategies' book too ([Strategies.markOwnCancels]), so a leg's stop taken out here and found cancelled
      * while the leg is still held rests again - never read as Boss's own cancel in Kite.
+     * 24 Nov 2026 (B6-I round 6): and the Pine scripts' ([PineAuto.markOwnCancels]: only their holdings' stops), so a script's stop taken out
+     * here is the app's to put back, never read as gone from Zerodha.
      */
     private suspend fun markTaken(exchange: String, symbol: String, ids: List<String>, gtts: List<String>) {
         if (ids.isEmpty() && gtts.isEmpty()) return
@@ -536,6 +538,7 @@ internal object SquareOffExit {
         runCatching { ArmLive.markOwnCancels(armIds) }
         runCatching { OrbArms.markOwnCancels(ids.filter { OrbArms.mayOwnStop(it) }) }
         runCatching { Strategies.markOwnCancels(ids) }
+        runCatching { PineAuto.markOwnCancels(ids) }
     }
 
     /** 20 Nov 2026: [markTaken]'s marks taken back for [ids] whose cancel did not take (still working): a later cancel of them is Boss's. */
@@ -545,6 +548,7 @@ internal object SquareOffExit {
         runCatching { ArmLive.unmarkOwnCancels(ids) }
         runCatching { OrbArms.unmarkOwnCancels(ids) }
         runCatching { Strategies.unmarkOwnCancels(ids) }
+        runCatching { PineAuto.unmarkOwnCancels(ids) }
     }
 
     /**

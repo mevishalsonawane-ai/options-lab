@@ -2845,4 +2845,106 @@ class StrategiesLiveTest : RobolectricTest() {
             assertFalse("taken back", runBlocking { Strategies.ownCancelForTest(stop.id) })
         }
     }
+
+    // ---- 24 Nov 2026 (B6-I round 6, final integration review) ----------------------------------------------------------------------
+
+    /**
+     * Item 3: a leg's stop never grows back while Boss's own exit on the row whose reply was lost may be selling it (sized less it, and no grow
+     * while it is looked for); once it is known not to have gone, it grows.
+     */
+    @Test fun aStopNeverGrowsWhileBossesLostExitMaySellTheRow() {
+        val id = twoLotLeg()
+        val other = kite.restsInKite(NIFTY_CE, "SELL", 75, 150.0, product = "MIS")
+        startLive(id)
+        val stop = workingStops().single()
+        assertEquals("room for one lot only", 75, stop.qty)
+        kite.order(other).status = "CANCELLED"                             // room comes back
+        Broker.lostSearchInlineForTest = true; Broker.lostLookGapMsForTest = 0L
+        SquareOffExit.noteBossLost(com.optionslab.engine.Kite.Order(NIFTY_CE, com.optionslab.engine.Kite.Side.SELL, 75, 75, "MIS", "MARKET", null),
+            kite.orders.keys.toList(), null, Origins.MANUAL)
+        try {
+            runBlocking { Strategies.manageOnly(compromised = false) }
+            assertEquals("never grown while his exit may be selling", 75, kite.order(stop.id).qty)
+            assertTrue(logged("stop_grown").isEmpty())
+            Broker.ageLostForTest(SquareOffExit.bossLostKey("NFO", NIFTY_CE, "MIS"), Broker.LOST_SEARCH_MS + 1_000)
+            assertFalse(SquareOffExit.bossExitLost("NFO", NIFTY_CE, "MIS"))
+            Strategies.forgetGrowWaitsForTest()
+            runBlocking { Strategies.manageOnly(compromised = false) }
+            assertEquals("grown once it is known not to have gone", 150, kite.order(stop.id).qty)
+            assertEquals("one stop, never two", 1, workingStops().size)
+        } finally { Broker.lostSearchInlineForTest = false; Broker.lostLookGapMsForTest = null }
+    }
+
+    /**
+     * Item 4: before the strategies' book is read, in its first two minutes after the start, the square-offs are told the strategies' lost
+     * exits are not known (-1) - only for a row a leg may hold (an option or a future); once read, or after the two minutes, what is kept.
+     */
+    @Test fun theLostExitsAreUnknownUntilTheBookIsReadOnlyForRowsALegMayHold() {
+        live()
+        Strategies.startedForTest(0)
+        assertEquals("an option, the book not read", -1, Strategies.lostPending(NIFTY_CE, "NRML"))
+        assertEquals("a future", -1, Strategies.lostPending("NIFTY26NOVFUT", "MIS"))
+        assertEquals("never a stock", 0, Strategies.lostPending("RELIANCE", "CNC"))
+        assertEquals("the square-offs wait", null, SquareOffExit.lostPending(NIFTY_CE, "NRML"))
+        runBlocking { Strategies.all() }                                   // the book read
+        assertEquals(0, Strategies.lostPending(NIFTY_CE, "NRML"))
+        Strategies.startedForTest(ArmLive.LOST_LET_GO_MS + 1_000)
+        assertEquals("past the two minutes: as kept", 0, Strategies.lostPending(NIFTY_CE, "NRML"))
+    }
+
+    /**
+     * Item 5: a leg's exit whose reply was lost is kept with the book: a restart inside its window keeps it looked for (never sent again) and
+     * counted for the square-offs; once found it is no longer kept, and it is the leg's one exit.
+     */
+    @Test fun aLostExitIsKeptWithTheBookSoARestartInItsWindowKeepsItLookedForAndCounted() {
+        live()
+        val id = saved(Position.B to OptionType.CE)
+        startLive(id)
+        kite.quote("NFO:$NIFTY_CE", 60.0, 59.95, 60.05)                    // through the 30-point stop: the run sells
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)
+        kite.trailReads = 50
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        try {
+            runBlocking { Strategies.tickAll(compromised = false) }
+            assertEquals(1, sells().size)
+            val kept = runBlocking { Strategies.lostExitsForTest() }
+            assertEquals("kept with the book", 1, kept.size)
+            assertEquals("counted for the square-offs", 75, Strategies.lostPending(NIFTY_CE, "NRML"))
+            // A restart inside its window: the memory gone, the book on disk.
+            Broker.forgetLostForTest(); Strategies.startedForTest(0)
+            assertEquals("not known before the book is read", -1, Strategies.lostPending(NIFTY_CE, "NRML"))
+            runBlocking { Strategies.all() }                               // the book read: taken back into the search
+            assertEquals("counted again", 75, Strategies.lostPending(NIFTY_CE, "NRML"))
+            assertTrue("looked for again", Broker.lostPending(kept.single()))
+            runBlocking { Strategies.tickAll(compromised = false) }
+            assertEquals("never sent again while it is looked for", 1, sells().size)
+            assertTrue(AutomationSupport.alerts().none { "lost before a restart" in it })
+            kite.showInBook()
+            runBlocking { Strategies.tickAll(compromised = false) }
+            runBlocking { Strategies.tickAll(compromised = false) }
+            assertEquals("one sale, never two", 1, sells().size)
+            assertTrue("found: no longer kept", runBlocking { Strategies.lostExitsForTest() }.isEmpty())
+            assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$NIFTY_CE:NRML").first)
+        } finally { Broker.lostSearchInlineForTest = false; Broker.lostLookGapMsForTest = null }
+    }
+
+    /** Item 5: a lost exit kept from an earlier day is not taken back (its order book is gone): dropped as the book is read. */
+    @Test fun aLostExitKeptFromAnEarlierDayIsDroppedAsTheBookIsRead() {
+        live()
+        val id = saved(Position.B to OptionType.CE)
+        startLive(id)
+        kite.quote("NFO:$NIFTY_CE", 60.0, 59.95, 60.05)
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)
+        kite.trailReads = 50
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        try {
+            runBlocking { Strategies.tickAll(compromised = false) }
+            assertEquals(1, runBlocking { Strategies.lostExitsForTest() }.size)
+            Broker.forgetLostForTest(); Strategies.forgetCacheForTest()
+            val d = Market.today().plusDays(1)
+            Market.testClock = java.time.Clock.fixed(d.atTime(10, 0).atZone(com.optionslab.engine.IST).toInstant(), com.optionslab.engine.IST)
+            assertTrue("dropped", runBlocking { Strategies.lostExitsForTest() }.isEmpty())
+            assertEquals(0, Strategies.lostPending(NIFTY_CE, "NRML"))
+        } finally { Broker.lostSearchInlineForTest = false; Broker.lostLookGapMsForTest = null }
+    }
 }

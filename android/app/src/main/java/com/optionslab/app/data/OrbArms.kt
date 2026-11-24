@@ -6505,7 +6505,16 @@ object OrbArms {
                     // [SquareOffExit]); a target or an index exit waits for him.)
                     // (Never while Zerodha holds more than the app's live trades on it - both books': Boss holds lots of his own there,
                     // which his order may be for.)
-                    val bosses = others.filter { it.tag.isBlank() && "kite:${it.id}" !in owners }
+                    // (24 Nov 2026, B6-I round 6, final integration review: by the one tag rule - [com.optionslab.ira.ManualCoverRule.bossTag]: no
+                    // tag, another app's, or his own "iraalgo" from the app's order screen - and never an order a fired GTT of the app's placed
+                    // (a protection's, a strategy leg's: no tag either), nor one not known to be his ([Protections.gttOrdersNotBosss]); the GTT
+                    // list not read, one with a tag a GTT's order may carry ([com.optionslab.ira.ManualCoverRule.gttTag]: none, or "gtt") is not
+                    // taken for his.)
+                    val gttLike = { o: Broker.OrderRow -> com.optionslab.ira.ManualCoverRule.gttTag(o.tag) }
+                    val gttApp = if (others.none { com.optionslab.ira.ManualCoverRule.bossTag(it.tag) && gttLike(it) }) emptySet()
+                        else runCatching { Protections.gttOrdersNotBosss("NFO", sym, Broker.gtts()) }.getOrNull()
+                    val bosses = others.filter { com.optionslab.ira.ManualCoverRule.bossTag(it.tag) && "kite:${it.id}" !in owners &&
+                        (!gttLike(it) || (gttApp != null && it.id !in gttApp)) }
                     if (room <= 0 && bosses.isNotEmpty()) {
                         // (19 Nov 2026, second review: never an unconfirmed row - an entry written down before its order went, a lost-id
                         // entry, the arms' live copies' unconfirmed buys - as shrinkToHeld: one may hold nothing and hide Boss's own lots.)

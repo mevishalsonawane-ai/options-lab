@@ -2014,4 +2014,91 @@ class PineAutoLiveTest : RobolectricTest() {
             assertNull(held())
         } finally { Broker.lostSearchInlineForTest = false; Broker.lostLookGapMsForTest = null; Broker.forgetLost(key) }
     }
+
+    // ---- 24 Nov 2026 (B6-I round 6, final integration review, item 1) ---------------------------------------------------------------------
+
+    /**
+     * A square-off takes a script's stop out for its sale, which Zerodha refuses: the take-out was marked the app's own in Pine's book too
+     * ([PineAuto.markOwnCancels]), so with the holding still held the stop rests again - never read as gone from Zerodha (WHO CANCELLED A STOP).
+     */
+    @Test fun aSquareOffsTakeOutOfAScriptsStopIsTheAppsOwnSoItRestsAgain() {
+        bought()
+        val sl = held()!!.stop!!
+        val row = Broker.Position(ce, "MIS", 30, 300.0, 300.0, 0.0)
+        kite.nextPlace(outcome = FakeKite.Outcome.REJECT, message = "RMS:Margin Exceeds, Required:1,20,000.00, Available:40,000.00")
+        runBlocking {
+            SquareOffExit.send(row, 30, 0.05, emptyList(), emptyList(), Broker.Positions(listOf(row), emptyList()), AppSettings.load().limits(),
+                "expiry square-off", "iraalgoexpiry", Origins.EXPIRY, "expires today", "expiry") { _, _ -> }
+        }
+        assertEquals("taken out by the square-off", "CANCELLED", kite.order(sl).status)
+        assertEquals("still held: its sale was refused", 30, kite.positions.getValue("NFO:$ce:MIS").first)
+        assertTrue("marked the app's own", PineAuto.ownCancelForTest(sl))
+        AutomationSupport.clearAlerts()
+        pass(52_010.0)                                             // still BUY: the stop's end read - the app's own, still held
+        assertTrue(log(), log().contains("taken out by the app for an exit"))
+        assertTrue(AutomationSupport.alerts().toString(), AutomationSupport.alerts().none { "is no longer at Zerodha" in it })
+        pass(52_020.0)
+        val h = held()!!
+        assertNotNull("its stop rests again", h.stop)
+        assertTrue(h.stop != sl)
+        assertEquals("TRIGGER PENDING", kite.order(h.stop!!).status)
+        assertEquals(30, kite.order(h.stop!!).qty)
+    }
+
+    /**
+     * Only the holdings' own stops are marked; a mark whose cancel did not take is taken back, so Boss's later cancel in Kite is his - never put
+     * back; and a mark the scripts' own exit made is never taken back by it. Both paths that take stops out mark and unmark Pine's.
+     */
+    @Test fun aMarkTakenBackLeavesBosssLaterCancelHisAndTheScriptsOwnMarksStay() {
+        bought()
+        val sl = held()!!.stop!!
+        PineAuto.markOwnCancels(listOf(sl, "990000001"))
+        assertTrue(PineAuto.ownCancelForTest(sl))
+        assertFalse("never another book's order", PineAuto.ownCancelForTest("990000001"))
+        PineAuto.unmarkOwnCancels(listOf(sl))                     // its cancel did not take
+        assertFalse(PineAuto.ownCancelForTest(sl))
+        kite.order(sl).status = "CANCELLED"                        // later, Boss in Kite
+        AutomationSupport.clearAlerts()
+        pass(52_010.0)
+        assertNull("the app watches the level", held()!!.stop)
+        assertEquals("Boss's cancel is never put back", 1, stops().size)
+        assertTrue(AutomationSupport.alerts().toString(), AutomationSupport.alerts().any { "is no longer at Zerodha" in it })
+        // The square-offs and Boss's exit from the app mark Pine's before their cancels go, and take back only their own marks.
+        fun src(f: String) = listOf(java.io.File("src/main/java/com/optionslab/app/$f"), java.io.File("app/src/main/java/com/optionslab/app/$f")).first { it.isFile }.readText()
+        val sq = src("data/SquareOffExit.kt")
+        assertTrue(sq.substring(sq.indexOf("private suspend fun markTaken")).substringBefore("\n    }\n").contains("PineAuto.markOwnCancels(ids)"))
+        assertTrue(sq.substring(sq.indexOf("private suspend fun untake")).substringBefore("\n    }\n").contains("PineAuto.unmarkOwnCancels(ids)"))
+        val m = src("ui/AppModel.kt")
+        assertTrue(m.substring(m.indexOf("private suspend fun markOwnExits")).substringBefore("\n    }\n").contains("PineAuto.markOwnCancels(pineIds)"))
+        assertTrue(m.substring(m.indexOf("private suspend fun unmarkOwnExits")).substringBefore("\n    }\n").contains("PineAuto.unmarkOwnCancels(m.pine)"))
+    }
+
+    /** A mark the scripts' own exit made (its own cancel of its stop) stays its own - never taken back by another path's unmark. */
+    @Test fun theScriptsOwnCancelMarkIsNeverTakenBackByAnotherPath() {
+        bought()
+        val sl = held()!!.stop!!
+        kite.cancelLagReads = 1_000                                // its cancel is taken; its end shows only later
+        pass(51_900.0)                                             // the exit takes the stop out itself
+        assertTrue(PineAuto.ownCancelForTest(sl))
+        PineAuto.markOwnCancels(listOf(sl))                        // a square-off marks it too, then its own cancel of it did not take
+        PineAuto.unmarkOwnCancels(listOf(sl))
+        assertTrue("still the scripts' own", PineAuto.ownCancelForTest(sl))
+    }
+
+    /**
+     * 24 Nov 2026 (B6-I round 6, item 4): before Pine's book is read, in its first two minutes after the start, the square-offs are told its
+     * lost exits are not known (-1) - only for a row a script may hold (an NSE option, intraday); once read, or after the two minutes, what is kept.
+     */
+    @Test fun theLostExitsAreUnknownUntilTheBookIsReadOnlyForRowsAScriptMayHold() {
+        PineAuto.startedForTest(0)
+        assertEquals("an option, intraday, the book not read", -1, PineAuto.lostPending(ce, "MIS"))
+        assertEquals("never a carried row", 0, PineAuto.lostPending(ce, "NRML"))
+        assertEquals("never a stock", 0, PineAuto.lostPending("RELIANCE", "MIS"))
+        assertEquals("the square-offs wait", null, SquareOffExit.lostPending(ce, "MIS"))
+        switchOn()
+        pass(51_900.0)                                             // the book read
+        assertEquals(0, PineAuto.lostPending(ce, "MIS"))
+        PineAuto.startedForTest(ArmLive.LOST_LET_GO_MS + 1_000)
+        assertEquals("past the two minutes: as kept", 0, PineAuto.lostPending(ce, "MIS"))
+    }
 }
