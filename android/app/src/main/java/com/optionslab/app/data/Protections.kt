@@ -929,7 +929,7 @@ object Protections {
 
     /** TEST ONLY: as after a restart - the list and the marks forgotten in memory, both read again from disk. */
     internal fun restartForTest() {
-        drainMarksForTest(); forgetMemoryForTest(); takenOver.clear(); targetHit.clear(); targetSales.clear(); targetWait.clear()
+        drainMarksForTest(); forgetMemoryForTest(); takenOver.clear(); targetHit.clear(); targetSales.clear(); targetWait.clear(); targetTookStop.clear(); targetTriedOn.clear()
         synchronized(marksMon) { marksLoaded = false; marksForgotten.clear(); marksFails = 0 }
     }
 
@@ -2416,6 +2416,30 @@ object Protections {
                                   /** 23 Nov 2026: Zerodha took it (placed, or a lost one found) - its fill is in an exit's lag guard. */
                                   val placed: Boolean = false)
     private val targetSales = java.util.concurrent.ConcurrentHashMap<Long, TargetSale>()
+
+    /**
+     * 24 Nov 2026 (second whole-app review): by protection id, when its own target's sale took its stop out ([sellAtTarget]) - from then what
+     * is held is read in its first minute too (the positions showed all of it then), so a sale refused or lost later never leaves the stop out
+     * until that minute ends. Memory only; kept [TOOK_STOP_KEEP_MS] (after a restart in that minute, the minute is waited out, as before).
+     */
+    private val targetTookStop = java.util.concurrent.ConcurrentHashMap<Long, Long>()
+
+    /**
+     * 24 Nov 2026 (second whole-app review): by contract ("exchange:symbol:product"), when a target's sale last took a stop out there. A stop
+     * put back after that sale (refused, rejected, part filled) is a new protection in its own first minute: its target is not watched in that
+     * minute until [TOOK_STOP_KEEP_MS] after the sale, so a sale Zerodha keeps refusing is tried about once a minute, as before - never look
+     * after look (each try a cancel, a sale and a stop placed again). Only protections set after that sale (a put-back's id is taken then):
+     * a slice set before it (lots Boss added) keeps its first-minute watch. Memory only.
+     */
+    private val targetTriedOn = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private const val TOOK_STOP_KEEP_MS = 60_000L
+
+    /** [p]'s contract key for [targetTriedOn]. */
+    private fun triedKey(p: Item) = "${p.exchange}:${p.symbol}:${p.product}"
+
+    /** Whether [p] was set after a target's sale took a stop out on its contract, within [TOOK_STOP_KEEP_MS] of it ([targetTriedOn]). */
+    private fun targetTriedLately(p: Item): Boolean =
+        targetTriedOn[triedKey(p)]?.let { at -> p.id >= at && nowMs() - at in 0L until TOOK_STOP_KEEP_MS } == true
     private fun gapClock(): Long = runCatching { SquareOffExit.clock() }.getOrDefault(System.currentTimeMillis())
 
     /**
@@ -2466,8 +2490,10 @@ object Protections {
      * stays out while the sale fills, and if the position is still held once it is done (refused later, part filled), the look puts the stop
      * back ([exitFilledFor], the taken-over branch). [p] as it then stands. Never two exits; never a stop out unless its sale goes.
      * [out] (second round): the stop came out for this sale already (its cancel showed a moment late, [TARGET_CANCEL]) - the sale only.
+     * [wholeOnly] (24 Nov 2026, second whole-app review): the protection's first minute - its stop comes out only when this sale is for all
+     * that stop and the protection cover, never for part (the looks put no stop back in that minute).
      */
-    private suspend fun sellAtTarget(p: Item, so: Broker.OrderRow, ltp: Double?, out: Boolean = false): Item {
+    private suspend fun sellAtTarget(p: Item, so: Broker.OrderRow, ltp: Double?, out: Boolean = false, wholeOnly: Boolean = false): Item {
         // (22 Nov 2026, with the square-offs' protocol: one seller at a time on the row - taken before the stop comes out, let go in a finally;
         // held by a square-off: nothing taken out, it sells the row.)
         var claim = SquareOffExit.claimExit(p.exchange, p.symbol, p.product, CLAIM_OWNER)
@@ -2493,7 +2519,7 @@ object Protections {
         // (Second round, m-1: until this try takes something out, the stream looks leave it be for a while - [targetWait].)
         targetWait[p.id] = nowMs() + TARGET_WAIT_MS
         if (claim == null) return p
-        try { return sellAtTargetClaimed(p, so, ltp, out) } finally { claim.release() }
+        try { return sellAtTargetClaimed(p, so, ltp, out, wholeOnly) } finally { claim.release() }
     }
 
     /** 22 Nov 2026 (B6 review): the protections' name on a position row's exit claim ([SquareOffExit.claimExit]). */
@@ -2504,7 +2530,7 @@ object Protections {
         SquareOffExit.exitClaimedBy(p.exchange, p.symbol, p.product)?.let { it != CLAIM_OWNER && it != STOP_CLAIM_OWNER } == true
 
     /** [sellAtTarget] with the row's exit claim held. */
-    private suspend fun sellAtTargetClaimed(p: Item, so: Broker.OrderRow, ltp: Double?, out: Boolean): Item = ExitCoordinator.turn(p.exchange, p.symbol, "protection target") {
+    private suspend fun sellAtTargetClaimed(p: Item, so: Broker.OrderRow, ltp: Double?, out: Boolean, wholeOnly: Boolean): Item = ExitCoordinator.turn(p.exchange, p.symbol, "protection target") {
         // Boss is exiting it by hand, or a square-off's sale is on its way: theirs.
         if (ArmLive.handsOffNow(p.exchange, p.symbol) || SquareOffExit.inGap(p.exchange, p.symbol, p.product)) return p
         val side = if (p.qty > 0) Kite.Side.SELL else Kite.Side.BUY
@@ -2519,6 +2545,9 @@ object Protections {
         val busy = othersBusy(p, side, book, gttBook, listOfNotNull(p.stopOrderId, p.targetOrderId))
         val planned = com.optionslab.engine.risk.ExitQty.sendable(room, busy, abs(p.qty), p.lotSize)
         if (planned <= 0) return p                                         // covered by another exit: nothing taken out
+        // (24 Nov 2026, second whole-app review: in its first minute - the positions may still trail the fresh buy - only a sale of all that
+        // its stop and it cover takes the stop out; for part, nothing is taken out and the looks after its first minute sell as before.)
+        if (wholeOnly && planned < maxOf(abs(p.qty), stop.qty - stop.filled)) return p
         val o = Kite.Order(p.symbol, side, planned, p.lotSize, p.product, "MARKET", null, p.tick, p.exchange, "iraprotect")
         val bad = Kite.refusals(o, AppSettings.load().limits(), Broker.sentToday(), false, exit = true)
         if (bad.isNotEmpty()) {
@@ -2540,6 +2569,11 @@ object Protections {
             var notOurs = false
             val refused = if (sent) false else {
                 noteTakenOver(listOf(stop.id, TARGET_CANCEL + stop.id))
+                val tookAt = nowMs()
+                targetTookStop.entries.removeIf { (_, at) -> tookAt - at !in 0L until TOOK_STOP_KEEP_MS }
+                targetTookStop[p.id] = tookAt
+                targetTriedOn.entries.removeIf { (_, at) -> tookAt - at !in 0L until TOOK_STOP_KEEP_MS }
+                targetTriedOn[triedKey(p)] = tookAt
                 targetWait.remove(p.id)                                    // (something taken out: the stream looks watch it again)
                 testBeforeTargetCancel?.invoke()
                 try { Broker.cancel(stop.id, stop.variety); false } catch (e: kotlinx.coroutines.CancellationException) { throw e
@@ -2882,7 +2916,13 @@ object Protections {
         // not: [hisTargetFilled].)
         val firstMinute = nowMs() - p.id in 0L until 60_000L
         val targetFilled = firstMinute && !stream && hisTargetFilled(p, rows)
-        val net = if (firstMinute && !soldLately(p) && !targetFilled) null else netNow()
+        // (24 Nov 2026, second whole-app review: [notRead] - what is held not read on purpose in its first minute - still lets the app's own
+        // target be watched below. Once that target's sale has taken its stop out ([targetTookStop], [TARGET_CANCEL]: the positions showed all
+        // of it then), what is held is read as after its first minute, so that sale - or its stop put back - does not wait for the minute to end
+        // (the mark is memory only: after a restart in that minute, the minute is waited out, as before).)
+        val targetOut = targetTookStop.containsKey(p.id) || (so != null && takenOver.containsKey(TARGET_CANCEL + so.id))
+        val notRead = firstMinute && !soldLately(p) && !targetFilled && !targetOut
+        val net = if (notRead) null else netNow()
         if (net != null && (net == 0 || net.sign() != p.qty.sign())) {
             listOfNotNull(so, to).filter { it.working }.forEach { runCatching { Broker.cancel(it.id, it.variety) } }
             val still = runCatching { Broker.orders().filter { it.id == p.stopOrderId || it.id == p.targetOrderId }.any { it.working } }.getOrElse { true }
@@ -3170,7 +3210,12 @@ object Protections {
         // 22 Nov 2026 (B6 review, M5): the app's own target ([Item.appTarget]) watched while its stop rests and the position is held: reached
         // (the price now, or a stream look's tick a moment ago), it is sold - on a regular look; a stream look (the live lane, every tick) only
         // marks it and asks a look apart at once ([targetHit]), never a Zerodha call from the tick.
-        val watchTarget = cur.appTarget && cur.target != null && so != null && so.working && net != null && net != 0 && net.sign() == cur.qty.sign()
+        // 24 Nov 2026 (second whole-app review: Boss's 10/10 target reached in the cover's first minute and fallen back by its end was never
+        // sold): watched in its first minute too, while what is held is not read then ([notRead]); its sale there sizes itself on fresh,
+        // lag-guarded reads as always, and takes the stop out only for a sale of all it covers ([sellAtTarget]'s wholeOnly). Not in the first
+        // minute of a stop put back after a target's sale on the contract a moment ago ([targetTriedLately]): tried again about once a minute.
+        val heldNow = net != null && net != 0 && net.sign() == cur.qty.sign()
+        val watchTarget = cur.appTarget && cur.target != null && so != null && so.working && (heldNow || (notRead && !targetTriedLately(cur)))
         if ((cur.trail == null && !watchTarget) || so == null || !so.working) return cur
         val key = "${p.exchange}:${p.symbol}"
         val streamed = if (stream) runCatching { Broker.tokenOf(key)?.let { KiteStream.freshTick(it) }?.last?.takeIf { it > 0 } }.getOrNull() else null
@@ -3188,7 +3233,7 @@ object Protections {
                 return cur
             }
             val marked = targetHit[cur.id]?.let { nowMs() - it in 0 until TARGET_HIT_KEEP_MS } == true
-            if (!stream && (reached || marked)) return sellAtTarget(cur, so, ltp)
+            if (!stream && (reached || marked)) return sellAtTarget(cur, so, ltp, wholeOnly = !heldNow)
         }
         if (cur.trail == null || ltp == null) return cur
         val n = Protection.next(cur.spec(), ltp)
@@ -3974,7 +4019,7 @@ object Protections {
         // (22 Nov 2026, B6 review: erased - no lost target sale saved before is kept, so none is "not known": [targetSalesGoing].)
         startUnknownUntil = 0L
         cache = null; published = null; activeHint = null; autoHint = false; liveKeysHint = emptyList(); overnightHint = false; mcxOvernightHint = false; dayGttHint = emptyMap()
-        freshDayGtts = emptyMap(); trackedOnly = false; blindWarned = 0L; takenOver.clear(); exitFilled.clear(); exitOrders.clear(); targetHit.clear(); targetSales.clear(); targetWait.clear()
+        freshDayGtts = emptyMap(); trackedOnly = false; blindWarned = 0L; takenOver.clear(); exitFilled.clear(); exitOrders.clear(); targetHit.clear(); targetSales.clear(); targetWait.clear(); targetTookStop.clear(); targetTriedOn.clear()
         // (22 Nov 2026, B6 review: the marks' file deleted beside no write in flight - a write handed over before this erase is dropped.)
         synchronized(marksMon) { marksLoaded = false; marksForgotten.clear(); marksFails = 0; marksFile?.let { runCatching { it.delete() } } }
         runCatching { gttTries.clear() }

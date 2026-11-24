@@ -604,6 +604,104 @@ class ProtectionsB6Test : RobolectricTest() {
         assertEquals(0, held())
     }
 
+    // ---- 24 Nov 2026 (second whole-app review): the app's own target in the protection's first minute ------------------------------
+
+    /**
+     * Boss's 10/10 target reached in the cover's first minute and fallen back by its end was never sold (what is held is not read in that
+     * minute, and the target was watched only beside a read). Now watched then too: reached, the stop comes out first and all of it is sold;
+     * after the minute the protection ends on the flat position, never a stop put back.
+     */
+    @Test fun theTargetReachedInItsFirstMinuteIsSold() {
+        protect()
+        val p = active().single()
+        kite.quote("NFO:$sym", 131.0, 130.95, 131.05)
+        kite.requests.clear()
+        tick()                                                               // its first minute: the clock never moved
+        val reqs = kite.requests.toList()
+        val cancel = reqs.indexOfFirst { it.method == "DELETE" && it.path.endsWith(p.stopOrderId!!) }
+        val sale = reqs.indexOfFirst { it.method == "POST" && it.path == "/orders/regular" && it.form["order_type"] == "MARKET" }
+        assertTrue("the stop out before the sale: $reqs", cancel in 0 until sale)
+        assertEquals("CANCELLED", kite.order(p.stopOrderId!!).status)
+        assertEquals(listOf("75"), sales().map { it.form["quantity"] })
+        assertEquals("flat, never short", 0, held())
+        // The price back under the target: nothing more sold; past its first minute the protection ends with no stop put back.
+        kite.quote("NFO:$sym", 118.0, 117.95, 118.05)
+        at(12, 5); tick()
+        com.optionslab.app.testing.SecondRead.clockOn(); tick()
+        assertTrue("ended", active().isEmpty())
+        assertEquals("one sale", 1, sales().size)
+        assertEquals("never a stop put back on a flat position", 0, kite.placed.count { it.form["order_type"] == "SL" })
+    }
+
+    /** In its first minute a stream tick also only marks the target (no Zerodha write from the tick); the look apart sells it. */
+    @Test fun aStreamTickInItsFirstMinuteMarksTheTargetAndALookApartSells() {
+        protect()
+        val p = active().single()
+        tick()                                                               // under the target: nothing
+        assertTrue(sales().isEmpty())
+        val apart = Protections::class.java.getDeclaredField("followApart").apply { isAccessible = true }.get(Protections) as java.util.concurrent.atomic.AtomicBoolean
+        apart.set(true)
+        try {
+            kite.requests.clear()
+            KiteStream.feedForTest(listOf(com.optionslab.engine.KiteTicks.Tick(12_345_678L, 131.0)))
+            runBlocking { Protections.tick(fast = true, stream = true) }
+            assertTrue("marked", Protections.targetMarkedForTest(p.id))
+            assertTrue("no Zerodha write from the tick's look: ${kite.requests}", kite.requests.none { it.method != "GET" })
+            assertTrue("nothing sold yet", sales().isEmpty())
+        } finally { apart.set(false) }
+        KiteStream.feedForTest(listOf(com.optionslab.engine.KiteTicks.Tick(12_345_678L, 129.5)))
+        tick()
+        assertEquals("CANCELLED", kite.order(p.stopOrderId!!).status)
+        assertEquals("the target the tick reached is sold", listOf("75"), sales().map { it.form["quantity"] })
+        assertEquals(0, held())
+    }
+
+    /**
+     * In its first minute the positions may still trail the fresh buy: a sale for only part of what the stop covers takes nothing out (no
+     * stop is put back in that minute); once all of it shows, still in that minute, all of it is sold.
+     */
+    @Test fun inItsFirstMinuteTheTargetTakesTheStopOutOnlyForAllItCovers() {
+        kite.position(sym, 150, 100.0, product = "MIS")
+        protect(qty = 150)
+        val p = active().single()
+        kite.positions["NFO:$sym:MIS"] = 75 to 100.0                         // the positions read trailing: only part shows yet
+        kite.quote("NFO:$sym", 131.0, 130.95, 131.05)
+        kite.requests.clear()
+        tick()
+        assertTrue("its stop left resting", kite.order(p.stopOrderId!!).working)
+        assertTrue("nothing taken out, nothing sold: ${kite.requests}",
+            kite.requests.none { it.method != "GET" && !it.path.startsWith("/margins") && !it.path.startsWith("/charges") })
+        // All of it shows now, still in its first minute: the stop out first, then all of it sold.
+        kite.positions["NFO:$sym:MIS"] = 150 to 100.0
+        com.optionslab.app.testing.SecondRead.clockOn()
+        tick()
+        assertEquals("CANCELLED", kite.order(p.stopOrderId!!).status)
+        assertEquals(listOf("150"), sales().map { it.form["quantity"] })
+        assertEquals("flat, never short", 0, held())
+    }
+
+    /**
+     * Its sale taken by Zerodha and then rejected, still in its first minute: once the sale has taken the stop out, what is held is read as
+     * after that minute, so the stop goes back at once - never left out until the minute ends.
+     */
+    @Test fun aTargetSaleRejectedAfterItWasTakenInItsFirstMinutePutsTheStopBack() {
+        protect()
+        val p = active().single()
+        kite.quote("NFO:$sym", 131.0, 130.95, 131.05)
+        kite.nextPlace(outcome = FakeKite.Outcome.REJECT, message = "RMS:Blocked for this contract")
+        tick()
+        assertEquals("CANCELLED", kite.order(p.stopOrderId!!).status)
+        assertEquals("the sale went, then was rejected", 1, sales().size)
+        assertEquals(75, held())
+        com.optionslab.app.testing.SecondRead.clockOn()                     // a few seconds on: still its first minute
+        tick()
+        val now = active().single()
+        assertTrue("a new stop rests: ${kite.placed.map { it.form["order_type"] }}",
+            now.stopOrderId != null && now.stopOrderId != p.stopOrderId && kite.order(now.stopOrderId!!).working)
+        assertEquals("SL", kite.placed.last().form["order_type"]); assertEquals("75", kite.placed.last().form["quantity"])
+        assertEquals("one sale only", 1, sales().size)
+    }
+
     /** The target's sale whose reply is lost and not found: no stop goes back beside it until the book shows it or it is let go. */
     @Test fun aLostTargetSaleKeepsTheStopOutUntilItIsKnown() {
         protect()

@@ -385,6 +385,52 @@ class ManualCoverPointsTest : RobolectricTest() {
         assertEquals("said once", 1, Alerts.posted.count { it.text.contains("covers 65 of the 130 held") })
     }
 
+    /**
+     * 24 Nov 2026 (second whole-app review): the 10 point target reached in the cover's first minute is sold then - before, nothing watched
+     * it in that minute, so a price that touched it and fell back by the minute's end was never sold.
+     */
+    @Test fun theTargetReachedInTheCoversFirstMinuteIsSold() {
+        val id = kite.boughtInKite(sym, 130, 125.35)
+        update(id, "COMPLETE", 130)
+        Background.await("covered") { kite.placed.isNotEmpty() }
+        settled()
+        val p = runBlocking { Protections.active() }.single()
+        assertTrue(p.appTarget); assertEquals(135.35, p.target!!, 1e-9)
+        later(20)                                                            // 20 s on: still its first minute
+        kite.quote("NFO:$sym", 136.0, 135.95, 136.05)
+        tick()
+        assertEquals("CANCELLED", kite.order(p.stopOrderId!!).status)
+        val sold = kite.placed.filter { it.form["order_type"] == "MARKET" && it.form["transaction_type"] == "SELL" }
+        assertEquals(listOf("130"), sold.map { it.form["quantity"] })
+        assertEquals("flat, never short", 0, kite.positions["NFO:$sym:MIS"]?.first ?: 0)
+    }
+
+    /**
+     * Lots Boss adds a minute after the cover get their own stop (a slice in its own first minute). The target reached then: the first cover
+     * sells its part and the added lots' part is sold too - the slice set before that sale keeps its first-minute watch (only a stop put
+     * back after a target's sale waits a minute).
+     */
+    @Test fun lotsAddedAMinuteLaterAreSoldAtTheTargetInTheirFirstMinute() {
+        val id = kite.boughtInKite(sym, 130, 125.35)
+        update(id, "COMPLETE", 130)
+        Background.await("covered") { kite.placed.isNotEmpty() }
+        settled()
+        later(61)                                                            // the first cover past its first minute
+        val more = kite.boughtInKite(sym, 65, 125.35)
+        update(more, "COMPLETE", 65, qty = 65)
+        Background.await("the lots added covered") { kite.placed.size == 2 }
+        settled()
+        val covers = runBlocking { Protections.active() }
+        assertEquals(listOf(65, 130), covers.map { it.qty }.sorted())
+        kite.quote("NFO:$sym", 136.0, 135.95, 136.05)
+        tick()
+        com.optionslab.app.testing.SecondRead.clockOn(); tick()              // a few seconds on: the added lots still in their first minute
+        covers.forEach { assertEquals("CANCELLED", kite.order(it.stopOrderId!!).status) }
+        val sold = kite.placed.filter { it.form["order_type"] == "MARKET" && it.form["transaction_type"] == "SELL" }
+        assertEquals(listOf(65, 130), sold.map { it.form.getValue("quantity").toInt() }.sorted())
+        assertEquals("flat, never short", 0, kite.positions["NFO:$sym:MIS"]?.first ?: 0)
+    }
+
     /** Intraday: the app's stop rests and its target is watched by the app; Boss's own target in Kite replaces the app's target, its stop stays. */
     @Test fun intradayBossesOwnTargetReplacesTheAppsWatchedTarget() {
         val id = kite.boughtInKite(sym, 130, 125.35)
