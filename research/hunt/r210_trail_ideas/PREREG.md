@@ -42,6 +42,17 @@ Exactly R193's (its PREREG section 1): R190's lake copy `~/.cache/iraalgo/r190/l
 (`r186engine.price`, `lock_levels`) unchanged. Dated Zerodha charges and R17 slippage (stop sales at the R17 stop fill;
 an index exit is a market sale at the next minute's open). **1 lot** for every number.
 
+### 1a. Data as fetched (24 Nov 2026, before any number; no rule changed)
+
+- Boss gave the lake's Drive folder link (24 Nov) and asked to **check only data from November 2024**: every trade, fold
+  and holdout number is from 1 Nov 2024 on (section 2). Older minutes only warm up indicators in R190's store build.
+- The files were read through the folder's share link (no stored credentials): `index_1m` (NIFTY, BANKNIFTY, FINNIFTY,
+  MIDCPNIFTY, SENSEX, INDIAVIX, every year plus the 2026 fill / gap parts), `options_rolling_1m` WEEK of the five indices
+  and BANKNIFTY MONTH (every year plus the 2026 gap parts), `index_daily` (+ fill). 90 files: 80 match the lake's
+  `MANIFEST.txt` sha256; the 10 `*_gap1113` parts are newer than the manifest (no sha to check). NIFTY's 2020 - Jul 2021
+  options come from the repo's `dhan-data` branch, as R190 did. `equity_1m` was not fetched: only Night reads it.
+- The flat lake and the R51 clean stores were then built with R190's own code (`r190data` steps, `r190arms.py build`).
+
 ## 2. Windows
 
 | window | dates | role |
