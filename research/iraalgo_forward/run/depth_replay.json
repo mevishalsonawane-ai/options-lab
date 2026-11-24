@@ -1,0 +1,42 @@
+{
+  "BANKNIFTY": {
+    "trades": 6,
+    "wins": 2,
+    "net": 2460.27,
+    "unfilled": 0,
+    "lot": 30,
+    "snapshots": 83
+  },
+  "FINNIFTY": {
+    "trades": 6,
+    "wins": 2,
+    "net": -1582.47,
+    "unfilled": 0,
+    "lot": 60,
+    "snapshots": 83
+  },
+  "MIDCPNIFTY": {
+    "trades": 6,
+    "wins": 4,
+    "net": 273.34,
+    "unfilled": 0,
+    "lot": 120,
+    "snapshots": 83
+  },
+  "NIFTY": {
+    "trades": 6,
+    "wins": 3,
+    "net": -718.02,
+    "unfilled": 0,
+    "lot": 65,
+    "snapshots": 83
+  },
+  "SENSEX": {
+    "trades": 6,
+    "wins": 3,
+    "net": -493.39,
+    "unfilled": 0,
+    "lot": 20,
+    "snapshots": 83
+  }
+}

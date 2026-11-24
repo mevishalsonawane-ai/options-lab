@@ -1,0 +1,2520 @@
+{
+ "folds": {
+  "0": {
+   "random": {
+    "trades": 446,
+    "wins": 181,
+    "losses": 265,
+    "flat": 0,
+    "win_rate": 0.40582959641255606,
+    "net": -99190.77000000003,
+    "gross_winners_after_cost": 160309.78999999998,
+    "gross_losers_after_cost": -259500.56,
+    "avg_net": -222.40082959641262,
+    "average_win": 885.6894475138121,
+    "average_loss": -979.247396226415,
+    "profit_factor": 0.6177627901843448,
+    "max_drawdown": 108214.85000000006,
+    "recovery": -0.9166095965572191,
+    "max_consecutive_losses": 14,
+    "sharpe": -5.422070957666845,
+    "sortino": -5.474062205583246,
+    "return_on_capital": -0.9919077000000003,
+    "max_entry_debit": 21811.66,
+    "account": 100000,
+    "monthly": {
+     "2026-04": {
+      "trades": 199,
+      "net": -42765.51
+     },
+     "2026-05": {
+      "trades": 190,
+      "net": -42007.77
+     },
+     "2026-06": {
+      "trades": 57,
+      "net": -14417.49
+     }
+    },
+    "side": {
+     "C": {
+      "trades": 248,
+      "net": -42723.44
+     },
+     "P": {
+      "trades": 198,
+      "net": -56467.33
+     }
+    },
+    "expiry": {
+     "False": {
+      "trades": 347,
+      "net": -82179.88
+     },
+     "True": {
+      "trades": 99,
+      "net": -17010.89
+     }
+    },
+    "regime": {
+     "falling": {
+      "trades": 203,
+      "net": -61644.0
+     },
+     "rising": {
+      "trades": 243,
+      "net": -37546.77
+     }
+    },
+    "session_bootstrap_avg_ci": [
+     -335.8023023060345,
+     -112.29992916634588
+    ],
+    "session_bootstrap_win_ci": [
+     0.3601675478152698,
+     0.45011327984837757
+    ],
+    "shuffled_drawdown_p95": 113400.70700000008,
+    "unfilled": 0,
+    "gross_before_cost": -33543.250000000015,
+    "stress_net": -99195.57999999999
+   },
+   "momentum": {
+    "trades": 438,
+    "wins": 175,
+    "losses": 263,
+    "flat": 0,
+    "win_rate": 0.3995433789954338,
+    "net": -99933.45000000001,
+    "gross_winners_after_cost": 162187.90999999997,
+    "gross_losers_after_cost": -262121.36000000002,
+    "avg_net": -228.15856164383564,
+    "average_win": 926.788057142857,
+    "average_loss": -996.6591634980989,
+    "profit_factor": 0.6187512150860196,
+    "max_drawdown": 103950.67000000003,
+    "recovery": -0.9613545540399113,
+    "max_consecutive_losses": 10,
+    "sharpe": -5.401614434874919,
+    "sortino": -5.557814108691703,
+    "return_on_capital": -0.9993345000000001,
+    "max_entry_debit": 21486.51,
+    "account": 100000,
+    "monthly": {
+     "2026-04": {
+      "trades": 199,
+      "net": -40481.32
+     },
+     "2026-05": {
+      "trades": 190,
+      "net": -41043.43
+     },
+     "2026-06": {
+      "trades": 49,
+      "net": -18408.7
+     }
+    },
+    "side": {
+     "C": {
+      "trades": 205,
+      "net": -34773.11
+     },
+     "P": {
+      "trades": 233,
+      "net": -65160.34
+     }
+    },
+    "expiry": {
+     "False": {
+      "trades": 338,
+      "net": -53014.14
+     },
+     "True": {
+      "trades": 100,
+      "net": -46919.31
+     }
+    },
+    "regime": {
+     "falling": {
+      "trades": 200,
+      "net": -34581.05
+     },
+     "rising": {
+      "trades": 238,
+      "net": -65352.4
+     }
+    },
+    "session_bootstrap_avg_ci": [
+     -349.574863836695,
+     -99.90938208087509
+    ],
+    "session_bootstrap_win_ci": [
+     0.3568276767802114,
+     0.44359234234234235
+    ],
+    "shuffled_drawdown_p95": 115424.24699999996,
+    "unfilled": 0,
+    "gross_before_cost": -35597.25,
+    "stress_net": -99848.15000000001
+   },
+   "no_trade": {
+    "trades": 0,
+    "wins": 0,
+    "losses": 0,
+    "flat": 0,
+    "win_rate": null,
+    "net": 0.0,
+    "gross_winners_after_cost": 0.0,
+    "gross_losers_after_cost": 0.0,
+    "avg_net": null,
+    "average_win": null,
+    "average_loss": null,
+    "profit_factor": null,
+    "max_drawdown": 0.0,
+    "recovery": null,
+    "max_consecutive_losses": 0,
+    "sharpe": null,
+    "sortino": null,
+    "return_on_capital": 0.0,
+    "max_entry_debit": 0,
+    "account": 100000,
+    "monthly": {},
+    "side": {},
+    "expiry": {},
+    "regime": {},
+    "session_bootstrap_avg_ci": null,
+    "session_bootstrap_win_ci": null,
+    "shuffled_drawdown_p95": 0.0,
+    "unfilled": 0,
+    "gross_before_cost": 0.0,
+    "stress_net": 0.0
+   },
+   "logistic": {
+    "trades": 12,
+    "wins": 6,
+    "losses": 6,
+    "flat": 0,
+    "win_rate": 0.5,
+    "net": -5737.57,
+    "gross_winners_after_cost": 3959.8500000000004,
+    "gross_losers_after_cost": -9697.42,
+    "avg_net": -478.1308333333333,
+    "average_win": 659.975,
+    "average_loss": -1616.2366666666667,
+    "profit_factor": 0.4083405689348301,
+    "max_drawdown": 8670.359999999999,
+    "recovery": -0.6617453023865215,
+    "max_consecutive_losses": 3,
+    "sharpe": -1.880952008312169,
+    "sortino": -2.009476023378815,
+    "return_on_capital": -0.057375699999999995,
+    "max_entry_debit": 20104.64,
+    "account": 100000,
+    "monthly": {
+     "2026-04": {
+      "trades": 6,
+      "net": -3052.89
+     },
+     "2026-05": {
+      "trades": 3,
+      "net": -3384.66
+     },
+     "2026-06": {
+      "trades": 3,
+      "net": 699.98
+     }
+    },
+    "side": {
+     "C": {
+      "trades": 1,
+      "net": 1251.37
+     },
+     "P": {
+      "trades": 11,
+      "net": -6988.94
+     }
+    },
+    "expiry": {
+     "False": {
+      "trades": 12,
+      "net": -5737.57
+     }
+    },
+    "regime": {
+     "falling": {
+      "trades": 7,
+      "net": -213.18
+     },
+     "rising": {
+      "trades": 5,
+      "net": -5524.39
+     }
+    },
+    "session_bootstrap_avg_ci": [
+     -1333.497425,
+     488.85287500000004
+    ],
+    "session_bootstrap_win_ci": [
+     0.14285714285714285,
+     0.9
+    ],
+    "shuffled_drawdown_p95": 8806.723,
+    "unfilled": 0,
+    "gross_before_cost": -3802.5000000000023,
+    "stress_net": -6689.159999999997
+   },
+   "dense": {
+    "trades": 105,
+    "wins": 44,
+    "losses": 61,
+    "flat": 0,
+    "win_rate": 0.41904761904761906,
+    "net": -18138.390000000007,
+    "gross_winners_after_cost": 46056.01,
+    "gross_losers_after_cost": -64194.4,
+    "avg_net": -172.74657142857149,
+    "average_win": 1046.7275,
+    "average_loss": -1052.3672131147541,
+    "profit_factor": 0.7174459142853582,
+    "max_drawdown": 23375.200000000004,
+    "recovery": -0.7759672644512134,
+    "max_consecutive_losses": 6,
+    "sharpe": -2.1012227969546142,
+    "sortino": -2.82699719962284,
+    "return_on_capital": -0.18138390000000007,
+    "max_entry_debit": 20085.13,
+    "account": 100000,
+    "monthly": {
+     "2026-04": {
+      "trades": 39,
+      "net": -9939.48
+     },
+     "2026-05": {
+      "trades": 36,
+      "net": -4625.55
+     },
+     "2026-06": {
+      "trades": 30,
+      "net": -3573.36
+     }
+    },
+    "side": {
+     "C": {
+      "trades": 26,
+      "net": -7187.19
+     },
+     "P": {
+      "trades": 79,
+      "net": -10951.2
+     }
+    },
+    "expiry": {
+     "False": {
+      "trades": 90,
+      "net": -24171.21
+     },
+     "True": {
+      "trades": 15,
+      "net": 6032.82
+     }
+    },
+    "regime": {
+     "falling": {
+      "trades": 61,
+      "net": -7847.8
+     },
+     "rising": {
+      "trades": 44,
+      "net": -10290.59
+     }
+    },
+    "session_bootstrap_avg_ci": [
+     -445.53339868421057,
+     125.00333543155875
+    ],
+    "session_bootstrap_win_ci": [
+     0.33,
+     0.5142926490984743
+    ],
+    "shuffled_drawdown_p95": 32373.457000000006,
+    "unfilled": 0,
+    "gross_before_cost": -2512.250000000011,
+    "stress_net": -26013.809999999994
+   },
+   "gru": {
+    "trades": 1,
+    "wins": 0,
+    "losses": 1,
+    "flat": 0,
+    "win_rate": 0.0,
+    "net": -2526.4900000000016,
+    "gross_winners_after_cost": 0.0,
+    "gross_losers_after_cost": -2526.4900000000016,
+    "avg_net": -2526.4900000000016,
+    "average_win": null,
+    "average_loss": -2526.4900000000016,
+    "profit_factor": 0.0,
+    "max_drawdown": 2526.4900000000016,
+    "recovery": -1.0,
+    "max_consecutive_losses": 1,
+    "sharpe": -2.049390153191919,
+    "sortino": -2.0493901531919194,
+    "return_on_capital": -0.025264900000000017,
+    "max_entry_debit": 19633.18,
+    "account": 100000,
+    "monthly": {
+     "2026-04": {
+      "trades": 1,
+      "net": -2526.49
+     }
+    },
+    "side": {
+     "P": {
+      "trades": 1,
+      "net": -2526.49
+     }
+    },
+    "expiry": {
+     "False": {
+      "trades": 1,
+      "net": -2526.49
+     }
+    },
+    "regime": {
+     "rising": {
+      "trades": 1,
+      "net": -2526.49
+     }
+    },
+    "session_bootstrap_avg_ci": [
+     -2526.4900000000016,
+     -2526.4900000000016
+    ],
+    "session_bootstrap_win_ci": [
+     0.0,
+     0.0
+    ],
+    "shuffled_drawdown_p95": 2526.4900000000016,
+    "unfilled": 0,
+    "gross_before_cost": -2349.7500000000023,
+    "stress_net": -2610.9300000000003
+   },
+   "cnn": {
+    "trades": 3,
+    "wins": 2,
+    "losses": 1,
+    "flat": 0,
+    "win_rate": 0.6666666666666666,
+    "net": 692.9499999999989,
+    "gross_winners_after_cost": 1373.3499999999985,
+    "gross_losers_after_cost": -680.3999999999996,
+    "avg_net": 230.98333333333298,
+    "average_win": 686.6749999999993,
+    "average_loss": -680.3999999999996,
+    "profit_factor": 2.0184450323339203,
+    "max_drawdown": 680.3999999999996,
+    "recovery": 1.0184450323339203,
+    "max_consecutive_losses": 1,
+    "sharpe": 1.1756125004557894,
+    "sortino": 2.1019886478536804,
+    "return_on_capital": 0.0069294999999999895,
+    "max_entry_debit": 11244.4,
+    "account": 100000,
+    "monthly": {
+     "2026-04": {
+      "trades": 1,
+      "net": -680.4
+     },
+     "2026-05": {
+      "trades": 1,
+      "net": 526.31
+     },
+     "2026-06": {
+      "trades": 1,
+      "net": 847.04
+     }
+    },
+    "side": {
+     "P": {
+      "trades": 3,
+      "net": 692.95
+     }
+    },
+    "expiry": {
+     "False": {
+      "trades": 2,
+      "net": 1373.35
+     },
+     "True": {
+      "trades": 1,
+      "net": -680.4
+     }
+    },
+    "regime": {
+     "falling": {
+      "trades": 1,
+      "net": 847.04
+     },
+     "rising": {
+      "trades": 2,
+      "net": -154.09
+     }
+    },
+    "session_bootstrap_avg_ci": [
+     -680.3999999999996,
+     847.039999999999
+    ],
+    "session_bootstrap_win_ci": [
+     0.0,
+     1.0
+    ],
+    "shuffled_drawdown_p95": 680.3999999999996,
+    "unfilled": 0,
+    "gross_before_cost": 1127.7500000000023,
+    "stress_net": 465.6100000000006
+   },
+   "dense_context_only": {
+    "trades": 1,
+    "wins": 1,
+    "losses": 0,
+    "flat": 0,
+    "win_rate": 1.0,
+    "net": 1251.369999999999,
+    "gross_winners_after_cost": 1251.369999999999,
+    "gross_losers_after_cost": 0.0,
+    "avg_net": 1251.369999999999,
+    "average_win": 1251.369999999999,
+    "average_loss": null,
+    "profit_factor": null,
+    "max_drawdown": 0.0,
+    "recovery": null,
+    "max_consecutive_losses": 0,
+    "sharpe": 2.04939015319192,
+    "sortino": null,
+    "return_on_capital": 0.01251369999999999,
+    "max_entry_debit": 20104.64,
+    "account": 100000,
+    "monthly": {
+     "2026-04": {
+      "trades": 1,
+      "net": 1251.37
+     }
+    },
+    "side": {
+     "C": {
+      "trades": 1,
+      "net": 1251.37
+     }
+    },
+    "expiry": {
+     "False": {
+      "trades": 1,
+      "net": 1251.37
+     }
+    },
+    "regime": {
+     "falling": {
+      "trades": 1,
+      "net": 1251.37
+     }
+    },
+    "session_bootstrap_avg_ci": [
+     1251.369999999999,
+     1251.369999999999
+    ],
+    "session_bootstrap_win_ci": [
+     1.0,
+     1.0
+    ],
+    "shuffled_drawdown_p95": 0.0,
+    "unfilled": 0,
+    "gross_before_cost": 1439.7499999999986,
+    "stress_net": 1166.9300000000003
+   }
+  },
+  "1": {
+   "random": {
+    "trades": 440,
+    "wins": 159,
+    "losses": 281,
+    "flat": 0,
+    "win_rate": 0.3613636363636364,
+    "net": -71745.62,
+    "gross_winners_after_cost": 82184.8,
+    "gross_losers_after_cost": -153930.41999999998,
+    "avg_net": -163.05822727272727,
+    "average_win": 516.885534591195,
+    "average_loss": -547.7950889679714,
+    "profit_factor": 0.5339087621537056,
+    "max_drawdown": 73077.14999999995,
+    "recovery": -0.9817791197385235,
+    "max_consecutive_losses": 14,
+    "sharpe": -10.645335245329347,
+    "sortino": -9.522816933133866,
+    "return_on_capital": -0.7174562,
+    "max_entry_debit": 13601.71,
+    "account": 100000,
+    "monthly": {
+     "2026-07": {
+      "trades": 230,
+      "net": -39395.38
+     },
+     "2026-08": {
+      "trades": 210,
+      "net": -32350.24
+     }
+    },
+    "side": {
+     "C": {
+      "trades": 223,
+      "net": -31019.66
+     },
+     "P": {
+      "trades": 217,
+      "net": -40725.96
+     }
+    },
+    "expiry": {
+     "False": {
+      "trades": 360,
+      "net": -58253.03
+     },
+     "True": {
+      "trades": 80,
+      "net": -13492.59
+     }
+    },
+    "regime": {
+     "falling": {
+      "trades": 238,
+      "net": -41635.48
+     },
+     "rising": {
+      "trades": 202,
+      "net": -30110.14
+     }
+    },
+    "session_bootstrap_avg_ci": [
+     -235.09362727272725,
+     -93.75072613636361
+    ],
+    "session_bootstrap_win_ci": [
+     0.3159090909090909,
+     0.40454545454545454
+    ],
+    "shuffled_drawdown_p95": 79509.71999999994,
+    "unfilled": 0,
+    "gross_before_cost": -11625.25,
+    "stress_net": -95869.5
+   },
+   "momentum": {
+    "trades": 440,
+    "wins": 163,
+    "losses": 277,
+    "flat": 0,
+    "win_rate": 0.3704545454545455,
+    "net": -53651.720000000016,
+    "gross_winners_after_cost": 97964.37,
+    "gross_losers_after_cost": -151616.09000000003,
+    "avg_net": -121.9357272727273,
+    "average_win": 601.0084049079754,
+    "average_loss": -547.3505054151625,
+    "profit_factor": 0.6461343911454251,
+    "max_drawdown": 60834.810000000034,
+    "recovery": -0.8819246743763971,
+    "max_consecutive_losses": 12,
+    "sharpe": -5.724709817068723,
+    "sortino": -6.822187620388521,
+    "return_on_capital": -0.5365172000000001,
+    "max_entry_debit": 13601.71,
+    "account": 100000,
+    "monthly": {
+     "2026-07": {
+      "trades": 230,
+      "net": -39708.8
+     },
+     "2026-08": {
+      "trades": 210,
+      "net": -13942.92
+     }
+    },
+    "side": {
+     "C": {
+      "trades": 217,
+      "net": -25099.95
+     },
+     "P": {
+      "trades": 223,
+      "net": -28551.77
+     }
+    },
+    "expiry": {
+     "False": {
+      "trades": 360,
+      "net": -44994.92
+     },
+     "True": {
+      "trades": 80,
+      "net": -8656.8
+     }
+    },
+    "regime": {
+     "falling": {
+      "trades": 238,
+      "net": -13384.59
+     },
+     "rising": {
+      "trades": 202,
+      "net": -40267.13
+     }
+    },
+    "session_bootstrap_avg_ci": [
+     -207.0942625,
+     -30.334130113636345
+    ],
+    "session_bootstrap_win_ci": [
+     0.33176136363636366,
+     0.4090909090909091
+    ],
+    "shuffled_drawdown_p95": 69631.84550000001,
+    "unfilled": 0,
+    "gross_before_cost": 6519.499999999996,
+    "stress_net": -84871.18
+   },
+   "no_trade": {
+    "trades": 0,
+    "wins": 0,
+    "losses": 0,
+    "flat": 0,
+    "win_rate": null,
+    "net": 0.0,
+    "gross_winners_after_cost": 0.0,
+    "gross_losers_after_cost": 0.0,
+    "avg_net": null,
+    "average_win": null,
+    "average_loss": null,
+    "profit_factor": null,
+    "max_drawdown": 0.0,
+    "recovery": null,
+    "max_consecutive_losses": 0,
+    "sharpe": null,
+    "sortino": null,
+    "return_on_capital": 0.0,
+    "max_entry_debit": 0,
+    "account": 100000,
+    "monthly": {},
+    "side": {},
+    "expiry": {},
+    "regime": {},
+    "session_bootstrap_avg_ci": null,
+    "session_bootstrap_win_ci": null,
+    "shuffled_drawdown_p95": 0.0,
+    "unfilled": 0,
+    "gross_before_cost": 0.0,
+    "stress_net": 0.0
+   },
+   "logistic": {
+    "trades": 0,
+    "wins": 0,
+    "losses": 0,
+    "flat": 0,
+    "win_rate": null,
+    "net": 0.0,
+    "gross_winners_after_cost": 0.0,
+    "gross_losers_after_cost": 0.0,
+    "avg_net": null,
+    "average_win": null,
+    "average_loss": null,
+    "profit_factor": null,
+    "max_drawdown": 0.0,
+    "recovery": null,
+    "max_consecutive_losses": 0,
+    "sharpe": null,
+    "sortino": null,
+    "return_on_capital": 0.0,
+    "max_entry_debit": 0,
+    "account": 100000,
+    "monthly": {},
+    "side": {},
+    "expiry": {},
+    "regime": {},
+    "session_bootstrap_avg_ci": null,
+    "session_bootstrap_win_ci": null,
+    "shuffled_drawdown_p95": 0.0,
+    "unfilled": 0,
+    "gross_before_cost": 0.0,
+    "stress_net": 0.0
+   },
+   "dense": {
+    "trades": 53,
+    "wins": 20,
+    "losses": 33,
+    "flat": 0,
+    "win_rate": 0.37735849056603776,
+    "net": -12672.220000000007,
+    "gross_winners_after_cost": 11479.959999999992,
+    "gross_losers_after_cost": -24152.179999999997,
+    "avg_net": -239.09849056603787,
+    "average_win": 573.9979999999996,
+    "average_loss": -731.8842424242423,
+    "profit_factor": 0.4753177559955248,
+    "max_drawdown": 13746.600000000004,
+    "recovery": -0.9218439468668619,
+    "max_consecutive_losses": 7,
+    "sharpe": -4.815741912592336,
+    "sortino": -5.12426959538922,
+    "return_on_capital": -0.12672220000000006,
+    "max_entry_debit": 13286.32,
+    "account": 100000,
+    "monthly": {
+     "2026-07": {
+      "trades": 33,
+      "net": -4674.58
+     },
+     "2026-08": {
+      "trades": 20,
+      "net": -7997.64
+     }
+    },
+    "side": {
+     "C": {
+      "trades": 23,
+      "net": -4607.84
+     },
+     "P": {
+      "trades": 30,
+      "net": -8064.38
+     }
+    },
+    "expiry": {
+     "False": {
+      "trades": 39,
+      "net": -11951.51
+     },
+     "True": {
+      "trades": 14,
+      "net": -720.71
+     }
+    },
+    "regime": {
+     "falling": {
+      "trades": 32,
+      "net": -11391.29
+     },
+     "rising": {
+      "trades": 21,
+      "net": -1280.93
+     }
+    },
+    "session_bootstrap_avg_ci": [
+     -501.9204299242425,
+     -13.35745698051957
+    ],
+    "session_bootstrap_win_ci": [
+     0.23402482269503547,
+     0.5131667852062589
+    ],
+    "shuffled_drawdown_p95": 16608.752000000004,
+    "unfilled": 0,
+    "gross_before_cost": -5577.000000000006,
+    "stress_net": -16371.299999999997
+   },
+   "gru": {
+    "trades": 0,
+    "wins": 0,
+    "losses": 0,
+    "flat": 0,
+    "win_rate": null,
+    "net": 0.0,
+    "gross_winners_after_cost": 0.0,
+    "gross_losers_after_cost": 0.0,
+    "avg_net": null,
+    "average_win": null,
+    "average_loss": null,
+    "profit_factor": null,
+    "max_drawdown": 0.0,
+    "recovery": null,
+    "max_consecutive_losses": 0,
+    "sharpe": null,
+    "sortino": null,
+    "return_on_capital": 0.0,
+    "max_entry_debit": 0,
+    "account": 100000,
+    "monthly": {},
+    "side": {},
+    "expiry": {},
+    "regime": {},
+    "session_bootstrap_avg_ci": null,
+    "session_bootstrap_win_ci": null,
+    "shuffled_drawdown_p95": 0.0,
+    "unfilled": 0,
+    "gross_before_cost": 0.0,
+    "stress_net": 0.0
+   },
+   "cnn": {
+    "trades": 0,
+    "wins": 0,
+    "losses": 0,
+    "flat": 0,
+    "win_rate": null,
+    "net": 0.0,
+    "gross_winners_after_cost": 0.0,
+    "gross_losers_after_cost": 0.0,
+    "avg_net": null,
+    "average_win": null,
+    "average_loss": null,
+    "profit_factor": null,
+    "max_drawdown": 0.0,
+    "recovery": null,
+    "max_consecutive_losses": 0,
+    "sharpe": null,
+    "sortino": null,
+    "return_on_capital": 0.0,
+    "max_entry_debit": 0,
+    "account": 100000,
+    "monthly": {},
+    "side": {},
+    "expiry": {},
+    "regime": {},
+    "session_bootstrap_avg_ci": null,
+    "session_bootstrap_win_ci": null,
+    "shuffled_drawdown_p95": 0.0,
+    "unfilled": 0,
+    "gross_before_cost": 0.0,
+    "stress_net": 0.0
+   },
+   "dense_context_only": {
+    "trades": 0,
+    "wins": 0,
+    "losses": 0,
+    "flat": 0,
+    "win_rate": null,
+    "net": 0.0,
+    "gross_winners_after_cost": 0.0,
+    "gross_losers_after_cost": 0.0,
+    "avg_net": null,
+    "average_win": null,
+    "average_loss": null,
+    "profit_factor": null,
+    "max_drawdown": 0.0,
+    "recovery": null,
+    "max_consecutive_losses": 0,
+    "sharpe": null,
+    "sortino": null,
+    "return_on_capital": 0.0,
+    "max_entry_debit": 0,
+    "account": 100000,
+    "monthly": {},
+    "side": {},
+    "expiry": {},
+    "regime": {},
+    "session_bootstrap_avg_ci": null,
+    "session_bootstrap_win_ci": null,
+    "shuffled_drawdown_p95": 0.0,
+    "unfilled": 0,
+    "gross_before_cost": 0.0,
+    "stress_net": 0.0
+   }
+  },
+  "2": {
+   "random": {
+    "trades": 330,
+    "wins": 134,
+    "losses": 196,
+    "flat": 0,
+    "win_rate": 0.40606060606060607,
+    "net": -37732.759999999995,
+    "gross_winners_after_cost": 91009.61000000002,
+    "gross_losers_after_cost": -128742.36999999998,
+    "avg_net": -114.34169696969695,
+    "average_win": 679.1761940298509,
+    "average_loss": -656.8488265306122,
+    "profit_factor": 0.706912650435129,
+    "max_drawdown": 42831.570000000014,
+    "recovery": -0.8809567335495753,
+    "max_consecutive_losses": 12,
+    "sharpe": -6.712616397446089,
+    "sortino": -7.594299359421267,
+    "return_on_capital": -0.37732759999999993,
+    "max_entry_debit": 11764.64,
+    "account": 100000,
+    "monthly": {
+     "2026-09": {
+      "trades": 210,
+      "net": -20306.09
+     },
+     "2026-10": {
+      "trades": 120,
+      "net": -17426.67
+     }
+    },
+    "side": {
+     "C": {
+      "trades": 158,
+      "net": -30703.47
+     },
+     "P": {
+      "trades": 172,
+      "net": -7029.29
+     }
+    },
+    "expiry": {
+     "False": {
+      "trades": 250,
+      "net": -18901.02
+     },
+     "True": {
+      "trades": 80,
+      "net": -18831.74
+     }
+    },
+    "regime": {
+     "falling": {
+      "trades": 166,
+      "net": -15587.1
+     },
+     "rising": {
+      "trades": 164,
+      "net": -22145.66
+     }
+    },
+    "session_bootstrap_avg_ci": [
+     -197.58682651515147,
+     -20.14440833333331
+    ],
+    "session_bootstrap_win_ci": [
+     0.35454545454545455,
+     0.45454545454545453
+    ],
+    "shuffled_drawdown_p95": 50530.20949999995,
+    "unfilled": 0,
+    "gross_before_cost": 7540.000000000004,
+    "stress_net": -61160.91
+   },
+   "momentum": {
+    "trades": 330,
+    "wins": 132,
+    "losses": 198,
+    "flat": 0,
+    "win_rate": 0.4,
+    "net": -31788.480000000007,
+    "gross_winners_after_cost": 100108.35999999999,
+    "gross_losers_after_cost": -131896.83999999997,
+    "avg_net": -96.32872727272729,
+    "average_win": 758.3966666666665,
+    "average_loss": -666.1456565656564,
+    "profit_factor": 0.7589898287176555,
+    "max_drawdown": 41441.139999999985,
+    "recovery": -0.7670754231181869,
+    "max_consecutive_losses": 12,
+    "sharpe": -3.663481997907195,
+    "sortino": -4.557646911267286,
+    "return_on_capital": -0.3178848000000001,
+    "max_entry_debit": 11764.64,
+    "account": 100000,
+    "monthly": {
+     "2026-09": {
+      "trades": 210,
+      "net": -28690.64
+     },
+     "2026-10": {
+      "trades": 120,
+      "net": -3097.84
+     }
+    },
+    "side": {
+     "C": {
+      "trades": 162,
+      "net": -30608.26
+     },
+     "P": {
+      "trades": 168,
+      "net": -1180.22
+     }
+    },
+    "expiry": {
+     "False": {
+      "trades": 250,
+      "net": -23394.96
+     },
+     "True": {
+      "trades": 80,
+      "net": -8393.52
+     }
+    },
+    "regime": {
+     "falling": {
+      "trades": 166,
+      "net": -5205.54
+     },
+     "rising": {
+      "trades": 164,
+      "net": -26582.94
+     }
+    },
+    "session_bootstrap_avg_ci": [
+     -209.40482727272723,
+     23.56396742424248
+    ],
+    "session_bootstrap_win_ci": [
+     0.3393939393939394,
+     0.4575757575757576
+    ],
+    "shuffled_drawdown_p95": 46326.15550000005,
+    "unfilled": 0,
+    "gross_before_cost": 13513.5,
+    "stress_net": -55258.79000000002
+   },
+   "no_trade": {
+    "trades": 0,
+    "wins": 0,
+    "losses": 0,
+    "flat": 0,
+    "win_rate": null,
+    "net": 0.0,
+    "gross_winners_after_cost": 0.0,
+    "gross_losers_after_cost": 0.0,
+    "avg_net": null,
+    "average_win": null,
+    "average_loss": null,
+    "profit_factor": null,
+    "max_drawdown": 0.0,
+    "recovery": null,
+    "max_consecutive_losses": 0,
+    "sharpe": null,
+    "sortino": null,
+    "return_on_capital": 0.0,
+    "max_entry_debit": 0,
+    "account": 100000,
+    "monthly": {},
+    "side": {},
+    "expiry": {},
+    "regime": {},
+    "session_bootstrap_avg_ci": null,
+    "session_bootstrap_win_ci": null,
+    "shuffled_drawdown_p95": 0.0,
+    "unfilled": 0,
+    "gross_before_cost": 0.0,
+    "stress_net": 0.0
+   },
+   "logistic": {
+    "trades": 1,
+    "wins": 0,
+    "losses": 1,
+    "flat": 0,
+    "win_rate": 0.0,
+    "net": -1781.6899999999996,
+    "gross_winners_after_cost": 0.0,
+    "gross_losers_after_cost": -1781.6899999999996,
+    "avg_net": -1781.6899999999996,
+    "average_win": null,
+    "average_loss": -1781.6899999999996,
+    "profit_factor": 0.0,
+    "max_drawdown": 1781.6899999999996,
+    "recovery": -1.0,
+    "max_consecutive_losses": 1,
+    "sharpe": -2.7633971188310302,
+    "sortino": -2.76339711883103,
+    "return_on_capital": -0.017816899999999997,
+    "max_entry_debit": 7849.87,
+    "account": 100000,
+    "monthly": {
+     "2026-10": {
+      "trades": 1,
+      "net": -1781.69
+     }
+    },
+    "side": {
+     "P": {
+      "trades": 1,
+      "net": -1781.69
+     }
+    },
+    "expiry": {
+     "False": {
+      "trades": 1,
+      "net": -1781.69
+     }
+    },
+    "regime": {
+     "falling": {
+      "trades": 1,
+      "net": -1781.69
+     }
+    },
+    "session_bootstrap_avg_ci": [
+     -1781.6899999999996,
+     -1781.6899999999996
+    ],
+    "session_bootstrap_win_ci": [
+     0.0,
+     0.0
+    ],
+    "shuffled_drawdown_p95": 1781.6899999999996,
+    "unfilled": 0,
+    "gross_before_cost": -1644.4999999999998,
+    "stress_net": -1853.1400000000003
+   },
+   "dense": {
+    "trades": 31,
+    "wins": 14,
+    "losses": 17,
+    "flat": 0,
+    "win_rate": 0.45161290322580644,
+    "net": 5356.379999999996,
+    "gross_winners_after_cost": 16784.549999999992,
+    "gross_losers_after_cost": -11428.17,
+    "avg_net": 172.78645161290308,
+    "average_win": 1198.896428571428,
+    "average_loss": -672.2452941176471,
+    "profit_factor": 1.468699713077421,
+    "max_drawdown": 5455.850000000002,
+    "recovery": 0.9817681937736545,
+    "max_consecutive_losses": 4,
+    "sharpe": 2.1284954431131458,
+    "sortino": 4.965163216959684,
+    "return_on_capital": 0.05356379999999995,
+    "max_entry_debit": 11380.96,
+    "account": 100000,
+    "monthly": {
+     "2026-09": {
+      "trades": 18,
+      "net": 2184.8
+     },
+     "2026-10": {
+      "trades": 13,
+      "net": 3171.58
+     }
+    },
+    "side": {
+     "C": {
+      "trades": 12,
+      "net": 4411.45
+     },
+     "P": {
+      "trades": 19,
+      "net": 944.93
+     }
+    },
+    "expiry": {
+     "False": {
+      "trades": 26,
+      "net": 6716.14
+     },
+     "True": {
+      "trades": 5,
+      "net": -1359.76
+     }
+    },
+    "regime": {
+     "falling": {
+      "trades": 19,
+      "net": 2494.68
+     },
+     "rising": {
+      "trades": 12,
+      "net": 2861.7
+     }
+    },
+    "session_bootstrap_avg_ci": [
+     -265.6160701970445,
+     632.8034767329909
+    ],
+    "session_bootstrap_win_ci": [
+     0.21871603260869565,
+     0.6538793103448277
+    ],
+    "shuffled_drawdown_p95": 7107.284999999998,
+    "unfilled": 0,
+    "gross_before_cost": 9668.749999999996,
+    "stress_net": 3122.0000000000027
+   },
+   "gru": {
+    "trades": 1,
+    "wins": 1,
+    "losses": 0,
+    "flat": 0,
+    "win_rate": 1.0,
+    "net": 1673.2700000000004,
+    "gross_winners_after_cost": 1673.2700000000004,
+    "gross_losers_after_cost": 0.0,
+    "avg_net": 1673.2700000000004,
+    "average_win": 1673.2700000000004,
+    "average_loss": null,
+    "profit_factor": null,
+    "max_drawdown": 0.0,
+    "recovery": null,
+    "max_consecutive_losses": 0,
+    "sharpe": 2.76339711883103,
+    "sortino": null,
+    "return_on_capital": 0.016732700000000003,
+    "max_entry_debit": 4959.32,
+    "account": 100000,
+    "monthly": {
+     "2026-10": {
+      "trades": 1,
+      "net": 1673.27
+     }
+    },
+    "side": {
+     "P": {
+      "trades": 1,
+      "net": 1673.27
+     }
+    },
+    "expiry": {
+     "False": {
+      "trades": 1,
+      "net": 1673.27
+     }
+    },
+    "regime": {
+     "rising": {
+      "trades": 1,
+      "net": 1673.27
+     }
+    },
+    "session_bootstrap_avg_ci": [
+     1673.2700000000004,
+     1673.2700000000004
+    ],
+    "session_bootstrap_win_ci": [
+     1.0,
+     1.0
+    ],
+    "shuffled_drawdown_p95": 0.0,
+    "unfilled": 0,
+    "gross_before_cost": 1810.2500000000005,
+    "stress_net": 1601.8199999999997
+   },
+   "cnn": {
+    "trades": 2,
+    "wins": 0,
+    "losses": 2,
+    "flat": 0,
+    "win_rate": 0.0,
+    "net": -3297.29,
+    "gross_winners_after_cost": 0.0,
+    "gross_losers_after_cost": -3297.29,
+    "avg_net": -1648.645,
+    "average_win": null,
+    "average_loss": -1648.645,
+    "profit_factor": 0.0,
+    "max_drawdown": 3297.29,
+    "recovery": -1.0,
+    "max_consecutive_losses": 2,
+    "sharpe": -3.95972701612605,
+    "sortino": -3.8980093014036776,
+    "return_on_capital": -0.0329729,
+    "max_entry_debit": 7849.87,
+    "account": 100000,
+    "monthly": {
+     "2026-10": {
+      "trades": 2,
+      "net": -3297.29
+     }
+    },
+    "side": {
+     "P": {
+      "trades": 2,
+      "net": -3297.29
+     }
+    },
+    "expiry": {
+     "False": {
+      "trades": 2,
+      "net": -3297.29
+     }
+    },
+    "regime": {
+     "falling": {
+      "trades": 1,
+      "net": -1781.69
+     },
+     "rising": {
+      "trades": 1,
+      "net": -1515.6
+     }
+    },
+    "session_bootstrap_avg_ci": [
+     -1781.6899999999996,
+     -1515.6000000000004
+    ],
+    "session_bootstrap_win_ci": [
+     0.0,
+     0.0
+    ],
+    "shuffled_drawdown_p95": 3297.29,
+    "unfilled": 0,
+    "gross_before_cost": -3022.499999999999,
+    "stress_net": -3440.1900000000005
+   },
+   "dense_context_only": {
+    "trades": 0,
+    "wins": 0,
+    "losses": 0,
+    "flat": 0,
+    "win_rate": null,
+    "net": 0.0,
+    "gross_winners_after_cost": 0.0,
+    "gross_losers_after_cost": 0.0,
+    "avg_net": null,
+    "average_win": null,
+    "average_loss": null,
+    "profit_factor": null,
+    "max_drawdown": 0.0,
+    "recovery": null,
+    "max_consecutive_losses": 0,
+    "sharpe": null,
+    "sortino": null,
+    "return_on_capital": 0.0,
+    "max_entry_debit": 0,
+    "account": 100000,
+    "monthly": {},
+    "side": {},
+    "expiry": {},
+    "regime": {},
+    "session_bootstrap_avg_ci": null,
+    "session_bootstrap_win_ci": null,
+    "shuffled_drawdown_p95": 0.0,
+    "unfilled": 0,
+    "gross_before_cost": 0.0,
+    "stress_net": 0.0
+   }
+  },
+  "3": {
+   "random": {
+    "trades": 170,
+    "wins": 65,
+    "losses": 105,
+    "flat": 0,
+    "win_rate": 0.38235294117647056,
+    "net": -26287.040000000008,
+    "gross_winners_after_cost": 70553.65,
+    "gross_losers_after_cost": -96840.69,
+    "avg_net": -154.62964705882356,
+    "average_win": 1085.440769230769,
+    "average_loss": -922.2922857142858,
+    "profit_factor": 0.7285537721798553,
+    "max_drawdown": 27198.110000000015,
+    "recovery": -0.9665024518247773,
+    "max_consecutive_losses": 10,
+    "sharpe": -5.375542915756182,
+    "sortino": -6.03472695392857,
+    "return_on_capital": -0.26287040000000006,
+    "max_entry_debit": 16563.8,
+    "account": 100000,
+    "monthly": {
+     "2026-10": {
+      "trades": 80,
+      "net": -13209.85
+     },
+     "2026-11": {
+      "trades": 90,
+      "net": -13077.19
+     }
+    },
+    "side": {
+     "C": {
+      "trades": 76,
+      "net": -4377.92
+     },
+     "P": {
+      "trades": 94,
+      "net": -21909.12
+     }
+    },
+    "expiry": {
+     "False": {
+      "trades": 140,
+      "net": -10205.55
+     },
+     "True": {
+      "trades": 30,
+      "net": -16081.49
+     }
+    },
+    "regime": {
+     "falling": {
+      "trades": 65,
+      "net": -14176.23
+     },
+     "rising": {
+      "trades": 105,
+      "net": -12110.81
+     }
+    },
+    "session_bootstrap_avg_ci": [
+     -349.57922352941176,
+     42.84313055555555
+    ],
+    "session_bootstrap_win_ci": [
+     0.28125,
+     0.4888888888888889
+    ],
+    "shuffled_drawdown_p95": 40084.322499999995,
+    "unfilled": 0,
+    "gross_before_cost": -1508.000000000001,
+    "stress_net": -38868.12999999999
+   },
+   "momentum": {
+    "trades": 170,
+    "wins": 64,
+    "losses": 106,
+    "flat": 0,
+    "win_rate": 0.3764705882352941,
+    "net": -37435.310000000005,
+    "gross_winners_after_cost": 67632.69999999998,
+    "gross_losers_after_cost": -105068.01000000001,
+    "avg_net": -220.20770588235297,
+    "average_win": 1056.7609374999997,
+    "average_loss": -991.2076415094341,
+    "profit_factor": 0.6437040160939564,
+    "max_drawdown": 38124.31,
+    "recovery": -0.9819275417705923,
+    "max_consecutive_losses": 8,
+    "sharpe": -7.429942389461496,
+    "sortino": -7.62371230760114,
+    "return_on_capital": -0.37435310000000005,
+    "max_entry_debit": 15802.95,
+    "account": 100000,
+    "monthly": {
+     "2026-10": {
+      "trades": 80,
+      "net": -34465.39
+     },
+     "2026-11": {
+      "trades": 90,
+      "net": -2969.92
+     }
+    },
+    "side": {
+     "C": {
+      "trades": 70,
+      "net": -6013.17
+     },
+     "P": {
+      "trades": 100,
+      "net": -31422.14
+     }
+    },
+    "expiry": {
+     "False": {
+      "trades": 140,
+      "net": -33209.54
+     },
+     "True": {
+      "trades": 30,
+      "net": -4225.77
+     }
+    },
+    "regime": {
+     "falling": {
+      "trades": 65,
+      "net": -15267.21
+     },
+     "rising": {
+      "trades": 105,
+      "net": -22168.1
+     }
+    },
+    "session_bootstrap_avg_ci": [
+     -399.83874260416667,
+     -39.296127941176486
+    ],
+    "session_bootstrap_win_ci": [
+     0.3058823529411765,
+     0.44713235294117676
+    ],
+    "shuffled_drawdown_p95": 49005.62600000001,
+    "unfilled": 0,
+    "gross_before_cost": -12704.250000000011,
+    "stress_net": -50035.95
+   },
+   "no_trade": {
+    "trades": 0,
+    "wins": 0,
+    "losses": 0,
+    "flat": 0,
+    "win_rate": null,
+    "net": 0.0,
+    "gross_winners_after_cost": 0.0,
+    "gross_losers_after_cost": 0.0,
+    "avg_net": null,
+    "average_win": null,
+    "average_loss": null,
+    "profit_factor": null,
+    "max_drawdown": 0.0,
+    "recovery": null,
+    "max_consecutive_losses": 0,
+    "sharpe": null,
+    "sortino": null,
+    "return_on_capital": 0.0,
+    "max_entry_debit": 0,
+    "account": 100000,
+    "monthly": {},
+    "side": {},
+    "expiry": {},
+    "regime": {},
+    "session_bootstrap_avg_ci": null,
+    "session_bootstrap_win_ci": null,
+    "shuffled_drawdown_p95": 0.0,
+    "unfilled": 0,
+    "gross_before_cost": 0.0,
+    "stress_net": 0.0
+   },
+   "logistic": {
+    "trades": 4,
+    "wins": 2,
+    "losses": 2,
+    "flat": 0,
+    "win_rate": 0.5,
+    "net": -1755.9099999999999,
+    "gross_winners_after_cost": 1309.3799999999992,
+    "gross_losers_after_cost": -3065.289999999999,
+    "avg_net": -438.97749999999996,
+    "average_win": 654.6899999999996,
+    "average_loss": -1532.6449999999995,
+    "profit_factor": 0.4271634983965627,
+    "max_drawdown": 1755.9099999999999,
+    "recovery": -1.0,
+    "max_consecutive_losses": 1,
+    "sharpe": -3.5888552916208614,
+    "sortino": -3.79925902497694,
+    "return_on_capital": -0.017559099999999998,
+    "max_entry_debit": 13409.88,
+    "account": 100000,
+    "monthly": {
+     "2026-10": {
+      "trades": 4,
+      "net": -1755.91
+     }
+    },
+    "side": {
+     "C": {
+      "trades": 2,
+      "net": -3065.29
+     },
+     "P": {
+      "trades": 2,
+      "net": 1309.38
+     }
+    },
+    "expiry": {
+     "False": {
+      "trades": 4,
+      "net": -1755.91
+     }
+    },
+    "regime": {
+     "falling": {
+      "trades": 3,
+      "net": -2338.91
+     },
+     "rising": {
+      "trades": 1,
+      "net": 583.0
+     }
+    },
+    "session_bootstrap_avg_ci": [
+     -1515.9099999999999,
+     583.0
+    ],
+    "session_bootstrap_win_ci": [
+     0.0,
+     1.0
+    ],
+    "shuffled_drawdown_p95": 3065.289999999999,
+    "unfilled": 0,
+    "gross_before_cost": -1163.4999999999977,
+    "stress_net": -2054.6899999999987
+   },
+   "dense": {
+    "trades": 44,
+    "wins": 16,
+    "losses": 28,
+    "flat": 0,
+    "win_rate": 0.36363636363636365,
+    "net": -12804.610000000002,
+    "gross_winners_after_cost": 18067.949999999997,
+    "gross_losers_after_cost": -30872.559999999998,
+    "avg_net": -291.0138636363637,
+    "average_win": 1129.2468749999998,
+    "average_loss": -1102.5914285714284,
+    "profit_factor": 0.585243011917379,
+    "max_drawdown": 18235.63,
+    "recovery": -0.7021753567055266,
+    "max_consecutive_losses": 5,
+    "sharpe": -5.400638355361886,
+    "sortino": -6.364380162995609,
+    "return_on_capital": -0.12804610000000002,
+    "max_entry_debit": 15754.18,
+    "account": 100000,
+    "monthly": {
+     "2026-10": {
+      "trades": 21,
+      "net": -16277.52
+     },
+     "2026-11": {
+      "trades": 23,
+      "net": 3472.91
+     }
+    },
+    "side": {
+     "C": {
+      "trades": 22,
+      "net": -5628.81
+     },
+     "P": {
+      "trades": 22,
+      "net": -7175.8
+     }
+    },
+    "expiry": {
+     "False": {
+      "trades": 39,
+      "net": -12282.26
+     },
+     "True": {
+      "trades": 5,
+      "net": -522.35
+     }
+    },
+    "regime": {
+     "falling": {
+      "trades": 20,
+      "net": -6475.46
+     },
+     "rising": {
+      "trades": 24,
+      "net": -6329.15
+     }
+    },
+    "session_bootstrap_avg_ci": [
+     -621.5020502828411,
+     83.46140853658531
+    ],
+    "session_bootstrap_win_ci": [
+     0.2571428571428571,
+     0.5
+    ],
+    "shuffled_drawdown_p95": 19925.7675,
+    "unfilled": 0,
+    "gross_before_cost": -6174.999999999996,
+    "stress_net": -16130.159999999998
+   },
+   "gru": {
+    "trades": 4,
+    "wins": 4,
+    "losses": 0,
+    "flat": 0,
+    "win_rate": 1.0,
+    "net": 2184.4299999999985,
+    "gross_winners_after_cost": 2184.4299999999985,
+    "gross_losers_after_cost": 0.0,
+    "avg_net": 546.1074999999996,
+    "average_win": 546.1074999999996,
+    "average_loss": null,
+    "profit_factor": null,
+    "max_drawdown": 0.0,
+    "recovery": null,
+    "max_consecutive_losses": 0,
+    "sharpe": 5.894713571701793,
+    "sortino": null,
+    "return_on_capital": 0.021844299999999983,
+    "max_entry_debit": 11767.89,
+    "account": 100000,
+    "monthly": {
+     "2026-10": {
+      "trades": 3,
+      "net": 2015.64
+     },
+     "2026-11": {
+      "trades": 1,
+      "net": 168.79
+     }
+    },
+    "side": {
+     "C": {
+      "trades": 2,
+      "net": 1079.86
+     },
+     "P": {
+      "trades": 2,
+      "net": 1104.57
+     }
+    },
+    "expiry": {
+     "False": {
+      "trades": 4,
+      "net": 2184.43
+     }
+    },
+    "regime": {
+     "falling": {
+      "trades": 4,
+      "net": 2184.43
+     }
+    },
+    "session_bootstrap_avg_ci": [
+     168.78999999999905,
+     911.0699999999997
+    ],
+    "session_bootstrap_win_ci": [
+     1.0,
+     1.0
+    ],
+    "shuffled_drawdown_p95": 0.0,
+    "unfilled": 0,
+    "gross_before_cost": 2782.000000000001,
+    "stress_net": 1882.3900000000012
+   },
+   "cnn": {
+    "trades": 5,
+    "wins": 3,
+    "losses": 2,
+    "flat": 0,
+    "win_rate": 0.6,
+    "net": -844.8400000000001,
+    "gross_winners_after_cost": 2220.449999999999,
+    "gross_losers_after_cost": -3065.289999999999,
+    "avg_net": -168.96800000000002,
+    "average_win": 740.1499999999996,
+    "average_loss": -1532.6449999999995,
+    "profit_factor": 0.724384968469541,
+    "max_drawdown": 1755.9099999999999,
+    "recovery": -0.48114083295840915,
+    "max_consecutive_losses": 1,
+    "sharpe": -1.4931963563509547,
+    "sortino": -1.808723027444607,
+    "return_on_capital": -0.008448400000000002,
+    "max_entry_debit": 13409.88,
+    "account": 100000,
+    "monthly": {
+     "2026-10": {
+      "trades": 5,
+      "net": -844.84
+     }
+    },
+    "side": {
+     "C": {
+      "trades": 3,
+      "net": -2154.22
+     },
+     "P": {
+      "trades": 2,
+      "net": 1309.38
+     }
+    },
+    "expiry": {
+     "False": {
+      "trades": 5,
+      "net": -844.84
+     }
+    },
+    "regime": {
+     "falling": {
+      "trades": 4,
+      "net": -1427.84
+     },
+     "rising": {
+      "trades": 1,
+      "net": 583.0
+     }
+    },
+    "session_bootstrap_avg_ci": [
+     -1515.9099999999999,
+     911.0699999999997
+    ],
+    "session_bootstrap_win_ci": [
+     0.0,
+     1.0
+    ],
+    "shuffled_drawdown_p95": 3065.289999999999,
+    "unfilled": 0,
+    "gross_before_cost": -97.49999999999727,
+    "stress_net": -1221.569999999998
+   }
+  }
+ },
+ "classification": {
+  "0": {
+   "logistic": {
+    "train_observations": 1860,
+    "eval_observations": 1198,
+    "accuracy": 0.5784641068447413,
+    "balanced": 0.4970717128611865,
+    "majority": 0.5868113522537562,
+    "validation_log_loss": 0.6789423642713034
+   },
+   "dense": {
+    "train_observations": 1860,
+    "eval_observations": 1198,
+    "accuracy": 0.5692821368948247,
+    "balanced": 0.5125594494015547,
+    "majority": 0.5868113522537562,
+    "validation_log_loss": 0.6924617917410069
+   },
+   "gru": {
+    "train_observations": 1860,
+    "eval_observations": 1198,
+    "accuracy": 0.5926544240400667,
+    "balanced": 0.510059341638289,
+    "majority": 0.5868113522537562,
+    "validation_log_loss": 0.6781106102670912
+   },
+   "cnn": {
+    "train_observations": 1860,
+    "eval_observations": 1198,
+    "accuracy": 0.5776293823038398,
+    "balanced": 0.4945672945672946,
+    "majority": 0.5868113522537562,
+    "validation_log_loss": 0.6814429421480207
+   },
+   "dense_context_only": {
+    "train_observations": 1860,
+    "eval_observations": 1198,
+    "accuracy": 0.5868113522537562,
+    "balanced": 0.5011954538270328,
+    "majority": 0.5868113522537562,
+    "validation_log_loss": 0.67958956939425
+   }
+  },
+  "1": {
+   "logistic": {
+    "train_observations": 3058,
+    "eval_observations": 880,
+    "accuracy": 0.6431818181818182,
+    "balanced": 0.4991181657848324,
+    "majority": 0.6443181818181818,
+    "validation_log_loss": 0.6516322546666365
+   },
+   "dense": {
+    "train_observations": 3058,
+    "eval_observations": 880,
+    "accuracy": 0.6136363636363636,
+    "balanced": 0.504814871162049,
+    "majority": 0.6443181818181818,
+    "validation_log_loss": 0.6597234692604604
+   },
+   "gru": {
+    "train_observations": 3058,
+    "eval_observations": 880,
+    "accuracy": 0.6420454545454546,
+    "balanced": 0.4989519414439542,
+    "majority": 0.6443181818181818,
+    "validation_log_loss": 0.6528582949902836
+   },
+   "cnn": {
+    "train_observations": 3058,
+    "eval_observations": 880,
+    "accuracy": 0.6431818181818182,
+    "balanced": 0.4991181657848324,
+    "majority": 0.6443181818181818,
+    "validation_log_loss": 0.65161439651877
+   },
+   "dense_context_only": {
+    "train_observations": 3058,
+    "eval_observations": 880,
+    "accuracy": 0.6443181818181818,
+    "balanced": 0.5,
+    "majority": 0.6443181818181818,
+    "validation_log_loss": 0.6548176424234661
+   }
+  },
+  "2": {
+   "logistic": {
+    "train_observations": 3938,
+    "eval_observations": 660,
+    "accuracy": 0.6106060606060606,
+    "balanced": 0.49704239556262364,
+    "majority": 0.6151515151515152,
+    "validation_log_loss": 0.6663669316421813
+   },
+   "dense": {
+    "train_observations": 3938,
+    "eval_observations": 660,
+    "accuracy": 0.6136363636363636,
+    "balanced": 0.5238256855824057,
+    "majority": 0.6151515151515152,
+    "validation_log_loss": 0.6849438648375294
+   },
+   "gru": {
+    "train_observations": 3938,
+    "eval_observations": 660,
+    "accuracy": 0.6106060606060606,
+    "balanced": 0.4977793724060354,
+    "majority": 0.6151515151515152,
+    "validation_log_loss": 0.6651194954543594
+   },
+   "cnn": {
+    "train_observations": 3938,
+    "eval_observations": 660,
+    "accuracy": 0.6121212121212121,
+    "balanced": 0.4990108994996315,
+    "majority": 0.6151515151515152,
+    "validation_log_loss": 0.6650063532675917
+   },
+   "dense_context_only": {
+    "train_observations": 3938,
+    "eval_observations": 660,
+    "accuracy": 0.6151515151515151,
+    "balanced": 0.5007369768434118,
+    "majority": 0.6151515151515152,
+    "validation_log_loss": 0.6692279957627175
+   }
+  },
+  "3": {
+   "logistic": {
+    "train_observations": 4598,
+    "eval_observations": 340,
+    "accuracy": 0.6,
+    "balanced": 0.5042747427908999,
+    "majority": 0.6058823529411765,
+    "validation_log_loss": 0.678499907023826
+   },
+   "dense": {
+    "train_observations": 4598,
+    "eval_observations": 340,
+    "accuracy": 0.5411764705882353,
+    "balanced": 0.4792059121866396,
+    "majority": 0.6058823529411765,
+    "validation_log_loss": 0.7066162780065623
+   },
+   "gru": {
+    "train_observations": 4598,
+    "eval_observations": 340,
+    "accuracy": 0.6088235294117647,
+    "balanced": 0.5102521373713954,
+    "majority": 0.6058823529411765,
+    "validation_log_loss": 0.675037512991369
+   },
+   "cnn": {
+    "train_observations": 4598,
+    "eval_observations": 340,
+    "accuracy": 0.5882352941176471,
+    "balanced": 0.49847848137951023,
+    "majority": 0.6058823529411765,
+    "validation_log_loss": 0.6782102211510168
+   }
+  }
+ },
+ "exit_sensitivity": {
+  "timed": {
+   "trades": 44,
+   "wins": 16,
+   "losses": 28,
+   "flat": 0,
+   "win_rate": 0.36363636363636365,
+   "net": -12804.610000000002,
+   "gross_winners_after_cost": 18067.949999999997,
+   "gross_losers_after_cost": -30872.559999999998,
+   "avg_net": -291.0138636363637,
+   "average_win": 1129.2468749999998,
+   "average_loss": -1102.5914285714284,
+   "profit_factor": 0.585243011917379,
+   "max_drawdown": 18235.63,
+   "recovery": -0.7021753567055266,
+   "max_consecutive_losses": 5,
+   "sharpe": -5.400638355361886,
+   "sortino": -6.364380162995609,
+   "return_on_capital": -0.12804610000000002,
+   "max_entry_debit": 15754.18,
+   "account": 100000,
+   "monthly": {
+    "2026-10": {
+     "trades": 21,
+     "net": -16277.52
+    },
+    "2026-11": {
+     "trades": 23,
+     "net": 3472.91
+    }
+   },
+   "side": {
+    "C": {
+     "trades": 22,
+     "net": -5628.81
+    },
+    "P": {
+     "trades": 22,
+     "net": -7175.8
+    }
+   },
+   "expiry": {
+    "False": {
+     "trades": 39,
+     "net": -12282.26
+    },
+    "True": {
+     "trades": 5,
+     "net": -522.35
+    }
+   },
+   "regime": {
+    "falling": {
+     "trades": 20,
+     "net": -6475.46
+    },
+    "rising": {
+     "trades": 24,
+     "net": -6329.15
+    }
+   },
+   "session_bootstrap_avg_ci": [
+    -621.5020502828411,
+    83.46140853658531
+   ],
+   "session_bootstrap_win_ci": [
+    0.2571428571428571,
+    0.5
+   ],
+   "shuffled_drawdown_p95": 19925.7675,
+   "unfilled": 0,
+   "gross_before_cost": -6174.999999999996,
+   "stress_net": -16130.159999999998
+  },
+  "step": {
+   "trades": 44,
+   "wins": 11,
+   "losses": 33,
+   "flat": 0,
+   "win_rate": 0.25,
+   "net": -13647.999999999998,
+   "gross_winners_after_cost": 10879.609999999999,
+   "gross_losers_after_cost": -24527.61,
+   "avg_net": -310.18181818181813,
+   "average_win": 989.0554545454544,
+   "average_loss": -743.2609090909091,
+   "profit_factor": 0.44356584273804084,
+   "max_drawdown": 13747.76,
+   "recovery": -0.9927435451302611,
+   "max_consecutive_losses": 8,
+   "sharpe": -9.087698353417442,
+   "sortino": -8.28723468106518,
+   "return_on_capital": -0.13648,
+   "max_entry_debit": 15754.18,
+   "account": 100000,
+   "monthly": {
+    "2026-10": {
+     "trades": 21,
+     "net": -10010.56
+    },
+    "2026-11": {
+     "trades": 23,
+     "net": -3637.44
+    }
+   },
+   "side": {
+    "C": {
+     "trades": 22,
+     "net": -5745.59
+    },
+    "P": {
+     "trades": 22,
+     "net": -7902.41
+    }
+   },
+   "expiry": {
+    "False": {
+     "trades": 39,
+     "net": -11438.89
+    },
+    "True": {
+     "trades": 5,
+     "net": -2209.11
+    }
+   },
+   "regime": {
+    "falling": {
+     "trades": 20,
+     "net": -8379.55
+    },
+    "rising": {
+     "trades": 24,
+     "net": -5268.45
+    }
+   },
+   "session_bootstrap_avg_ci": [
+    -506.3295495766488,
+    -88.54570750750757
+   ],
+   "session_bootstrap_win_ci": [
+    0.14812091503267974,
+    0.35555555555555557
+   ],
+   "shuffled_drawdown_p95": 17537.6295,
+   "unfilled": 0,
+   "gross_before_cost": null,
+   "stress_net": -16136.660000000002
+  },
+  "percent": {
+   "trades": 44,
+   "wins": 16,
+   "losses": 28,
+   "flat": 0,
+   "win_rate": 0.36363636363636365,
+   "net": -8577.97,
+   "gross_winners_after_cost": 18067.949999999997,
+   "gross_losers_after_cost": -26645.91999999999,
+   "avg_net": -194.95386363636362,
+   "average_win": 1129.2468749999998,
+   "average_loss": -951.6399999999996,
+   "profit_factor": 0.6780756678696027,
+   "max_drawdown": 14008.990000000002,
+   "recovery": -0.6123189466192779,
+   "max_consecutive_losses": 5,
+   "sharpe": -4.065360770916759,
+   "sortino": -5.251474270976018,
+   "return_on_capital": -0.08577969999999999,
+   "max_entry_debit": 15754.18,
+   "account": 100000,
+   "monthly": {
+    "2026-10": {
+     "trades": 21,
+     "net": -12472.57
+    },
+    "2026-11": {
+     "trades": 23,
+     "net": 3894.6
+    }
+   },
+   "side": {
+    "C": {
+     "trades": 22,
+     "net": -3478.19
+    },
+    "P": {
+     "trades": 22,
+     "net": -5099.78
+    }
+   },
+   "expiry": {
+    "False": {
+     "trades": 39,
+     "net": -10190.02
+    },
+    "True": {
+     "trades": 5,
+     "net": 1612.05
+    }
+   },
+   "regime": {
+    "falling": {
+     "trades": 20,
+     "net": -5515.3
+    },
+    "rising": {
+     "trades": 24,
+     "net": -3062.67
+    }
+   },
+   "session_bootstrap_avg_ci": [
+    -470.8169570399112,
+    164.77616027874575
+   ],
+   "session_bootstrap_win_ci": [
+    0.2571428571428571,
+    0.5
+   ],
+   "shuffled_drawdown_p95": 16301.773499999996,
+   "unfilled": 0,
+   "gross_before_cost": null,
+   "stress_net": -15458.699999999999
+  },
+  "atr": {
+   "trades": 44,
+   "wins": 14,
+   "losses": 30,
+   "flat": 0,
+   "win_rate": 0.3181818181818182,
+   "net": -9580.310000000005,
+   "gross_winners_after_cost": 13544.679999999998,
+   "gross_losers_after_cost": -23124.99,
+   "avg_net": -217.73431818181828,
+   "average_win": 967.4771428571428,
+   "average_loss": -770.8330000000001,
+   "profit_factor": 0.5857161451745492,
+   "max_drawdown": 12281.29,
+   "recovery": -0.780073591617819,
+   "max_consecutive_losses": 6,
+   "sharpe": -5.559965095376509,
+   "sortino": -6.473003569591415,
+   "return_on_capital": -0.09580310000000004,
+   "max_entry_debit": 15754.18,
+   "account": 100000,
+   "monthly": {
+    "2026-10": {
+     "trades": 21,
+     "net": -9154.21
+    },
+    "2026-11": {
+     "trades": 23,
+     "net": -426.1
+    }
+   },
+   "side": {
+    "C": {
+     "trades": 22,
+     "net": -3452.25
+    },
+    "P": {
+     "trades": 22,
+     "net": -6128.06
+    }
+   },
+   "expiry": {
+    "False": {
+     "trades": 39,
+     "net": -11091.8
+    },
+    "True": {
+     "trades": 5,
+     "net": 1511.49
+    }
+   },
+   "regime": {
+    "falling": {
+     "trades": 20,
+     "net": -5771.56
+    },
+    "rising": {
+     "trades": 24,
+     "net": -3808.75
+    }
+   },
+   "session_bootstrap_avg_ci": [
+    -426.22046087184896,
+    79.53222453310701
+   ],
+   "session_bootstrap_win_ci": [
+    0.21428571428571427,
+    0.4468225083986562
+   ],
+   "shuffled_drawdown_p95": 15033.566500000004,
+   "unfilled": 0,
+   "gross_before_cost": null,
+   "stress_net": -12270.090000000006
+  },
+  "adaptive": {
+   "trades": 44,
+   "wins": 13,
+   "losses": 31,
+   "flat": 0,
+   "win_rate": 0.29545454545454547,
+   "net": -16171.599999999997,
+   "gross_winners_after_cost": 15248.159999999996,
+   "gross_losers_after_cost": -31419.759999999995,
+   "avg_net": -367.53636363636355,
+   "average_win": 1172.9353846153842,
+   "average_loss": -1013.5406451612902,
+   "profit_factor": 0.4853047890881407,
+   "max_drawdown": 17261.279999999995,
+   "recovery": -0.9368714255258012,
+   "max_consecutive_losses": 5,
+   "sharpe": -7.558383315060879,
+   "sortino": -7.950352058554481,
+   "return_on_capital": -0.16171599999999997,
+   "max_entry_debit": 15754.18,
+   "account": 100000,
+   "monthly": {
+    "2026-10": {
+     "trades": 21,
+     "net": -12706.12
+    },
+    "2026-11": {
+     "trades": 23,
+     "net": -3465.48
+    }
+   },
+   "side": {
+    "C": {
+     "trades": 22,
+     "net": -6961.99
+    },
+    "P": {
+     "trades": 22,
+     "net": -9209.61
+    }
+   },
+   "expiry": {
+    "False": {
+     "trades": 39,
+     "net": -16664.55
+    },
+    "True": {
+     "trades": 5,
+     "net": 492.95
+    }
+   },
+   "regime": {
+    "falling": {
+     "trades": 20,
+     "net": -7889.73
+    },
+    "rising": {
+     "trades": 24,
+     "net": -8281.87
+    }
+   },
+   "session_bootstrap_avg_ci": [
+    -612.548788043478,
+    -17.848846052631444
+   ],
+   "session_bootstrap_win_ci": [
+    0.20408163265306123,
+    0.41304347826086957
+   ],
+   "shuffled_drawdown_p95": 21876.21949999999,
+   "unfilled": 0,
+   "gross_before_cost": null,
+   "stress_net": -19052.81
+  },
+  "threshold_0.5": {
+   "trades": 69,
+   "wins": 25,
+   "losses": 44,
+   "flat": 0,
+   "win_rate": 0.36231884057971014,
+   "net": -22303.899999999994,
+   "gross_winners_after_cost": 27714.289999999994,
+   "gross_losers_after_cost": -50018.189999999995,
+   "avg_net": -323.2449275362318,
+   "average_win": 1108.5715999999998,
+   "average_loss": -1136.7770454545453,
+   "profit_factor": 0.5540842241592507,
+   "max_drawdown": 31359.330000000013,
+   "recovery": -0.7112364964430039,
+   "max_consecutive_losses": 5,
+   "sharpe": -6.539349814293646,
+   "sortino": -7.190248589780955,
+   "return_on_capital": -0.22303899999999993,
+   "max_entry_debit": 16489.01,
+   "account": 100000,
+   "monthly": {
+    "2026-10": {
+     "trades": 32,
+     "net": -24735.78
+    },
+    "2026-11": {
+     "trades": 37,
+     "net": 2431.88
+    }
+   },
+   "side": {
+    "C": {
+     "trades": 28,
+     "net": -6766.35
+    },
+    "P": {
+     "trades": 41,
+     "net": -15537.55
+    }
+   },
+   "expiry": {
+    "False": {
+     "trades": 61,
+     "net": -18490.1
+    },
+    "True": {
+     "trades": 8,
+     "net": -3813.8
+    }
+   },
+   "regime": {
+    "falling": {
+     "trades": 26,
+     "net": -4522.97
+    },
+    "rising": {
+     "trades": 43,
+     "net": -17780.93
+    }
+   },
+   "session_bootstrap_avg_ci": [
+    -638.9206684491978,
+    -14.273603515031803
+   ],
+   "session_bootstrap_win_ci": [
+    0.2615217391304348,
+    0.48388356854838716
+   ],
+   "shuffled_drawdown_p95": 30032.85250000001,
+   "unfilled": 0,
+   "gross_before_cost": -12028.249999999996
+  },
+  "threshold_0.6": {
+   "trades": 32,
+   "wins": 12,
+   "losses": 20,
+   "flat": 0,
+   "win_rate": 0.375,
+   "net": -10382.510000000002,
+   "gross_winners_after_cost": 11538.629999999996,
+   "gross_losers_after_cost": -21921.139999999992,
+   "avg_net": -324.45343750000006,
+   "average_win": 961.5524999999997,
+   "average_loss": -1096.0569999999996,
+   "profit_factor": 0.5263699789335774,
+   "max_drawdown": 13852.490000000002,
+   "recovery": -0.7495049626457049,
+   "max_consecutive_losses": 6,
+   "sharpe": -4.774825733160628,
+   "sortino": -5.669840831443386,
+   "return_on_capital": -0.10382510000000002,
+   "max_entry_debit": 15754.18,
+   "account": 100000,
+   "monthly": {
+    "2026-10": {
+     "trades": 15,
+     "net": -12941.42
+    },
+    "2026-11": {
+     "trades": 17,
+     "net": 2558.91
+    }
+   },
+   "side": {
+    "C": {
+     "trades": 14,
+     "net": -3764.83
+    },
+    "P": {
+     "trades": 18,
+     "net": -6617.68
+    }
+   },
+   "expiry": {
+    "False": {
+     "trades": 29,
+     "net": -11529.37
+    },
+    "True": {
+     "trades": 3,
+     "net": 1146.86
+    }
+   },
+   "regime": {
+    "falling": {
+     "trades": 16,
+     "net": -1206.34
+    },
+    "rising": {
+     "trades": 16,
+     "net": -9176.17
+    }
+   },
+   "session_bootstrap_avg_ci": [
+    -806.1140762392245,
+    144.38649358108103
+   ],
+   "session_bootstrap_win_ci": [
+    0.2222222222222222,
+    0.56
+   ],
+   "shuffled_drawdown_p95": 16402.88299999999,
+   "unfilled": 0,
+   "gross_before_cost": -5528.249999999996
+  }
+ }
+}

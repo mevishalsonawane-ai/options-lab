@@ -1,0 +1,17 @@
+period,shift,level,windows,band,count
+discovery,0,30,5060,under20,2246
+discovery,0,30,5060,20_to_under30,1270
+discovery,0,30,5060,40_plus,877
+discovery,0,30,5060,30_to_under40,667
+discovery,5,30,5060,under20,2318
+discovery,5,30,5060,20_to_under30,1183
+discovery,5,30,5060,40_plus,858
+discovery,5,30,5060,30_to_under40,701
+replication,0,30,375,under20,107
+replication,0,30,375,20_to_under30,103
+replication,0,30,375,40_plus,100
+replication,0,30,375,30_to_under40,65
+replication,5,30,376,40_plus,117
+replication,5,30,376,under20,107
+replication,5,30,376,20_to_under30,101
+replication,5,30,376,30_to_under40,51

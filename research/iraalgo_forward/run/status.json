@@ -1,0 +1,83 @@
+{
+ "task": "replay complete",
+ "selected": "dense",
+ "holdout": {
+  "trades": 44,
+  "wins": 16,
+  "losses": 28,
+  "flat": 0,
+  "win_rate": 0.36363636363636365,
+  "net": -12804.610000000002,
+  "gross_winners_after_cost": 18067.949999999997,
+  "gross_losers_after_cost": -30872.559999999998,
+  "avg_net": -291.0138636363637,
+  "average_win": 1129.2468749999998,
+  "average_loss": -1102.5914285714284,
+  "profit_factor": 0.585243011917379,
+  "max_drawdown": 18235.63,
+  "recovery": -0.7021753567055266,
+  "max_consecutive_losses": 5,
+  "sharpe": -5.400638355361886,
+  "sortino": -6.364380162995609,
+  "return_on_capital": -0.12804610000000002,
+  "max_entry_debit": 15754.18,
+  "account": 100000,
+  "monthly": {
+   "2026-10": {
+    "trades": 21,
+    "net": -16277.52
+   },
+   "2026-11": {
+    "trades": 23,
+    "net": 3472.91
+   }
+  },
+  "side": {
+   "C": {
+    "trades": 22,
+    "net": -5628.81
+   },
+   "P": {
+    "trades": 22,
+    "net": -7175.8
+   }
+  },
+  "expiry": {
+   "False": {
+    "trades": 39,
+    "net": -12282.26
+   },
+   "True": {
+    "trades": 5,
+    "net": -522.35
+   }
+  },
+  "regime": {
+   "falling": {
+    "trades": 20,
+    "net": -6475.46
+   },
+   "rising": {
+    "trades": 24,
+    "net": -6329.15
+   }
+  },
+  "session_bootstrap_avg_ci": [
+   -621.5020502828411,
+   83.46140853658531
+  ],
+  "session_bootstrap_win_ci": [
+   0.2571428571428571,
+   0.5
+  ],
+  "shuffled_drawdown_p95": 19925.7675,
+  "unfilled": 0,
+  "gross_before_cost": -6174.999999999996,
+  "stress_net": -16130.159999999998
+ },
+ "completed_folds": 4,
+ "utc": "2026-11-24T18:15:57.729535+00:00",
+ "cpu_seconds": 11.264805427,
+ "torch_threads": 2,
+ "gpu": false
+}

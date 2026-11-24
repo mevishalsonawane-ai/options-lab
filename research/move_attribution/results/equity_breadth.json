@@ -1,0 +1,56 @@
+{
+  "equities": 59,
+  "pairs": 158,
+  "means": {
+    "before": 0.498390903239648,
+    "during": 0.8412357863119503,
+    "control_before": 0.45011800042909256,
+    "control_during": 0.48412357863119515
+  },
+  "by_side": {
+    "-1": {
+      "before": 0.5161420500403551,
+      "during": 0.8424132364810332,
+      "control_before": 0.39426957223567394,
+      "control_during": 0.4713478611783697
+    },
+    "1": {
+      "before": 0.47824095281722395,
+      "during": 0.8398992212551535,
+      "control_before": 0.5135135135135135,
+      "control_during": 0.4986257443884563
+    }
+  },
+  "examples": [
+    {
+      "day": "2026-10-21",
+      "anchor": "2026-10-21 09:45:00+05:30",
+      "label": -1,
+      "n": 59,
+      "aligned": 52,
+      "returns_pct": {
+        "HDFCBANK": 0.154,
+        "ICICIBANK": 0.071,
+        "RELIANCE": -0.31,
+        "INFY": 0.017,
+        "TCS": 0.091,
+        "LT": -0.062
+      }
+    },
+    {
+      "day": "2026-10-21",
+      "anchor": "2026-10-21 10:30:00+05:30",
+      "label": 1,
+      "n": 59,
+      "aligned": 45,
+      "returns_pct": {
+        "HDFCBANK": 0.084,
+        "ICICIBANK": 0.257,
+        "RELIANCE": 0.189,
+        "INFY": 0.249,
+        "TCS": 0.267,
+        "LT": 0.215
+      }
+    }
+  ]
+}

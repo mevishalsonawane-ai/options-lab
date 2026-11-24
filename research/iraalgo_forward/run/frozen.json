@@ -1,0 +1,8 @@
+{
+ "family": "dense",
+ "walk_forward_net": {
+  "dense": -25454.230000000018
+ },
+ "threshold": 0.55,
+ "signature": "bbbe05b04937eaa7d2a1d93a546dbaed2a689c07e3112405c8d7ad081224fdd5"
+}

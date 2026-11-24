@@ -1,0 +1,130 @@
+{
+  "loaded_weights": "dense",
+  "trades": 44,
+  "net": -12804.610000000002,
+  "training_replay": {
+    "trades": 491,
+    "wins": 401,
+    "losses": 90,
+    "flat": 0,
+    "win_rate": 0.8167006109979633,
+    "net": 319787.75,
+    "gross_winners_after_cost": 419464.31999999995,
+    "gross_losers_after_cost": -99676.57,
+    "avg_net": 651.2988798370673,
+    "average_win": 1046.045685785536,
+    "average_loss": -1107.5174444444444,
+    "profit_factor": 4.208253955769143,
+    "max_drawdown": 8052.540000000037,
+    "recovery": 39.71265588249155,
+    "max_consecutive_losses": 3,
+    "sharpe": 5.875447811260718,
+    "sortino": 32.26857814551157,
+    "return_on_capital": 3.1978775,
+    "max_entry_debit": 22075.03,
+    "account": 100000,
+    "monthly": {
+      "2025-11": {
+        "trades": 14,
+        "net": 6426.5
+      },
+      "2025-12": {
+        "trades": 31,
+        "net": 9154.02
+      },
+      "2026-01": {
+        "trades": 46,
+        "net": 25017.71
+      },
+      "2026-02": {
+        "trades": 50,
+        "net": 62273.39
+      },
+      "2026-03": {
+        "trades": 86,
+        "net": 47346.56
+      },
+      "2026-04": {
+        "trades": 63,
+        "net": 42147.5
+      },
+      "2026-05": {
+        "trades": 56,
+        "net": 44267.84
+      },
+      "2026-06": {
+        "trades": 50,
+        "net": 31125.59
+      },
+      "2026-07": {
+        "trades": 29,
+        "net": 11225.61
+      },
+      "2026-08": {
+        "trades": 15,
+        "net": 10145.13
+      },
+      "2026-09": {
+        "trades": 29,
+        "net": 14686.06
+      },
+      "2026-10": {
+        "trades": 22,
+        "net": 15971.84
+      }
+    },
+    "side": {
+      "C": {
+        "trades": 231,
+        "net": 159150.98
+      },
+      "P": {
+        "trades": 260,
+        "net": 160636.77
+      }
+    },
+    "expiry": {
+      "False": {
+        "trades": 381,
+        "net": 247252.06
+      },
+      "True": {
+        "trades": 110,
+        "net": 72535.69
+      }
+    },
+    "regime": {
+      "falling": {
+        "trades": 284,
+        "net": 198868.17
+      },
+      "rising": {
+        "trades": 207,
+        "net": 120919.58
+      }
+    },
+    "session_bootstrap_avg_ci": [
+      497.15290215549334,
+      814.2743161989796
+    ],
+    "session_bootstrap_win_ci": [
+      0.7821530006872135,
+      0.8507751937984496
+    ],
+    "shuffled_drawdown_p95": 9786.81649999999,
+    "unfilled": 0,
+    "gross_before_cost": 391535.0
+  },
+  "p_one_sided_daily_sign_flip": 0.9328033598320083,
+  "bonferroni_p_four_models": 1,
+  "depth_file": "depth_sample.parquet",
+  "depth_sha256": "a7db056a94af385b496d5a059a420ccc771d1ca6562f240a254525b06d9314d7",
+  "depth_rows": 253482,
+  "quote_start": "2026-11-16 09:22:50.591244459+05:30",
+  "quote_end": "2026-11-16 10:44:50.663738012+05:30",
+  "two_sided_atm_snapshots": 166,
+  "halfspread_median": 0.125,
+  "halfspread_p95": 0.15000000000000568,
+  "simulated_allowance_median": 0.551275,
+  "observed_halfspread_above_allowance": 0.0
+}
