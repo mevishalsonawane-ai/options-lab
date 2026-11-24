@@ -1,0 +1,34 @@
+id: r210-r72-f15
+title: 'R210 R72 Breadth Donchian: current exits + 15-minute trend filter (close vs EMA(20)) vs the current exits (V5)'
+family: daily-filters
+date: '2026-11-24'
+doc: research/hunt/r210_trail_ideas/PREREG.md
+hypothesis: 'current exits + 15-minute trend filter (close vs EMA(20)) beats current exits (V5; Liquidity: breakeven at +10%
+  / +Rs 1,000) on R72 Breadth Donchian: higher net on the design years (1 Nov 2024 - 31 Mar 2026), in at least 3 of 4 walk-forward
+  folds, worst month not worse, BH q <= 0.10 (m = 4,826); then, read once, higher net and a worst month not worse on 1 Apr
+  - 13 Nov 2026'
+data_version: Drive lake copy (R190's flat folder ~/.cache/iraalgo/r190/lake, with the 20 Oct - 13 Nov 2026 fill); R51 clean
+  stores 3 Aug 2020 - 13 Nov 2026 (R190), as R193
+period:
+  design: 2024-11-01..2026-03-31 (folds F1 Nov 2024 - Feb 2025, F2 Mar - Jun 2025, F3 Jul - Oct 2025, F4 Nov 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-11-13 (locked for R210's variants; read once, design survivors only)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (15-minute index bars, EMA(20))'
+- 'entries: the arm''s own index breaks, unchanged; options bought, 1 lot'
+model_or_rule: 'current exits + 15-minute trend filter (close vs EMA(20)) (baseline: current exits (V5; Liquidity: breakeven
+  at +10% / +Rs 1,000))'
+settings: research/hunt/r210_trail_ideas/r210cfg.py; PREREG.md section 3
+prereg: research/hunt/r210_trail_ideas/PREREG.md
+variants_tried: null
+results:
+  summary: pre-registered on 24 Nov 2026; not run yet (the data run follows the push of PREREG.md)
+  costs: dated Zerodha charges, R17 fills and slippage, 1 lot
+holdout_read: false
+verdict: proposed
+notes: Research only; nothing in the app changes. Idea from a third-party prompt-only skill pack (no backtests).
