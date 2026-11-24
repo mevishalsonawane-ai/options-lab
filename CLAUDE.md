@@ -230,11 +230,12 @@ notes; match the surrounding code.
   app's). A buy of his placed outside the app is covered about 3 s after Zerodha reports it COMPLETE (or the rest cancelled after a part
   fill; a part fill still working waits): the order update only queues the look, which re-reads orders and GTTs in the exit turn (a stop
   he set at once wins) and needs a fresh positions read showing at least that quantity; lots he adds beside the app's own protection are
-  covered too (never more than held, checked again just before they rest); anything else after two looks 20 s apart, as before. Every
+  covered too (never more than held, checked again just before they rest; one that must wait is tried again on the next looks, and lots
+  still not covered about two minutes on are said loudly, once); anything else after two looks 20 s apart, as before. Every
   leave-alone rule stays. Nothing rests while another seller holds the row (a square-off, an arm's exit, his own exit from the app) or while
-  he is exiting it himself: inside the protections' lock, with the row claimed, what Zerodha holds is read again from a fresh orders read
-  (lag-guarded) and must still be all it covers, with no sale on it filled since the look (24 Nov 2026); a sale of his that fills while
-  the stop goes in takes it out at once. Intraday only the stop rests at Zerodha (the target is watched by the app). Boss's own orders come first: a
+  he is exiting it himself: what Zerodha holds is read again just before (lag-guarded) and must still be all it covers, and inside the
+  protections' lock, with the row claimed, a fresh order book must show no sale on it filled since (24 Nov 2026); a sale of his that fills
+  while the stop goes in takes it out at once. Intraday only the stop rests at Zerodha (the target is watched by the app). Boss's own orders come first: a
   stop or target order of the app's he moved in Kite is kept at his level, never moved back (a GTT of the app's he moves is not
   followed). Per side (his stops fire in a fall, his targets in a rise): his own stop or GTT beside the app's (an order only once Zerodha
   has taken it: open, trigger pending or being modified; never an order of the app's own GTT, nor after a restart one of a fired GTT not

@@ -207,6 +207,30 @@ class OrbArmsExitGuardTest : RobolectricTest() {
     }
 
     /**
+     * 24 Nov 2026 (B6-I round 7, gate review): Boss's exit from the app (its LIMIT still working: [SquareOffExit.noteBossExitOrder]) covering the
+     * lot is never cancelled at a stop's level - a working exit on the row: the app's exit waits for it, nothing is sold beside it, and he is
+     * told; once it fills, nothing is sold either (never short). (Round 6 cancelled it as his order.)
+     */
+    @Test fun bossesExitFromTheAppIsNeverCancelledByAStopExitNorSoldBeside() {
+        val s1 = stopOrder(30, 160.0, 152.0)
+        state(listOf(position("orb", 30, 200.0, "E1", s1, 160.0)))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        val his = kite.restingInKite(sym, "SELL", 30, 250.0, tag = "iraalgo")
+        SquareOffExit.noteBossExitOrder(his)                                // his exit from the app (AppModel notes each leg it sends)
+        kite.quote("NFO:$sym", 150.0, 149.95, 150.05)
+        kite.requests.clear()
+        pass()
+        assertEquals("his exit never cancelled", "OPEN", kite.order(his).status)
+        assertEquals("TRIGGER PENDING", kite.order(s1).status)
+        assertTrue("nothing cancelled, nothing sold", kite.requests.none { it.method != "GET" })
+        assertTrue(AutomationSupport.alerts().toString(), AutomationSupport.alerts().any { "your own sell order on $sym" in it && "It is your exit from the app" in it })
+        kite.fill(his, 150.0)                                               // his exit sells the lot
+        pass()
+        assertTrue("never sold beside it", marketSells().isEmpty())
+        assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$sym:MIS").first)
+    }
+
+    /**
      * 24 Nov 2026 (B6-I round 6, item 2): an order a GTT of the app's own placed when it fired (a protection's, a strategy leg's: no tag of the
      * app's) is never taken for Boss's - never cancelled for this exit; the trade's stop rests and nothing is sold beside it.
      */

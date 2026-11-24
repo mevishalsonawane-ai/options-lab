@@ -2135,6 +2135,34 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals(0, restingSells())
     }
 
+    /**
+     * 24 Nov 2026 (B6-I round 7, gate review): Boss's exit from the app ("iraalgo", a LIMIT resting) on the arm's contract is never cancelled
+     * when the arm's stop is due - a working exit on the row: nothing is sold beside it (never more than held), Boss is told the exit cannot
+     * sell (never that the app cancels his LIMIT), and once his exit fills the position is flat, never short.
+     */
+    @Test fun bossesExitFromTheAppIsNeverCancelledByAnArmsDueExitNorSoldBeside() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        ArmLive.entered(ask(donchian, "his-exit"))
+        watch()
+        val boss = kite.restsInKite(sym, "SELL", 30, 260.0, tag = "iraalgo")   // his exit from the app, resting
+        SquareOffExit.noteBossExitOrder(boss)                              // (AppModel notes each leg it sends)
+        watch()
+        assertEquals("never more resting sells than held", 30, restingSells())
+        val said = com.optionslab.app.work.Alerts.posted.map { it.text }.filter { "another sell order covers the lot" in it }
+        assertEquals(said.toString(), 1, said.size)
+        assertTrue("never said as one the app cancels: $said", said.none { "cancels your LIMIT first" in it })
+        kite.quote("NFO:$sym", 165.0, 164.95, 165.05)                    // through the arm's 170 stop
+        watch()
+        assertTrue("his exit never cancelled", kite.order(boss).working)
+        assertEquals("nothing sold beside it", 0, marketSells())
+        assertEquals(30, held())
+        assertEquals(1, posted("is due but cannot sell"))
+        kite.fill(boss, 165.0)                                            // his exit sells the lot
+        ArmLive.testNow = ArmLive.testNow!!.plusSeconds(5); watch()
+        assertEquals("never sold beside it", 0, marketSells())
+        assertEquals("flat, never short", 0, held())
+    }
+
     /** Audit A1: at 15:15 with the arm's stop resting and Boss's LIMIT covering the lot, his LIMIT and the stop go out and the arm sells once. */
     @Test fun theSquareOffSellsThroughBossesLimitTarget() {
         ArmLive.entered(ask(com.optionslab.engine.orb.VixDivRules.SOURCE, "sq-tgt"))

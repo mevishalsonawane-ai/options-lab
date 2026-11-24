@@ -6521,7 +6521,10 @@ object OrbArms {
                         val apps = b.positions.filter { it.open && it.live && !it.unconfirmed && it.kite == sym }.sumOf { it.qty } +
                             ArmLive.view.value.openReal.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side > 0 && !it.unconfirmed }.sumOf { it.qty }
                         // (Against what Zerodha holds itself: the app's trades there - a part whose lost sale is pending included.)
-                        val cancels = why !in TAKE_EXITS && heldRaw <= apps
+                        // (24 Nov 2026, B6-I round 7, gate review: never while his exit from the app works on it - [SquareOffExit.isBossExitOrder]:
+                        // a working exit on the row, waited for as a square-off's sale is; nothing of his is cancelled then.)
+                        val fromApp = bosses.any { SquareOffExit.isBossExitOrder(it.id) }
+                        val cancels = why !in TAKE_EXITS && heldRaw <= apps && !fromApp
                         var out = cancels
                         if (cancels) for (o in bosses) {
                             runCatching { Broker.cancel(o.id, o.variety) }
@@ -6534,6 +6537,7 @@ object OrbArms {
                             "covers the lot the app is exiting (${why.replace('_', ' ')}). " + when {
                                 out -> "It was cancelled; the app now sends its own exit sale (its fill or refusal is shown as usual)."
                                 cancels -> "It could not be cancelled yet (or it filled); the app reads Zerodha again on its next check."
+                                fromApp -> "It is your exit from the app: never cancelled - the app's exit waits for it and sells only what it leaves."
                                 else -> "The app's exit waits for it; cancel it in Kite if you want the app to sell."
                             }, "ORB live")
                         // (Filled meanwhile, or not out yet: nothing more this pass - the next reads again; this trade's stop rests.)

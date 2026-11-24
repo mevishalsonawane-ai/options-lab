@@ -108,7 +108,8 @@ internal object SquareOffExit {
     }
 
     /** TEST ONLY. */
-    internal fun resetForTest(gap: Long = GAP_MS) { placedAt.clear(); clock = System::currentTimeMillis; gapMs = gap; claims.clear(); skips.clear(); soldAt.clear(); chasing.clear(); bossFoundAt.clear(); bossLost.clear() }
+    internal fun resetForTest(gap: Long = GAP_MS) { placedAt.clear(); clock = System::currentTimeMillis; gapMs = gap; claims.clear(); skips.clear(); soldAt.clear(); chasing.clear(); bossFoundAt.clear(); bossLost.clear()
+        bossExitOrders.clear() }
 
     /**
      * 23 Nov 2026 (B6 follow-ups, round 2): by position row ("EXCHANGE:SYMBOL:PRODUCT"), the square-off passes chasing a blocked MARKET
@@ -223,6 +224,30 @@ internal object SquareOffExit {
     /** 22 Nov 2026 (B6 review, second round): the name Boss's own exit from the app claims a row by ([claimExit]; AppModel's takeover). */
     const val BOSS_OWNER = "boss"
 
+    /**
+     * 24 Nov 2026 (B6-I round 7, gate review: his exit from the app, a LIMIT still working, was cancelled by an arm as "his order blocking its
+     * exit", and the rest of his exit was dropped): the orders Boss's exits from the app sent, or turned into his exit (a resting stop made his
+     * LIMIT), by Zerodha's id, with when (noted by AppModel as each id is known). Another book never cancels one ([isBossExitOrder]): it is a
+     * working exit on the row, waited for or sold beside only for what it leaves. Memory only, bounded (a restart starts with none: his orders
+     * then are his plain orders).
+     */
+    private val bossExitOrders = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /** 24 Nov 2026 (B6-I round 7): order [id] is one Boss's exit from the app sent or turned into his ([bossExitOrders]). Memory, never blocks. */
+    fun noteBossExitOrder(id: String) {
+        if (id.isBlank()) return
+        val now = System.currentTimeMillis()
+        if (bossExitOrders.size > 500) bossExitOrders.entries.removeIf { now - it.value > 24 * 60 * 60_000L }
+        if (bossExitOrders.size > 500) bossExitOrders.entries.sortedBy { it.value }.take(bossExitOrders.size - 400).forEach { bossExitOrders.remove(it.key, it.value) }
+        bossExitOrders[id] = now
+    }
+
+    /** 24 Nov 2026 (B6-I round 7): whether order [id] is one of Boss's exits from the app ([noteBossExitOrder]). Memory only. */
+    fun isBossExitOrder(id: String): Boolean = bossExitOrders.containsKey(id)
+
+    /** TEST ONLY (24 Nov 2026, B6-I round 7): no exit of Boss's from the app noted (as after a restart). */
+    internal fun forgetBossExitOrdersForTest() = bossExitOrders.clear()
+
     /** 23 Nov 2026 (B6 review, eighth round): the prefix of the keys Boss's own lost exits are looked for under ([bossLostKey]). */
     const val BOSS_LOST = "bossexit:"
 
@@ -326,7 +351,7 @@ internal object SquareOffExit {
     /** TEST ONLY: Boss's lost exits forgotten from memory, as after a restart (the marks' file kept). */
     internal fun forgetBossLostForTest() { bossLost.clear(); bossFoundAt.clear() }
     /** 23 Nov 2026 (B6 review, eighth round): Erase everything - Boss's lost exits forgotten (their watches end with them). Memory only. */
-    internal fun forgetBossLostForErase() { bossLost.clear(); bossFoundAt.clear(); Broker.forgetLostPrefix(BOSS_LOST) }
+    internal fun forgetBossLostForErase() { bossLost.clear(); bossFoundAt.clear(); Broker.forgetLostPrefix(BOSS_LOST); bossExitOrders.clear() }
 
     /**
      * 23 Nov 2026 (B6 review, eighth round, m1: a lost exit found was never said): Boss's lost exit [l] found in Zerodha's book - its state
@@ -748,11 +773,16 @@ internal object SquareOffExit {
             // 22 Nov 2026 (B6 review): while an arm's lost exit sale on it is unresolved, nothing resting on it is taken out (it may fill
             // beside them, into a short) - said once; the next pass reads again (that sale is found and booked, or let go, in about two
             // minutes).
-            fun lostWaits(what: String) {
-                runCatching { Diag.record("exits", "$who ${p.exchange}:${p.symbol}: an arm's exit sale on it is not settled " +
-                    "(${lost ?: "size unknown"}); $what") }
+            // (24 Nov 2026, B6-I round 7: [n] - the count as last read; not known: a book not read yet after the start, set aside, or not answering.)
+            fun lostWaits(what: String, n: Int? = lost) {
+                runCatching { Diag.record("exits", "$who ${p.exchange}:${p.symbol}: " + (if (n == null) "a book's state is not read yet after the " +
+                    "start (up to 2 minutes), or is not known now" else "an arm's exit sale on it is not settled ($n)") + "; $what") }
                 // (Said once for each new sale an arm started on it ([salesStarted]) - a later lost sale there is told too.)
-                tell("unsettled $row ${salesStarted[row] ?: 0L}", "${p.symbol} $aboutIt, and an arm's own exit sale on it has not " +
+                // (24 Nov 2026, B6-I round 7: not known - a book not read yet after the start, or set aside - said as that, never as an arm's sale.)
+                tell("unsettled $row ${salesStarted[row] ?: 0L}", if (n == null) "${p.symbol} $aboutIt, and a book's state is not read yet " +
+                    "after the start (up to 2 minutes), or is not known now, so a sale of the app's on it may still be pending. The $exitName takes no stop or target on " +
+                    "it out meanwhile and sells once that is known. Check ${p.symbol} in Kite."
+                else "${p.symbol} $aboutIt, and an arm's own exit sale on it has not " +
                     "settled yet: it went a moment ago, or Zerodha's reply to it was lost and the app is still looking for it. The $exitName " +
                     "takes no stop or target on it out meanwhile and sells only what that sale leaves, once it has settled (about two minutes " +
                     "at most). Check ${p.symbol} in Kite.")
@@ -788,7 +818,7 @@ internal object SquareOffExit {
             val lostNow = lostPending(p.symbol, p.product)
             if (side == Kite.Side.SELL && (lostNow == null || lostNow > (lost ?: 0) || (salesStarted[row] ?: 0L) != started)) {
                 clearPlaced(p.exchange, p.symbol, p.product)
-                lostWaits("one came up as this sale was about to go: nothing taken out or sold")
+                lostWaits("one came up as this sale was about to go: nothing taken out or sold", lostNow)
                 return false
             }
             if (!takeOut()) { clearPlaced(p.exchange, p.symbol, p.product); skipped("its resting orders could not be confirmed out"); return false }
@@ -801,10 +831,12 @@ internal object SquareOffExit {
                     val cut = if (lostAfter == null) 0 else com.optionslab.engine.risk.ExitQty.sendable(heldNow, pending + lostAfter, abs(heldNow), lotSize)
                     if (cut <= 0) {
                         clearPlaced(p.exchange, p.symbol, p.product)
-                        runCatching { Diag.record("exits", "$who ${p.exchange}:${p.symbol}: an arm's exit sale on it came up (${lostAfter ?: "size unknown"}) " +
-                            "while its resting orders came out: nothing sold") }
+                        // (24 Nov 2026, B6-I round 7: not known - a book not read yet after the start - said as that.)
+                        val came = if (lostAfter == null) "a book's state is not read yet after the start (up to 2 minutes), or is not known now, " +
+                            "so a sale of the app's on it may be pending" else "an arm's own exit sale on it ($lostAfter) came up meanwhile and is still pending"
+                        runCatching { Diag.record("exits", "$who ${p.exchange}:${p.symbol}: $came while its resting orders came out: nothing sold") }
                         tell("unsettled out $row ${salesStarted[row] ?: 0L}", "${p.symbol} $aboutIt. Its stop at Zerodha is OUT: the $exitName " +
-                            "took its resting orders out to sell it, and an arm's own exit sale on it (${lostAfter ?: "size unknown"}) came up meanwhile and is still pending, so " +
+                            "took its resting orders out to sell it, and $came, so " +
                             "nothing was sold beside that sale. The $exitName looks again on its next pass; check ${p.symbol} in Kite now.")
                         return false
                     }

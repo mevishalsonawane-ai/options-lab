@@ -1490,6 +1490,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         // while the leg is still held rests again - never read as Boss's own cancel in Kite, a restart included.)
         val stratIds = rest.map { it.id }
         runCatching { com.optionslab.app.data.Strategies.markOwnCancels(stratIds) }
+        // (24 Nov 2026, B6-I round 7: and the Pine scripts' - only their holdings' stops - so a script's stop taken out here and found cancelled
+        // while still held rests again, never read as gone from Zerodha.)
+        val pineIds = rest.map { it.id }.filter { com.optionslab.app.data.PineAuto.mayOwnStop(it) }
+        runCatching { com.optionslab.app.data.PineAuto.markOwnCancels(pineIds) }
         taken?.addAll(rest.map { it.id })
         for (r in rest) runCatching { b.cancel(r.id, r.variety) }
         // The cancels confirmed (or the check that follows sees what still works and says so).
@@ -1522,6 +1526,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             ?.let { still -> runCatching { com.optionslab.app.data.OrbArms.unmarkOwnCancels(still) } }
         working?.filter { it in stratIds }?.takeIf { it.isNotEmpty() }
             ?.let { still -> runCatching { com.optionslab.app.data.Strategies.unmarkOwnCancels(still) } }
+        working?.filter { it in pineIds }?.takeIf { it.isNotEmpty() }
+            ?.let { still -> runCatching { com.optionslab.app.data.PineAuto.unmarkOwnCancels(still) } }
         runCatching { com.optionslab.app.data.Diag.record("orders", "square-off ${o.tradingSymbol}: the cancel of its resting exits could not be confirmed (the order book did not answer); checked again before the leg goes") }
         return Took.Cleared
     }
@@ -2397,6 +2403,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                             val f = runCatching { b.awaitOrder(took.id) }.getOrElse { e -> com.optionslab.app.data.Broker.Fill(took.id, "UNKNOWN", 0.0, 0, e.message ?: "status not confirmed") }
                             fills += f
                             if (f.filled > 0) filledBy.getOrPut(PartSent.keyOf(leg)) { HashMap() }[f.orderId] = f.filled
+                            if (cur.exit) com.optionslab.app.data.SquareOffExit.noteBossExitOrder(took.id)    // (24 Nov 2026, round 7: his exit, never another book's to cancel)
                             launch { runCatching { com.optionslab.app.data.Strategies.tagOwner("kite:${took.id}", cur.source) } }
                             if (f.filled > 0) launch { runCatching { com.optionslab.app.work.Notifier.orderFilled(ctx, leg.side.name, f.filled, leg.tradingSymbol, f.avgPrice, "Live", cur.source, f.orderId) } }
                             if (f.filled > 0 && cur.source.startsWith(com.optionslab.app.data.Origins.MANUAL)) com.optionslab.app.ira.BossTradeLog.filled("kite:${f.orderId}",
@@ -2416,6 +2423,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     }
                     val id = placedId!!
                     // Named before the fill is awaited, so the order book shows who sent it from its first refresh.
+                    if (cur.exit) com.optionslab.app.data.SquareOffExit.noteBossExitOrder(id)              // (24 Nov 2026, round 7: his exit, never another book's to cancel)
                     launch { runCatching { com.optionslab.app.data.Strategies.tagOwner("kite:$id", cur.source) } }
                     var f = runCatching { b.awaitOrder(id) }.getOrElse { com.optionslab.app.data.Broker.Fill(id, "UNKNOWN", 0.0, 0, "status not confirmed; check the order book") }
                     // (23 Nov 2026, B6 review, ninth round: a resting exit turned into this leg's exit when it went again, below - [StuckLeg.converted].)
@@ -2480,6 +2488,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                         when {
                             took2 is Took.Exit -> {
                                 convertedId = took2.id
+                                if (cur.exit) com.optionslab.app.data.SquareOffExit.noteBossExitOrder(took2.id)
                                 launch { runCatching { com.optionslab.app.data.Strategies.tagOwner("kite:${took2.id}", cur.source) } }
                                 f = runCatching { b.awaitOrder(took2.id) }.getOrElse { e -> com.optionslab.app.data.Broker.Fill(took2.id, "UNKNOWN", 0.0, 0, e.message ?: "status not confirmed") }
                             }
@@ -2487,6 +2496,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                             why2 != null -> f = f.copy(message = "sent again was refused: $why2")
                             id2 != null -> {
                                 val sent2 = id2
+                                if (cur.exit) com.optionslab.app.data.SquareOffExit.noteBossExitOrder(sent2)
                                 launch { runCatching { com.optionslab.app.data.Strategies.tagOwner("kite:$sent2", cur.source) } }
                                 f = runCatching { b.awaitOrder(sent2) }.getOrElse { com.optionslab.app.data.Broker.Fill(sent2, "UNKNOWN", 0.0, 0, "status not confirmed; check the order book") }
                             }

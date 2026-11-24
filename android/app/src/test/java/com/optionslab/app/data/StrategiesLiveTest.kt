@@ -2947,4 +2947,23 @@ class StrategiesLiveTest : RobolectricTest() {
             assertEquals(0, Strategies.lostPending(NIFTY_CE, "NRML"))
         } finally { Broker.lostSearchInlineForTest = false; Broker.lostLookGapMsForTest = null }
     }
+
+    /**
+     * 24 Nov 2026 (B6-I round 7): a square-off held back because a book's state is not read yet after the start says so - never "an arm's
+     * own exit sale" - and nothing is sold or taken out meanwhile.
+     */
+    @Test fun aSquareOffHeldBackByABookNotReadYetSaysSo() {
+        live()
+        kite.position(NIFTY_CE, 75, 100.0, product = "MIS")
+        Strategies.startedForTest(0)
+        val said = ArrayList<String>()
+        val row = Broker.Position(NIFTY_CE, "MIS", 75, 100.0, 100.0, 0.0)
+        runBlocking {
+            SquareOffExit.send(row, 75, 0.05, emptyList(), emptyList(), Broker.Positions(listOf(row), emptyList()), AppSettings.load().limits(),
+                "expiry square-off", "iraalgoexpiry", Origins.EXPIRY, "expires today", "expiry") { _, w -> said += w }
+        }
+        assertTrue("nothing sold", sells().isEmpty())
+        assertTrue(said.toString(), said.any { "a book's state is not read yet after the start (up to 2 minutes)" in it })
+        assertTrue(said.toString(), said.none { "an arm's own exit sale" in it })
+    }
 }

@@ -2809,20 +2809,26 @@ object ArmLive {
     }
 
     /** 18 Nov 2026 (audit A1, review): what the app will do when the exit is due, by the orders that take the stop's room ([foreign]). */
-    private fun coveredWords(foreign: List<Broker.OrderRow>): String =
-        if (foreign.any { it.type == "LIMIT" && com.optionslab.ira.ManualCoverRule.bossTag(it.tag) })
-            "when the exit is due it cancels your LIMIT first and sells."
+    // (24 Nov 2026, B6-I round 7: "it cancels" only for one it may cancel ([cancellable]) - never his exit from the app; one with a tag a fired
+    // GTT's order may carry is told apart only by the GTT list when the exit is due, and said so.)
+    private fun coveredWords(foreign: List<Broker.OrderRow>): String {
+        val may = foreign.filter { cancellable(it, emptySet()) }
+        return if (may.any { !com.optionslab.ira.ManualCoverRule.gttTag(it.tag) }) "when the exit is due it cancels your LIMIT first and sells."
+        else if (may.isNotEmpty()) "when the exit is due it cancels your LIMIT first and sells - never one a GTT of the app's placed."
         else "it cannot cancel ${if (foreign.size > 1) "those orders" else "that order"} for you: cancel ${if (foreign.size > 1) "them" else "it"} " +
             "in Kite, or the exit cannot sell when it is due."
+    }
 
     /**
      * 18 Nov 2026 (audit A1): an exit order the arm may cancel when its own exit is due: a plain LIMIT of no part of the app.
      * 24 Nov 2026 (B6-I round 6, final integration review): Boss's by the one tag rule ([com.optionslab.ira.ManualCoverRule.bossTag]) - no tag,
      * another app's, or his own "iraalgo" from the app's order screen (it was never counted as his) - never one the app sent by itself; and
      * never an order a fired GTT of the app's placed, nor one not known to be his ([mine], from [Protections.gttOrdersNotBosss]).
+     * Round 7 (gate review): and never his exit from the app ([SquareOffExit.isBossExitOrder]) - a working exit on the row: the arm's exit
+     * waits while it works and never sells beside it. His other orders (in Kite, or a target from the app's order screen) as before.
      */
     internal fun cancellable(o: Broker.OrderRow, mine: Set<String>): Boolean =
-        o.working && o.type == "LIMIT" && com.optionslab.ira.ManualCoverRule.bossTag(o.tag) && o.id !in mine
+        o.working && o.type == "LIMIT" && com.optionslab.ira.ManualCoverRule.bossTag(o.tag) && !SquareOffExit.isBossExitOrder(o.id) && o.id !in mine
 
     /** 18 Nov 2026 (audit A1): [freeBlocked]'s cancels, in the contract's exit turn, each confirmed out on a fresh read. */
     private suspend fun cancelBlockers(p: Pos, ids: List<String>, why: String, mine: Set<String>): Freed {

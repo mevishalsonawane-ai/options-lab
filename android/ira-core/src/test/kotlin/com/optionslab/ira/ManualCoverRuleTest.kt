@@ -184,6 +184,13 @@ class ManualCoverRuleTest {
         }
         // (A sale filled since outweighs a positions read that still shows it held.)
         assertTrue(pc(sold = true, held = 130)!!.second.contains("filled a moment ago"))
+        // (Round 7: each of these is a "checked again" by its type - looked at again soon, its reported buy kept; a rule Boss is told of never.)
+        for (r in listOf(pc(by = "x"), pc(boss = true), pc(read = false), pc(sold = true), pc(held = 65),
+                ManualCoverRule.precheckInLock(true, false, true, false, true, false), ManualCoverRule.precheckInLock(true, true, false, false, true, false)))
+            assertTrue(ManualCoverRule.checkedAgain(r), r.toString())
+        assertFalse(ManualCoverRule.checkedAgain(null), "placed")
+        assertFalse(ManualCoverRule.checkedAgain(ManualCoverRule.precheckInLock(true, true, true, true, true, false)), "a working order: left alone")
+        assertFalse(ManualCoverRule.checkedAgain(ManualCoverRule.precheckInLock(true, true, true, false, true, true)), "a GTT: left alone")
     }
 
     @Test fun theOpenTicketsLegsAreLeftAlone() {

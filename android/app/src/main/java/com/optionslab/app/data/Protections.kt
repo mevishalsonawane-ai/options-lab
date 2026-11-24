@@ -3829,15 +3829,16 @@ object Protections {
         val s = AppSettings.load()
         if (!s.live || !s.allowRealOrders) return AddResult("Switch to Live with the badge at the top first.")
         if (extra <= 0) return AddResult("Not protected: nothing more to cover.")
-        val spec = runCatching { Broker.spec(exchange, symbol) }.getOrNull() ?: return AddResult("Could not read $symbol's lot and tick from Zerodha.")
+        // (24 Nov 2026, B6-I round 7: each "checked again" below is marked so ([AddResult.again]) - its caller keeps the lots and looks again.)
+        val spec = runCatching { Broker.spec(exchange, symbol) }.getOrNull() ?: return AddResult("Could not read $symbol's lot and tick from Zerodha.", again = true)
         val again = com.optionslab.ira.ManualCoverRule.CHECKED_AGAIN
         // (Review: read just before the lock - never a wait under it, which every stop's watch shares. What the protection covers is read
         // inside it, after any raise of its stop a look made meanwhile.)
-        val orders = Broker.within(2_500) { Broker.orders(fresh = true) } ?: return AddResult("Not protected: $again: Zerodha's orders could not be read")
+        val orders = Broker.within(2_500) { Broker.orders(fresh = true) } ?: return AddResult("Not protected: $again: Zerodha's orders could not be read", again = true)
         val heldNow = Broker.within(2_500) { ExitCoordinator.held(exchange, symbol, product, "protection", orders, forceLag = true) }
-            ?: return AddResult("Not protected: $again: what is held could not be read")
+            ?: return AddResult("Not protected: $again: what is held could not be read", again = true)
         // (Review: less than the caller just read held - this read trailing his buy, or a sale since: tried again soon, never "already covered".)
-        if (heldNow < covered + extra) return AddResult("Not protected: $again: what is held could not be read in full yet (it shows $heldNow)")
+        if (heldNow < covered + extra) return AddResult("Not protected: $again: what is held could not be read in full yet (it shows $heldNow)", again = true)
         return lock.withLock {
             val list = load()
             val mine = list.filter { it.active && it.live && it.symbol == symbol }
@@ -3849,7 +3850,7 @@ object Protections {
             // (Merge with B6-B round 8: Boss's own exit on it whose reply was lost may be selling it - nothing added beside it; tried again soon.)
             if (SquareOffExit.bossLostQty(symbol, product, Kite.Side.SELL, exchange) > 0)
                 return@withLock AddResult("Not protected: $again: your exit on $symbol may still be selling it (Zerodha's reply to it was lost), so " +
-                    "what is held could not be read yet")
+                    "what is held could not be read yet", again = true)
             val own = mine.flatMap { listOfNotNull(it.stopOrderId, it.targetOrderId) }.toSet()
             runCatching { precheck(own) }.getOrElse { "$again: it failed (${it.message})" }?.let { why ->
                 return@withLock AddResult("Not protected: $why") }
@@ -3874,7 +3875,8 @@ object Protections {
      * 23 Nov 2026 (B6-I round 3): what [addAutoSlices] did - its [words] (as before), the units it [added], and what the app's protection
      * covers of what is held after it ([coveredNow] of [heldNow]; 0 when not read).
      */
-    data class AddResult(val words: String, val added: Int = 0, val coveredNow: Int = 0, val heldNow: Int = 0) {
+    // (24 Nov 2026, B6-I round 7: [again] - a "checked again" refusal of its own, by its type: the caller keeps the lots and looks again soon.)
+    data class AddResult(val words: String, val added: Int = 0, val coveredNow: Int = 0, val heldNow: Int = 0, val again: Boolean = false) {
         companion object {
             /** Nothing added: the app's own protection already covers all that is held now. */
             const val ALREADY = "Already covered"

@@ -443,6 +443,8 @@ object ManualCover {
             }
             if (!placing) continue
             val k = "${u.exchange}:${u.symbol}:${u.product}"
+            // (24 Nov 2026, B6-I round 7, review: a new buy of his on the row - its lots are tried afresh, so a wait for earlier ones starts again.)
+            growWaiting.remove(k)
             val was = fills[k]
             fills[k] = Fill((was?.orders ?: emptyMap()) + (u.orderId to u.filled), maxOf(was?.atMs ?: r.atMs, r.atMs),
                 maxOf(was?.atNanos ?: r.atNanos, r.atNanos), was?.lagged ?: 0)
@@ -590,6 +592,8 @@ object ManualCover {
         val prot = withTimeoutOrNull(3_000) { runCatching { Protections.active() to Protections.endedSince(from) }.getOrNull() } ?: return ManualCoverRule.FollowUp.READ_FAILED
         // 7 Nov, second review: the protections this switch set (only those are ever taken off by it).
         val autos = prot.first.filter { it.live && it.auto && it.note != "removing" }
+        // (24 Nov 2026, B6-I round 7: lots added still not covered about two minutes on are said loudly, once; switched off, nothing waits.)
+        if (placing) tellUncovered(d, all, prot.first, now00) else synchronized(mem) { growWaiting.clear() }
         if (candidates.isEmpty() && autos.isEmpty()) { synchronized(mem) { looks.clear() }; return quiet }
         // 7 Nov, fourth review: switched off with none of its own protections, there is nothing to do: nothing more is read.
         if (!placing && autos.isEmpty()) { synchronized(mem) { looks.clear() }; return quiet }
@@ -644,7 +648,7 @@ object ManualCover {
         for (p in candidates) {
             when (val why = ManualCoverRule.skip(p, first)) {
                 null -> if ("$d|${p.lookKey}" !in given) open += p
-                else -> countLeftAlone(d, p, why)
+                else -> { countLeftAlone(d, p, why); leftAloneEndsWait(p, why) }
             }
         }
         if (open.isEmpty()) { synchronized(mem) { looks.keepOnly(emptySet()) }; return quiet }
@@ -664,7 +668,7 @@ object ManualCover {
         for (p in open) {
             when (val why = ManualCoverRule.skip(p, facts)) {
                 null -> uncovered += p
-                else -> countLeftAlone(d, p, why)
+                else -> { countLeftAlone(d, p, why); leftAloneEndsWait(p, why) }
             }
         }
         val now = Market.now().toInstant().toEpochMilli()
@@ -891,9 +895,10 @@ object ManualCover {
         }
         // 7 Nov, third review: checked again OUTSIDE the protections' lock (these reads may be slow): the underlying's shorts, working
         // sells, futures and stock, and what is held. Anything found: nothing sent, not an attempt, never a refusal.
-        // (24 Nov 2026, B6-I round 6: the sales on the contract as this check read them - one filled after it is caught inside the lock.)
-        val sells = HashMap<String, Int>()
-        val outside = recheck(p, spec.lotSize, names, sells = sells)
+        // (24 Nov 2026, B6-I round 6: the sales on the contract as this check read them - one filled after it is caught inside the lock -
+        // and what is held, lag-guarded; round 7: read here, outside the lock, so the lock is held only for a fresh order book and the GTTs.)
+        val seen = Seen()
+        val outside = recheck(p, spec.lotSize, names, seen = seen)
         if (outside != null) {
             outside.first?.let { countLeftAlone(d, p, it) }
             runCatching { Diag.record("protection", "Manual position ${p.symbol} (${p.qty}): stop and target not placed: ${outside.second}") }
@@ -909,7 +914,7 @@ object ManualCover {
             runCatching {
                 Protections.noteCoverLook(p.exchange, p.symbol, p.product, lookAt)
                 Protections.protectLive(p.symbol, p.exchange, p.product, p.qty, p.last, stop, null, target, auto = true, precheck = {
-                    lastCheck(p, reportedDone(), p.qty, sells) { t, c -> pass = t; claim = c }?.let { (why, words) -> left = why; words }
+                    lastCheck(p, reportedDone(), p.qty, seen) { t, c -> pass = t; claim = c }?.let { (why, words) -> left = why; words }
                 })
             }.getOrElse { "Not protected: ${it.message}" }
         } finally { pass?.leave(); claim?.release() }
@@ -973,13 +978,14 @@ object ManualCover {
         val key = p0.key
         val (covered, stop) = g
         val extra = p0.qty - covered
-        if (extra <= 0) { synchronized(mem) { fills.remove(p0.lookKey) }; return false }
-        val spec = Broker.within(8_000) { Broker.spec(p0.exchange, p0.symbol) } ?: return true
-        val last = Broker.within(5_000) { Broker.quotesFresh(listOf(key)) }?.get(key)?.last?.takeIf { it > 0 } ?: return true
+        if (extra <= 0) { synchronized(mem) { fills.remove(p0.lookKey); growWaiting.remove(p0.lookKey) }; return false }
+        // (Round 7, review: a read that failed waits too - said loudly if those lots are still not covered about two minutes on.)
+        val spec = Broker.within(8_000) { Broker.spec(p0.exchange, p0.symbol) } ?: run { growWaits(p0.lookKey, lookAt); return true }
+        val last = Broker.within(5_000) { Broker.quotesFresh(listOf(key)) }?.get(key)?.last?.takeIf { it > 0 } ?: run { growWaits(p0.lookKey, lookAt); return true }
         val p = p0.copy(qty = extra, last = last)
         // At or just over the stop already: nothing added (a stop there would trigger, or be refused, at once).
         if (stop != null && last < stop + ManualCoverRule.room(p0.avg, spec.tickSize.takeIf { it > 0 } ?: 0.05, stop) - 1e-9) {
-            synchronized(mem) { fills.remove(p0.lookKey) }
+            synchronized(mem) { fills.remove(p0.lookKey); growWaiting.remove(p0.lookKey) }
             val said = "${p.symbol}: you bought $extra more yourself, but the price (%.2f) is at or close to the app's stop (%.2f), so no stop was added for them. Set one yourself."
                 .format(java.util.Locale.ENGLISH, last, stop)
             Alerts.post(said, Alerts.Kind.ERROR, "Protection")
@@ -987,15 +993,21 @@ object ManualCover {
             noteLast("NOT covered: ${p.symbol}, $extra of ${p0.qty} held (at or close to its stop)")
             return false
         }
-        val sells = HashMap<String, Int>()
-        val outside = recheck(p, spec.lotSize, names, working = covered, sells = sells)
+        val seen = Seen()
+        val outside = recheck(p, spec.lotSize, names, working = covered, seen = seen)
         if (outside != null) {
             outside.first?.let { countLeftAlone(d, p0, it) }
             runCatching { Diag.record("protection", "Manual position ${p.symbol}: the $extra added not covered: ${outside.second}") }
-            // (Review: a read that failed is tried again soon - its reported buy kept - never left to expire with those lots bare.)
-            return outside.first == null && outside.second.contains("could not be read")
+            // (Review: a read that failed is tried again soon - its reported buy kept - never left to expire with those lots bare. Round 7: any
+            // "checked again" - less held than seen as well - by its type, as the last check's.)
+            if (ManualCoverRule.checkedAgain(outside)) { growWaits(p0.lookKey, lookAt); return true }
+            // (Round 7, review: left alone for a rule - his own stop or order on it, a spread - or not covered for good: no longer waited for.)
+            synchronized(mem) { growWaiting.remove(p0.lookKey) }
+            return false
         }
         var left: ManualCoverRule.Skip? = null
+        // (24 Nov 2026, B6-I round 7: the last check's "checked again" - [ManualCoverRule.checkedAgain], by its type, never its words.)
+        var againInLock = false
         var pass: com.optionslab.ira.ExitTurns.Pass? = null
         var claim: SquareOffExit.ExitClaim? = null
         // (Round 3: what it saw covered goes in too - inside the protections' lock what is added is capped at what is held then less what the
@@ -1005,7 +1017,8 @@ object ManualCover {
             runCatching {
                 Protections.noteCoverLook(p.exchange, p.symbol, p.product, lookAt)
                 Protections.addAutoSlices(p.symbol, p.exchange, p.product, extra, last, covered) { own ->
-                    lastCheck(p, reportedDone() + own, p0.qty, sells) { t, c -> pass = t; claim = c }?.let { (why, words) -> left = why; words }
+                    lastCheck(p, reportedDone() + own, p0.qty, seen) { t, c -> pass = t; claim = c }
+                        ?.also { againInLock = ManualCoverRule.checkedAgain(it) && loaded && on }?.let { (why, words) -> left = why; words }
                 }
             }.getOrElse { Protections.AddResult("Not protected: ${it.message}") }
         } finally { pass?.leave(); claim?.release() }
@@ -1013,13 +1026,17 @@ object ManualCover {
         left?.let { countLeftAlone(d, p0, it) }
         // (Review: a read that failed inside - the lot and tick, the books in the exit turn, the turn busy - keeps its reported buy and is tried
         // again soon; anything else is its one try.)
+        // (24 Nov 2026, B6-I round 7, gate review: every "checked again" - the last check's, by its type ([againInLock]), and the slices' own
+        // ([Protections.AddResult.again]): a sale on it that filled a moment ago, less held than seen, Boss exiting it - keeps it too: the next
+        // look reads again and covers what is held then (never more). Still not covered about two minutes on: said loudly ([tellUncovered]).)
         val again = ManualCoverRule.CHECKED_AGAIN
-        if (left == null && (result.startsWith("Could not read") || (result.contains(again) &&
+        if (left == null && (againInLock || added.again || result.startsWith("Could not read") || (result.contains(again) &&
                 (result.contains("not read") || result.contains("could not be read") || result.contains("busy") || result.contains("failed"))))) {
             runCatching { Diag.record("protection", "Manual position ${p.symbol}: the $extra added not covered yet: $result") }
+            growWaits(p0.lookKey, lookAt)
             return true
         }
-        synchronized(mem) { fills.remove(p0.lookKey) }
+        synchronized(mem) { fills.remove(p0.lookKey); growWaiting.remove(p0.lookKey) }
         if (result.startsWith(Protections.AddResult.ALREADY)) {
             // (Round 3: nothing to add - the app's own stop already covers all that is held now.)
             runCatching { Diag.record("protection", "Manual position ${p.symbol}: nothing added for the $extra bought: $result") }
@@ -1047,21 +1064,87 @@ object ManualCover {
     }
 
     /**
+     * 24 Nov 2026 (B6-I round 6-7): what the check outside the lock ([recheck]) read, for the last check inside it ([lastCheck]): each sale on
+     * the contract with what it had filled, and what Zerodha holds (lag-guarded). Memory, one cover or grow.
+     */
+    private class Seen {
+        val sells = HashMap<String, Int>()
+        var held: Int? = null
+    }
+
+    /**
+     * 24 Nov 2026 (B6-I round 7, gate review: lots Boss added could be left with no stop, silently): by look key, when a grow first had to be
+     * looked at again (the market's clock) - its reported buy kept ([grow]). Ended when it is covered, or when there is nothing to add. Under
+     * [mem].
+     */
+    private val growWaiting = HashMap<String, Long>()
+
+    /** [grow] of [key] to be looked at again: the first such time kept ([growWaiting]). */
+    private fun growWaits(key: String, at: Long) { synchronized(mem) { growWaiting.putIfAbsent(key, at) } }
+
+    /**
+     * Round 7 (review): [p] left alone because Boss handles it himself ([HIS_OWN]: his own order or GTT on it, his own exit, a spread or hedge,
+     * two products, the expiry square-off, its protection removed) is no longer waited for ([growWaiting]): never said as not covered. Its own
+     * protection following it (FOLLOWED, PROTECTED) is how a grow's row reads once its reported buy is gone - still waited for.
+     */
+    private fun leftAloneEndsWait(p: ManualCoverRule.Pos, why: ManualCoverRule.Skip) {
+        if (why in HIS_OWN) synchronized(mem) { growWaiting.remove(p.lookKey) }
+    }
+    private val HIS_OWN = setOf(ManualCoverRule.Skip.WORKING_ORDER, ManualCoverRule.Skip.GTT, ManualCoverRule.Skip.HANDS_OFF, ManualCoverRule.Skip.SPREAD,
+        ManualCoverRule.Skip.HEDGE, ManualCoverRule.Skip.TWO_PRODUCTS, ManualCoverRule.Skip.EXPIRING, ManualCoverRule.Skip.ENDED_TODAY,
+        ManualCoverRule.Skip.ENDED_EARLIER)
+
+    /**
+     * 24 Nov 2026 (B6-I round 7): lots Boss added that are still not covered by the app's own automatic stop [UNCOVERED_TELL_MS] after the
+     * first try that had to wait ([growWaiting]) - Zerodha's positions read now ([all]) holding more than the app's active automatic
+     * protections on that row cover ([active]) - are said loudly, once, and no longer waited for (his own stop for them, or a later buy of
+     * his reported on the stream, as before). Covered meanwhile, or no more held than covered: dropped, unsaid. Under [mem] for the record.
+     */
+    private fun tellUncovered(d: String, all: List<ManualCoverRule.Pos>, active: List<Protections.Item>, now: Long) {
+        val due = synchronized(mem) {
+            // (Review: a clock gone back starts the wait again; a buy of his on it still in its grace is looked at first - never said early.)
+            growWaiting.entries.filter { now < it.value }.forEach { it.setValue(now) }
+            growWaiting.filter { now - it.value >= UNCOVERED_TELL_MS && fills[it.key]?.let { f -> !graceOver(f) } != true }.keys.toList()
+                .onEach { growWaiting.remove(it) }
+        }
+        for (k in due) {
+            val rows = all.filter { it.lookKey == k }
+            val held = rows.sumOf { it.qty }
+            val p = rows.firstOrNull() ?: continue
+            val covered = active.filter { it.active && it.live && it.auto && it.exchange == p.exchange && it.symbol == p.symbol && it.product == p.product }
+                .sumOf { it.qty }
+            if (covered <= 0 || held <= covered) continue
+            val said = "${p.symbol}: ${held - covered} of the $held you hold are NOT covered by the app's automatic stop - the lots you bought " +
+                "more could not be added to it (Zerodha's books changed as it tried). Set a stop for them yourself."
+            runCatching { Diag.record("protection", "Manual position: $said") }
+            loud(NOTICE_GAVE_UP, said)
+            noteLast("NOT covered: ${p.symbol}, ${held - covered} of $held held")
+        }
+    }
+
+    /** 24 Nov 2026 (B6-I round 7): how long lots added may wait to be covered before Boss is told loudly ([tellUncovered]). */
+    internal const val UNCOVERED_TELL_MS = 120_000L
+
+    /**
      * 7 Nov, second and third review: the check just before placing, OUTSIDE the protections' lock (bounded reads). Null: go on;
      * else the reason (and the rule it falls under, when it is one Boss is told of).
      */
     private suspend fun recheck(p: ManualCoverRule.Pos, lot: Int, names: Map<String, String>, working: Int = 0,
-                                sells: MutableMap<String, Int>? = null): Pair<ManualCoverRule.Skip?, String>? {
+                                seen: Seen? = null): Pair<ManualCoverRule.Skip?, String>? {
         val again = ManualCoverRule.CHECKED_AGAIN
-        val orders = Broker.within(8_000) { Broker.orders() } ?: return null to "$again: Zerodha's orders could not be read"
+        // (24 Nov 2026, B6-I round 7: a read of its own - never one shared from a moment before - so a sale that filled before this check
+        // began is never taken for one filled since it, inside the lock.)
+        val orders = Broker.within(8_000) { Broker.orders(fresh = true) } ?: return null to "$again: Zerodha's orders could not be read"
         // (24 Nov 2026, B6-I round 6: what each sale on the contract had filled when read here - [lastCheck] looks for one filled since.)
-        sells?.putAll(orders.filter { it.side == "SELL" && it.exchange == p.exchange && it.symbol == p.symbol }.associate { it.id to it.filled })
+        seen?.sells?.putAll(orders.filter { it.side == "SELL" && it.exchange == p.exchange && it.symbol == p.symbol }.associate { it.id to it.filled })
         val positions = Broker.within(8_000) { Broker.positionBook() } ?: return null to "$again: Zerodha's positions could not be read"
         val equity = equityFor(listOf(p.symbol)) ?: return null to "$again: the holdings could not be read"
         val tracked = withTimeoutOrNull(3_000) { runCatching { trackedIds(Protections.active()) }.getOrNull() }
             ?: return null to "$again: the protections could not be read"
-        val heldNow = Broker.within(8_000) { ExitCoordinator.held(p.exchange, p.symbol, p.product, WHO, orders, positions) }
+        // (Round 7: lag-guarded - a sale filled a moment ago that the positions still trail counts as sold - and kept for [lastCheck].)
+        val heldNow = Broker.within(8_000) { ExitCoordinator.held(p.exchange, p.symbol, p.product, WHO, orders, positions, forceLag = true) }
             ?: return null to "$again: what is held could not be read"
+        seen?.held = heldNow
         // (23 Nov 2026, B6-I round 2: [working] - what the app's own protection already covers, for lots added: never more than held.)
         val sendable = com.optionslab.engine.risk.ExitQty.sendable(heldNow, working, p.qty, lot)
         return ManualCoverRule.precheck(p, posOf(positions), sellsOf(orders, tracked), heldTodayOf(positions), equity, sendable, p.qty, names)
@@ -1073,7 +1156,7 @@ object ManualCover {
      * its orders and GTTs, each read with a 2.5 s deadline (not read: nothing, never a refusal); nothing working or active on it
      * (23 Nov 2026: but Boss's own buys the stream reported done, [done], [reportedDone]).
      */
-    private suspend fun lastCheck(p: ManualCoverRule.Pos, done: Set<String>, need: Int, sells: Map<String, Int>,
+    private suspend fun lastCheck(p: ManualCoverRule.Pos, done: Set<String>, need: Int, seen: Seen,
                                   keep: (com.optionslab.ira.ExitTurns.Pass, SquareOffExit.ExitClaim) -> Unit): Pair<ManualCoverRule.Skip?, String>? {
         if (!(loaded && on)) return ManualCoverRule.precheckInLock(false, true, true, false, true, false)
         val turn = ExitCoordinator.tryEnter(p.exchange, p.symbol, WHO) ?: return ManualCoverRule.precheckInLock(true, false, true, false, true, false)
@@ -1095,12 +1178,12 @@ object ManualCover {
             var r = ManualCoverRule.precheckInLock(true, true, orders != null,
                 orders?.any { it.working && it.exchange == p.exchange && it.symbol == p.symbol && it.id !in done } == true, gtts != null,
                 gtts?.any { it.active && it.exchange == p.exchange && it.symbol == p.symbol } == true)
-            // (Round 6: what Zerodha holds, from this read of the orders - lag-guarded, so a sale that filled a moment ago and that the positions
-            // still trail counts as sold - at least what the stop is to cover, and no sale on the contract filled since the look outside.)
+            // (Round 6: what Zerodha holds - lag-guarded, so a sale that filled a moment ago and that the positions still trail counts as sold
+            // - at least what the stop is to cover, and no sale on the contract filled since the look outside. Round 7: what is held as the check
+            // outside read it ([recheck]: no positions read while the lock is held), with this fresh order book showing no sale filled since.)
             if (r == null && orders != null) {
-                val held = Broker.within(2_500) { ExitCoordinator.held(p.exchange, p.symbol, p.product, WHO, orders, forceLag = true) }
-                val soldSince = orders.any { it.side == "SELL" && it.exchange == p.exchange && it.symbol == p.symbol && it.filled > (sells[it.id] ?: 0) }
-                r = ManualCoverRule.precheckRow(null, false, held != null, held ?: 0, need, soldSince)
+                val soldSince = orders.any { it.side == "SELL" && it.exchange == p.exchange && it.symbol == p.symbol && it.filled > (seen.sells[it.id] ?: 0) }
+                r = ManualCoverRule.precheckRow(null, false, seen.held != null, seen.held ?: 0, need, soldSince)
             }
             val c = claim
             if (r == null && c != null) keep(turn, c) else { c?.release(); turn.leave() }
@@ -1148,7 +1231,7 @@ object ManualCover {
         tally = ManualCoverRule.Tally()
         // 23 Nov 2026: the stream's reported fills, and a look one asked for still waiting (one already looking finishes that look: round 2,
         // [nowLooking]; round 3: the look asked for dropped, so one that has not started does nothing).
-        inbox.clear(); fills.clear(); sellsSeen.clear(); rejectTold.clear(); lastSaid = ""
+        inbox.clear(); fills.clear(); sellsSeen.clear(); rejectTold.clear(); lastSaid = ""; growWaiting.clear()
         nowDue.set(NO_LOOK)
         if (nowLooking.get() == 0) nowJob?.cancel()
     }
@@ -1156,7 +1239,7 @@ object ManualCover {
     /** Whether anything is still in memory beyond the defaults (the erase's tests). Memory only. */
     internal fun holdsForErase(): Boolean = !on || stopPts != ManualCoverRule.DEFAULT_STOP_POINTS || targetPts != ManualCoverRule.DEFAULT_TARGET_POINTS ||
         lastSaid.isNotEmpty() || inbox.isNotEmpty() || rejectTold.isNotEmpty() || synchronized(mem) {
-        fills.isNotEmpty() || sellsSeen.isNotEmpty() || looks.size > 0 || tries.isNotEmpty() || attempts.isNotEmpty() || lastAttempt.isNotEmpty() || gaveUp.isNotEmpty() ||
+        fills.isNotEmpty() || sellsSeen.isNotEmpty() || growWaiting.isNotEmpty() || looks.size > 0 || tries.isNotEmpty() || attempts.isNotEmpty() || lastAttempt.isNotEmpty() || gaveUp.isNotEmpty() ||
             toldLow.isNotEmpty() || leftAlone.isNotEmpty() || untracked.isNotEmpty() || unhedged.isNotEmpty() || hedgeLooks.size > 0 || unhedgedIds.isNotEmpty() || tally.protectedN + tally.leftAlone + tally.failed > 0
     }
 

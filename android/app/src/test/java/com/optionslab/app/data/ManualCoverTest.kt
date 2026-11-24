@@ -853,10 +853,15 @@ class ManualCoverTest : RobolectricTest() {
     @Test fun theRowIsClaimedWhileTheCoverGoesIn() {
         look(); later(25)
         val seen = ArrayList<String?>()
-        kite.afterNext("/orders/regular") { seen += SquareOffExit.exitClaimedBy("NFO", sym, "NRML") }
+        var readsInLock = -1
+        var readsAtLast = -1
+        beforeTheLastCheck { readsAtLast = kite.positionReads }
+        kite.afterNext("/orders/regular") { seen += SquareOffExit.exitClaimedBy("NFO", sym, "NRML"); readsInLock = kite.positionReads - readsAtLast }
         look()
         assertEquals(listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
         assertEquals("held by the protections' stop while it went in", listOf<String?>(Protections.STOP_CLAIM_OWNER), seen)
         assertEquals("let go after", null, SquareOffExit.exitClaimedBy("NFO", sym, "NRML"))
+        // (Round 7: what is held is read before the lock - inside it only a fresh order book and the GTTs, so the stops' watch waits less.)
+        assertEquals("no positions read inside the lock", 0, readsInLock)
     }
 }

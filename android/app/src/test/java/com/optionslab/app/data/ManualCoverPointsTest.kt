@@ -1262,4 +1262,78 @@ class ManualCoverPointsTest : RobolectricTest() {
         assertEquals(130, runBlocking { Protections.active() }.sumOf { it.qty })
         assertEquals("never left holding the row", null, SquareOffExit.exitClaimedBy("NFO", sym, "MIS"))
     }
+
+    // ---- 24 Nov 2026 (B6-I round 7, gate review) -----------------------------------------------------------------------------------
+
+    /** The sale [f] made just before the slices' last check reads the orders, inside the lock (after the checks outside it read the books). */
+    private fun beforeTheSlicesLastCheck(f: () -> Unit) {
+        kite.afterNext("/quote") { kite.afterNext("/orders") { kite.afterNext("/orders") { kite.beforeNext("/orders") { f() } } } }
+    }
+
+    /**
+     * MAJOR (the reviewer's case, in this contract's lots of 65): 65 held with the app's stop, Boss buys 130 more, then 65 of them sell between
+     * the check outside the lock and the last check - the lots are kept (never dropped as a refusal) and the next look covers what is held
+     * then: all 130, never more.
+     */
+    @Test fun lotsAddedThenPartSoldBeforeTheyRestAreCoveredOnTheNextLook() {
+        val id = kite.boughtInKite(sym, 65, 125.35)
+        update(id, "COMPLETE", 65, qty = 65)
+        Background.await("covered") { kite.placed.isNotEmpty() }
+        settled()
+        val more = kite.boughtInKite(sym, 130, 125.35)
+        beforeTheSlicesLastCheck { kite.soldInKite(sym, 65, 126.0) }
+        update(more, "COMPLETE", 130, qty = 130)
+        Background.await("tried") { Diag.lines().any { it.contains("the 130 added not covered yet") } }
+        settled()
+        assertTrue(Diag.lines().joinToString("\n"), Diag.lines().any { it.contains("the 130 added not covered yet") && it.contains("a sale on it filled a moment ago") })
+        assertEquals("nothing added beside the sale", 1, kite.placed.size)
+        later(15); look()                                                   // the next look (the app's follow-up, 10 s on)
+        assertEquals("all 130 held covered", 130, runBlocking { Protections.active() }.sumOf { it.qty })
+        assertEquals(listOf("65", "65"), kite.placed.filter { it.form["order_type"] == "SL" }.map { it.form["quantity"] })
+        later(125); look()
+        assertTrue("nothing said: covered", Alerts.posted.none { it.text.contains("NOT covered by the app's automatic stop") })
+    }
+
+    /** The same when the sale fills just before the check outside the lock reads the books: kept, and covered on the next look. */
+    @Test fun lotsAddedThenPartSoldBeforeTheCheckOutsideAreCoveredOnTheNextLook() {
+        val id = kite.boughtInKite(sym, 65, 125.35)
+        update(id, "COMPLETE", 65, qty = 65)
+        Background.await("covered") { kite.placed.isNotEmpty() }
+        settled()
+        val more = kite.boughtInKite(sym, 130, 125.35)
+        kite.afterNext("/quote") { kite.soldInKite(sym, 65, 126.0) }
+        update(more, "COMPLETE", 130, qty = 130)
+        Background.await("tried") { Diag.lines().any { it.contains("the 130 added not covered") && it.contains("Zerodha holds less than seen") } }
+        settled()
+        assertEquals("nothing added beside the sale", 1, kite.placed.size)
+        later(15); look()
+        assertEquals("all 130 held covered", 130, runBlocking { Protections.active() }.sumOf { it.qty })
+        later(125); look()
+        assertTrue("nothing said: covered", Alerts.posted.none { it.text.contains("NOT covered by the app's automatic stop") })
+    }
+
+    /**
+     * MAJOR: lots added that still cannot be covered (he sold more of them as the stop went in, so the next looks never see his buy held) are
+     * said loudly about two minutes on - once - never left without a word.
+     */
+    @Test fun lotsAddedStillUncoveredAboutTwoMinutesOnAreSaidLoudlyOnce() {
+        val id = kite.boughtInKite(sym, 65, 125.35)
+        update(id, "COMPLETE", 65, qty = 65)
+        Background.await("covered") { kite.placed.isNotEmpty() }
+        settled()
+        val more = kite.boughtInKite(sym, 195, 125.35)
+        beforeTheSlicesLastCheck { kite.soldInKite(sym, 130, 126.0) }       // 130 held: his buy of 195 never shows in full again
+        update(more, "COMPLETE", 195, qty = 195)
+        Background.await("tried") { Diag.lines().any { it.contains("the 195 added not covered yet") } }
+        settled()
+        later(30); look()
+        assertTrue(Alerts.posted.none { it.text.contains("NOT covered by the app's automatic stop") })
+        later(100); look()                                                  // over two minutes since it first had to wait
+        val said = Alerts.posted.filter { it.text.contains("NOT covered by the app's automatic stop") }.map { it.text }
+        assertEquals(said.toString(), 1, said.size)
+        assertTrue(said.single(), said.single().startsWith("$sym: 65 of the 130 you hold are NOT covered"))
+        later(30); look(); later(30); look()
+        assertEquals("once", 1, Alerts.posted.count { it.text.contains("NOT covered by the app's automatic stop") })
+        assertEquals("the app's stop untouched", 65, runBlocking { Protections.active() }.sumOf { it.qty })
+    }
 }

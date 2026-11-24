@@ -128,14 +128,28 @@ object PineAuto {
      * 24 Nov 2026 (B6-I round 6, final integration review: the provider answered 0 before the book was read, so a lost exit saved in it from
      * before a restart was not counted): the scripts' live exit sales whose answer was lost and that are still looked for on [symbol]'s
      * [product] row ([Broker.lostSales] - taken back from the book as it is read: [restoreLostSales]); -1 (not known) for a row a script may
-     * hold (an NSE option, intraday: [ArmLive.armsMayHold]) while the book is not read yet in its first [ArmLive.LOST_LET_GO_MS] after the
-     * start, or for as long after it was set aside as damaged - as the arms' live book's ([ArmLive.unsettledSales]). Memory only.
+     * hold ([pineMayHold]) while the book is not read yet in its first [ArmLive.LOST_LET_GO_MS] after the start, or for as long after it was
+     * set aside as damaged - as the arms' live book's ([ArmLive.unsettledSales]). Memory only.
      */
     internal fun lostPending(symbol: String, product: String): Int {
         val wall = System.currentTimeMillis()
-        if ((wall < lostAsideUntil || (cache == null && wall < lostUnknownUntil)) && product == "MIS" && ArmLive.armsMayHold(symbol, product)) return -1
+        if ((wall < lostAsideUntil || (cache == null && wall < lostUnknownUntil)) && pineMayHold(symbol, product)) return -1
         return Broker.lostSales(LOST_EXIT, symbol, product)
     }
+
+    /**
+     * 24 Nov 2026 (B6-I round 7, gate review: BSE's and MCX's options were held back too): a row a script may hold - an NSE option (NFO),
+     * intraday, as the scripts trade - never a BSE index's option (BFO), a commodity's (MCX), a future or a stock. By the symbol's form
+     * alone (the square-offs ask by symbol and product). Pure.
+     */
+    internal fun pineMayHold(symbol: String, product: String): Boolean {
+        if (product != "MIS" || !OPTION_FORM.containsMatchIn(symbol)) return false
+        val u = com.optionslab.ira.ManualCoverRule.underlying(symbol)
+        return u !in BSE_INDICES && u !in com.optionslab.engine.mcx.Mcx.NAMES
+    }
+    /** (A strike's digits before CE / PE - never a stock whose name ends in CE.) */
+    private val OPTION_FORM = Regex("\\d(CE|PE)$")
+    private val BSE_INDICES = setOf("SENSEX", "BANKEX", "SENSEX50")
     /** 24 Nov 2026 (B6-I round 6): until when (wall clock) a lost exit saved in a book not read yet in this process is not known ([lostPending]). */
     @Volatile private var lostUnknownUntil = 0L
     /** 24 Nov 2026 (B6-I round 6): until when (wall clock) a lost exit kept in a book set aside as damaged is not known ([lostPending]). */

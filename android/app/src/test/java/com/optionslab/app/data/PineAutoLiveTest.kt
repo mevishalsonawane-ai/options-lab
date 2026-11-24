@@ -2071,6 +2071,11 @@ class PineAutoLiveTest : RobolectricTest() {
         val m = src("ui/AppModel.kt")
         assertTrue(m.substring(m.indexOf("private suspend fun markOwnExits")).substringBefore("\n    }\n").contains("PineAuto.markOwnCancels(pineIds)"))
         assertTrue(m.substring(m.indexOf("private suspend fun unmarkOwnExits")).substringBefore("\n    }\n").contains("PineAuto.unmarkOwnCancels(m.pine)"))
+        // (24 Nov 2026, B6-I round 7: and his exit's main path, which takes the resting exits out before its leg goes - marked before the
+        // cancels, a mark taken back for one still working.)
+        val take = m.substring(m.indexOf("private suspend fun takeOverLegClaimed"))
+        assertTrue(take.indexOf("PineAuto.markOwnCancels(pineIds)") in 1 until take.indexOf("for (r in rest) runCatching { b.cancel(r.id, r.variety) }"))
+        assertTrue(take.contains("PineAuto.unmarkOwnCancels(still)"))
     }
 
     /** A mark the scripts' own exit made (its own cancel of its stop) stays its own - never taken back by another path's unmark. */
@@ -2094,6 +2099,11 @@ class PineAutoLiveTest : RobolectricTest() {
         assertEquals("an option, intraday, the book not read", -1, PineAuto.lostPending(ce, "MIS"))
         assertEquals("never a carried row", 0, PineAuto.lostPending(ce, "NRML"))
         assertEquals("never a stock", 0, PineAuto.lostPending("RELIANCE", "MIS"))
+        // (24 Nov 2026, B6-I round 7: only an NSE option - never BSE's (BFO) or a commodity's (MCX), never a future.)
+        assertEquals("never a BSE index's option", 0, PineAuto.lostPending("SENSEX26N2081000CE", "MIS"))
+        assertEquals("never a commodity's option", 0, PineAuto.lostPending("CRUDEOIL25DEC5400CE", "MIS"))
+        assertEquals("never a future", 0, PineAuto.lostPending("BANKNIFTY26OCTFUT", "MIS"))
+        assertEquals("a stock's NSE option", -1, PineAuto.lostPending("RELIANCE26OCT1500CE", "MIS"))
         assertEquals("the square-offs wait", null, SquareOffExit.lostPending(ce, "MIS"))
         switchOn()
         pass(51_900.0)                                             // the book read

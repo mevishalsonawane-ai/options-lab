@@ -529,6 +529,12 @@ object ManualCoverRule {
         else -> null
     }
 
+    /**
+     * 24 Nov 2026 (B6-I round 7): whether a last check's answer ([precheckInLock], [precheckRow]) is a "checked again" one - no rule Boss is
+     * told of (its [Skip] null): the position is looked at again soon, its reported buy kept. Told by its type, never by its words.
+     */
+    fun checkedAgain(r: Pair<Skip?, String>?): Boolean = r != null && r.first == null
+
     /** An automatic protection taken off because its position became part of a spread or a hedge. */
     fun saidUnhedged(symbol: String, why: Skip): String =
         "$symbol: its automatic stop and target were removed because it is now part of a spread/hedge (${why.words}). Your own " +
