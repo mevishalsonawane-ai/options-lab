@@ -161,4 +161,133 @@ object BreadthDonchianArm {
     }
 
     private fun rs(x: Double) = (if (x < 0) "−₹" else "+₹") + "%,.0f".format(Locale.ENGLISH, kotlin.math.abs(x))
+
+    // ---- Verified Options-Buying Upgrades (Nov 2026 real 1m option-price walk-forward) -----------------------------------
+
+    /**
+     * Execution universe (Ex-BANKNIFTY): all 5 [UNDERLYINGS] remain in the [MIN_BREADTH] breadth vote, while BANKNIFTY is
+     * excluded from execution due to monthly-expiry drag on real 1m option prices.
+     */
+    val EXEC_UNDERLYINGS = listOf("NIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX")
+
+    /**
+     * Opposing-wick absorption ceiling: skip a breakout bar whose opposing rejection wick is at or above 35% of the bar range.
+     * Verified across 4/4 Ex-BANKNIFTY indices in both Design (Jul 2024 - Dec 2025) and Holdout (Jan - Oct 2026):
+     * multi-slot str>0 & brk>=0.50 lifts 1x PnL +₹1,66,233 -> +₹2,11,404 (2x +₹2,04,878), PF 1.33 -> 1.48, day-t +2.49 -> +2.88.
+     */
+    const val MAX_OPPOSING_WICK = 0.35
+
+    /** Minimum breakout extension in ATR(14) units beyond the 20-bar Donchian channel. */
+    const val MIN_BREAK_STRENGTH = 0.50
+
+    /** Lookback for causal ATR used by [breakStrength]. */
+    const val BREAK_ATR_LEN = 14
+
+    /**
+     * Fraction of [bar]'s high-low range consumed by the opposing rejection wick for [side] (+1 call: upper wick; -1 put: lower
+     * wick). Returns 0.0 for flat bars or non-finite prices. Pure.
+     */
+    fun opposingWick(bar: PassedArms.Bar5, side: Int): Double {
+        if (!bar.open.isFinite() || !bar.high.isFinite() || !bar.low.isFinite() || !bar.close.isFinite()) return 0.0
+        val range = bar.high - bar.low
+        if (!(range > 0.0)) return 0.0
+        val wick = if (side > 0) bar.high - maxOf(bar.open, bar.close) else minOf(bar.open, bar.close) - bar.low
+        return (wick / range).coerceIn(0.0, 1.0)
+    }
+
+    /** True when [bar] does not show passive opposing-wick absorption ([opposingWick] strictly below [maxWick]). Pure. */
+    fun passesAbsorptionGate(bar: PassedArms.Bar5, side: Int, maxWick: Double = MAX_OPPOSING_WICK): Boolean =
+        side != 0 && opposingWick(bar, side) < maxWick - 1e-12
+
+    /** True when causal ATM straddle expansion vs 09:20 ([straddleVs0920]) is strictly positive. Unknown/NaN returns false. Pure. */
+    fun straddleExpanding(straddleVs0920: Double?): Boolean =
+        straddleVs0920 != null && straddleVs0920.isFinite() && straddleVs0920 > 0.0
+
+    /**
+     * Breakout extension at bar [i] of [series] in ATR([atrLen]) units beyond the prior [lookback]-bar Donchian edge for [side]
+     * (+1: (close - maxHigh) / atr; -1: (minLow - close) / atr). Null when history is insufficient or ATR is non-positive. Pure.
+     */
+    fun breakStrength(
+        series: List<PassedArms.Bar5>,
+        i: Int,
+        side: Int,
+        lookback: Int = DonchianArm.LOOKBACK,
+        atrLen: Int = BREAK_ATR_LEN,
+    ): Double? {
+        if (side == 0 || i < lookback || i >= series.size) return null
+        val w = series.subList(i - lookback, i)
+        if (w.any { !it.high.isFinite() || !it.low.isFinite() }) return null
+        val bar = series[i]
+        if (!bar.close.isFinite()) return null
+        val start = maxOf(0, i - atrLen + 1)
+        var trSum = 0.0
+        var trCount = 0
+        for (k in start..i) {
+            val cur = series[k]
+            if (!cur.high.isFinite() || !cur.low.isFinite()) continue
+            val tr = if (k > 0 && series[k - 1].close.isFinite()) {
+                val pc = series[k - 1].close
+                maxOf(cur.high - cur.low, kotlin.math.abs(cur.high - pc), kotlin.math.abs(cur.low - pc))
+            } else {
+                cur.high - cur.low
+            }
+            trSum += tr
+            trCount++
+        }
+        if (trCount < minOf(5, atrLen)) return null
+        val atr = trSum / trCount
+        if (!(atr > 0.0)) return null
+        return if (side > 0) (bar.close - w.maxOf { it.high }) / atr else (w.minOf { it.low } - bar.close) / atr
+    }
+
+    /**
+     * Upgraded signal generator keeping all 5 [UNDERLYINGS] in the [MIN_BREADTH] breadth vote, while applying:
+     *   1. Ex-BANKNIFTY execution ([execUnderlyings]),
+     *   2. Opposing-wick absorption gate ([maxOpposingWick], default 0.35),
+     *   3. Breakout extension floor ([minBreakStrength], default 0.50 ATR),
+     *   4. Optional causal ATM straddle expansion gate ([straddleVs0920ByBar]: map of (underlying, barIndex) -> straddle_vs_0920),
+     *   5. Highest [breakStrength] tie-breaking within the same bar for strict 1-position Rs 56,000 slot selection.
+     * Existing [signals] remains unchanged for parity with legacy callers and tests. Pure.
+     */
+    fun filteredSignals(
+        seriesByIndex: Map<String, List<PassedArms.Bar5>>,
+        today: LocalDate,
+        execUnderlyings: List<String> = EXEC_UNDERLYINGS,
+        maxOpposingWick: Double = MAX_OPPOSING_WICK,
+        minBreakStrength: Double = MIN_BREAK_STRENGTH,
+        straddleVs0920ByBar: Map<Pair<String, Int>, Double>? = null,
+    ): List<DonchianArm.Signal> {
+        val by = HashMap<Int, MutableMap<String, Triple<Int, PassedArms.Bar5, Double?>>>()
+        for (u in UNDERLYINGS) {
+            val s = seriesByIndex[u] ?: continue
+            for (i in s.indices) {
+                val bar = s[i]
+                if (bar.date != today) continue
+                val side = DonchianArm.sideAt(s, i)
+                val brk = if (side != 0) breakStrength(s, i, side) else null
+                by.getOrPut(bar.b) { HashMap() }[u] = Triple(side, bar, brk)
+            }
+        }
+        val execSet = execUnderlyings.toSet()
+        val out = ArrayList<DonchianArm.Signal>()
+        for (b in by.keys.sorted()) {
+            val row = by.getValue(b)
+            val side = breadth(row.mapValues { it.value.first })
+            if (side == 0) continue
+            val barCandidates = ArrayList<Pair<Double, DonchianArm.Signal>>()
+            for (u in UNDERLYINGS) {
+                if (u !in execSet) continue
+                val (s, bar, brk) = row[u] ?: continue
+                if (s != side || !DonchianArm.inWindow(bar.closesAt.toLocalTime())) continue
+                if (!passesAbsorptionGate(bar, side, maxOpposingWick)) continue
+                if (brk == null || brk < minBreakStrength - 1e-12) continue
+                if (straddleVs0920ByBar != null && !straddleExpanding(straddleVs0920ByBar[u to b])) continue
+                val sig = DonchianArm.Signal(u, side, bar, PassedArms.itmStrike(u, side, bar.close, DonchianArm.MONEY))
+                barCandidates += brk to sig
+            }
+            barCandidates.sortByDescending { it.first }
+            for ((_, sig) in barCandidates) out += sig
+        }
+        return out
+    }
 }
