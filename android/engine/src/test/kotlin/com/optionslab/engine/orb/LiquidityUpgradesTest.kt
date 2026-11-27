@@ -79,4 +79,26 @@ class LiquidityUpgradesTest {
         assertEquals("SENSEX", LiquidityRules.underlyingOf(LiquidityRules.SENSEX5))
         assertEquals("BANKNIFTY", LiquidityRules.underlyingOf(LiquidityRules.ARM15))
     }
+    
+    @Test
+    fun parkinsonFeynmanKacEstimatorAndGateVerifyRatioAndEdgeCases() {
+        val activeBars = (0 until 30).map { i -> Bar(t0.plusMinutes(i.toLong()), 100.0, 100.10, 100.0, 100.05) }
+        val quietBars = (0 until 30).map { i -> Bar(t0.plusMinutes(i.toLong()), 100.0, 100.03, 100.0, 100.01) }
+
+        val rvActive = LiquidityRules.parkinsonRvPct(activeBars)
+        val rvQuiet = LiquidityRules.parkinsonRvPct(quietBars)
+        assertTrue(rvActive != null && rvActive > 15.0)
+        assertTrue(rvQuiet != null && rvQuiet < 7.0)
+        assertTrue(LiquidityRules.passesFeynmanKacParkinsonGate(rvActive, 15.0))
+        assertFalse(LiquidityRules.passesFeynmanKacParkinsonGate(rvQuiet, 15.0))
+
+        assertEquals(null, LiquidityRules.parkinsonRvPct(activeBars.take(10)))
+        assertFalse(LiquidityRules.passesFeynmanKacParkinsonGate(rvActive, Double.NaN))
+        assertFalse(LiquidityRules.passesFeynmanKacParkinsonGate(rvActive, 0.0))
+
+        val cleanBull = bar(100.0, 120.0, 100.0, 118.0)
+        assertTrue(LiquidityRules.passesUp3Gate("NIFTY", cleanBull, +1, 0.04, fkParkinsonRatio = 0.65, requireFkParkinson = true))
+        assertFalse(LiquidityRules.passesUp3Gate("NIFTY", cleanBull, +1, 0.04, fkParkinsonRatio = 0.55, requireFkParkinson = true))
+        assertFalse(LiquidityRules.passesUp3Gate("NIFTY", cleanBull, +1, 0.04, fkParkinsonRatio = null, requireFkParkinson = true))
+    }
 }
