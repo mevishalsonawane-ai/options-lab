@@ -73,5 +73,10 @@ class LiquidityUpgradesTest {
         assertEquals(15.0, LiquidityRules.indexStopPointsEx("NIFTY"))
         assertEquals(50.0, LiquidityRules.indexStopPointsEx("SENSEX"))
         assertEquals(8.0, LiquidityRules.indexStopPointsEx("MIDCPNIFTY"))
+        assertEquals("NIFTY", LiquidityRules.underlyingOf(LiquidityRules.NIFTY15))
+        assertEquals("NIFTY", LiquidityRules.underlyingOf(LiquidityRules.NIFTY5))
+        assertEquals("SENSEX", LiquidityRules.underlyingOf(LiquidityRules.SENSEX15))
+        assertEquals("SENSEX", LiquidityRules.underlyingOf(LiquidityRules.SENSEX5))
+        assertEquals("BANKNIFTY", LiquidityRules.underlyingOf(LiquidityRules.ARM15))
     }
 }
