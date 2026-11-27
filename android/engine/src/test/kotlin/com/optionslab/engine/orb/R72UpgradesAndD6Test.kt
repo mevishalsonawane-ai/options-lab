@@ -130,5 +130,26 @@ Bar(t0.plusMinutes(i.toLong()), px, px, px, px)
         val fkMap = mapOf(("SENSEX" to 1) to 0.85, ("NIFTY" to 1) to 0.55, ("FINNIFTY" to 1) to Double.NaN)
         val filtered = BreadthDonchianArm.filteredSignals(series, day, fkSemiVolRatioByBar = fkMap)
         assertEquals(listOf("SENSEX"), filtered.map { it.underlying })
+        // Branch coverage for empty/single/multi-day/invalid bars, side=0, mixed returns, missing FK key, and null/negative inputs
+        assertEquals(null, BreadthDonchianArm.directionalSemiVolPct(emptyList(), +1))
+        assertEquals(null, BreadthDonchianArm.directionalSemiVolPct(upBars, 0))
+        assertEquals(null, BreadthDonchianArm.directionalSemiVolPct(upBars, +1, window = 0))
+        assertEquals(null, BreadthDonchianArm.directionalSemiVolPct(upBars.take(1), +1))
+        val mixedBars = listOf(
+            Bar(t0.minusDays(1), 100.0, 100.0, 100.0, 100.0),
+            Bar(t0, 100.0, 100.0, 100.0, Double.NaN),
+            Bar(t0.plusMinutes(1), 100.0, 100.0, 100.0, -1.0),
+        ) + (0..30).map { i ->
+            val px = if (i % 2 == 0) 100.0 else 100.05
+            Bar(t0.plusMinutes(i.toLong() + 2), px, px, px, px)
+        }
+        assertTrue((BreadthDonchianArm.directionalSemiVolPct(mixedBars, +1) ?: 0.0) > 0.0)
+        assertTrue((BreadthDonchianArm.directionalSemiVolPct(mixedBars, -1) ?: 0.0) > 0.0)
+        assertEquals(null, BreadthDonchianArm.feynmanKacSemiVolRatio(null, 15.0))
+        assertEquals(null, BreadthDonchianArm.feynmanKacSemiVolRatio(10.0, null))
+        assertEquals(null, BreadthDonchianArm.feynmanKacSemiVolRatio(Double.NaN, 15.0))
+        assertEquals(null, BreadthDonchianArm.feynmanKacSemiVolRatio(-1.0, 15.0))
+        val fkMissing = mapOf(("SENSEX" to 1) to 0.85, ("NIFTY" to 1) to 0.55)
+        assertEquals(listOf("SENSEX"), BreadthDonchianArm.filteredSignals(series, day, fkSemiVolRatioByBar = fkMissing).map { it.underlying })
 }
 }
