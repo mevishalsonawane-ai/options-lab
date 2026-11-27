@@ -451,11 +451,15 @@ object LiquidityRules {
         requireStraddle: Boolean = true,
         applyWideDaySkip: Boolean = false,
         maxOpposingWick: Double = MAX_OPPOSING_WICK,
+        fkParkinsonRatio: Double? = null,
+minFkParkinsonRatio: Double = MIN_FK_PARKINSON_RATIO,
+requireFkParkinson: Boolean = false,
     ): Boolean {
         if (underlying !in EX_BN_UNDERLYINGS) return false
         if (!passesAbsorptionGate(bar, side, maxOpposingWick)) return false
         if (requireStraddle && !straddleExpanding(straddleVs0920)) return false
         if (applyWideDaySkip && BreadthDonchianArm.wideDay(wideRatio)) return false
+        if (requireFkParkinson && (fkParkinsonRatio == null || !fkParkinsonRatio.isFinite() || fkParkinsonRatio < minFkParkinsonRatio - 1e-12)) return false
         return true
     }
 
@@ -468,4 +472,47 @@ object LiquidityRules {
      */
     fun rankCandidates(candidates: List<Candidate>): List<Candidate> =
         candidates.sortedByDescending { it.minutes }
+        
+    // ---- Verified Feynman-Kac Parkinson Range-RV Gate (Nov 2026 MC + Walk-Forward) ---------------------------------------
+
+    const val FK_PARKINSON_WINDOW = 30
+    const val FK_PARKINSON_MIN_BARS = 15
+    const val MIN_FK_PARKINSON_RATIO = 0.60
+    private val ANNUALIZE_1M_PCT = kotlin.math.sqrt(252.0 * 375.0) * 100.0
+    private val PARKINSON_CONST = 1.0 / (4.0 * kotlin.math.ln(2.0))
+
+    fun parkinsonRvPct(
+        ones: List<Bar>,
+        window: Int = FK_PARKINSON_WINDOW,
+        minBars: Int = FK_PARKINSON_MIN_BARS,
+    ): Double? {
+        if (ones.isEmpty() || window <= 0) return null
+        val sessionDate = ones.maxOf { it.start.toLocalDate() }
+        val valid = ones.filter {
+            it.start.toLocalDate() == sessionDate &&
+                it.high.isFinite() && it.low.isFinite() && it.low > 0.0 && it.high >= it.low
+        }.sortedBy { it.start }.takeLast(window)
+        if (valid.size < minBars) return null
+        var sumHl2 = 0.0
+        for (b in valid) {
+            val r = kotlin.math.ln(b.high / b.low)
+            sumHl2 += r * r
+        }
+        return kotlin.math.sqrt((sumHl2 / valid.size) * PARKINSON_CONST) * ANNUALIZE_1M_PCT
+    }
+
+    fun feynmanKacParkinsonRatio(parkinsonRvPct: Double?, atmIvPct: Double?): Double? {
+        if (parkinsonRvPct == null || atmIvPct == null || !parkinsonRvPct.isFinite() || !atmIvPct.isFinite()) return null
+        if (parkinsonRvPct < 0.0 || atmIvPct <= 0.0) return null
+        return parkinsonRvPct / maxOf(1.0, atmIvPct)
+    }
+
+    fun passesFeynmanKacParkinsonGate(
+        parkinsonRvPct: Double?,
+        atmIvPct: Double?,
+        minRatio: Double = MIN_FK_PARKINSON_RATIO,
+    ): Boolean {
+        val ratio = feynmanKacParkinsonRatio(parkinsonRvPct, atmIvPct) ?: return false
+        return ratio >= minRatio - 1e-12
+    }
 }
