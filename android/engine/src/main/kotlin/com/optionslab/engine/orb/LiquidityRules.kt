@@ -110,6 +110,8 @@ object LiquidityRules {
     fun underlyingOf(arm: Arm): String = when {
         arm.source.endsWith("_fin") -> "FINNIFTY"
         arm.source.endsWith("_mid") -> "MIDCPNIFTY"
+        arm.source.endsWith("_nifty") -> "NIFTY"
+        arm.source.endsWith("_sensex") -> "SENSEX"
         else -> "BANKNIFTY"
     }
     /** Strike spacing of the index's options: BANKNIFTY 100, FINNIFTY 50, MIDCPNIFTY 25. */
