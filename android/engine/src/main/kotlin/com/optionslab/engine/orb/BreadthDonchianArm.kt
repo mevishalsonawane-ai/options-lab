@@ -256,6 +256,8 @@ object BreadthDonchianArm {
         maxOpposingWick: Double = MAX_OPPOSING_WICK,
         minBreakStrength: Double = MIN_BREAK_STRENGTH,
         straddleVs0920ByBar: Map<Pair<String, Int>, Double>? = null,
+        fkSemiVolRatioByBar: Map<Pair<String, Int>, Double>? = null,
+        minFkSemiVolRatio: Double = MIN_FK_SEMI_VOL_RATIO,
     ): List<DonchianArm.Signal> {
         val by = HashMap<Int, MutableMap<String, Triple<Int, PassedArms.Bar5, Double?>>>()
         for (u in UNDERLYINGS) {
@@ -282,6 +284,10 @@ object BreadthDonchianArm {
                 if (!passesAbsorptionGate(bar, side, maxOpposingWick)) continue
                 if (brk == null || brk < minBreakStrength - 1e-12) continue
                 if (straddleVs0920ByBar != null && !straddleExpanding(straddleVs0920ByBar[u to b])) continue
+                if (fkSemiVolRatioByBar != null) {
+                    val fk = fkSemiVolRatioByBar[u to b]
+                    if (fk == null || !fk.isFinite() || fk < minFkSemiVolRatio - 1e-12) continue
+                }
                 val sig = DonchianArm.Signal(u, side, bar, PassedArms.itmStrike(u, side, bar.close, DonchianArm.MONEY))
                 barCandidates += brk to sig
             }
@@ -289,5 +295,53 @@ object BreadthDonchianArm {
             for ((_, sig) in barCandidates) out += sig
         }
         return out
+    }
+
+    // ---- Verified Feynman-Kac Directional Semi-Vol Gate (Nov 2026 MC + Walk-Forward) ------------------------------------
+
+    const val FK_SEMI_VOL_WINDOW = 30
+    const val FK_SEMI_VOL_MIN_BARS = 15
+    const val MIN_FK_SEMI_VOL_RATIO = 0.70
+    private val ANNUALIZE_1M_PCT = kotlin.math.sqrt(252.0 * 375.0) * 100.0
+
+    fun directionalSemiVolPct(
+        ones: List<Bar>,
+        side: Int,
+        window: Int = FK_SEMI_VOL_WINDOW,
+        minBars: Int = FK_SEMI_VOL_MIN_BARS,
+    ): Double? {
+        if (side == 0 || ones.isEmpty() || window <= 0) return null
+        val sessionDate = ones.maxOf { it.start.toLocalDate() }
+        val dayBars = ones.filter { it.start.toLocalDate() == sessionDate && it.close.isFinite() && it.close > 0.0 }
+            .sortedBy { it.start }
+        if (dayBars.size < 2) return null
+        val rets = ArrayList<Double>(dayBars.size - 1)
+        for (i in 1 until dayBars.size) {
+            rets += kotlin.math.ln(dayBars[i].close / dayBars[i - 1].close)
+        }
+        val win = rets.takeLast(window)
+        if (win.size < minBars) return null
+        var sumSq = 0.0
+        for (r in win) {
+            if (side > 0 && r > 0.0) sumSq += r * r
+            else if (side < 0 && r < 0.0) sumSq += r * r
+        }
+        val meanSq2 = (sumSq / win.size) * 2.0
+        return kotlin.math.sqrt(meanSq2) * ANNUALIZE_1M_PCT
+    }
+
+    fun feynmanKacSemiVolRatio(semiVolPct: Double?, atmIvPct: Double?): Double? {
+        if (semiVolPct == null || atmIvPct == null || !semiVolPct.isFinite() || !atmIvPct.isFinite()) return null
+        if (semiVolPct < 0.0 || atmIvPct <= 0.0) return null
+        return semiVolPct / maxOf(1.0, atmIvPct)
+    }
+
+    fun passesFeynmanKacSemiVolGate(
+        semiVolPct: Double?,
+        atmIvPct: Double?,
+        minRatio: Double = MIN_FK_SEMI_VOL_RATIO,
+    ): Boolean {
+        val ratio = feynmanKacSemiVolRatio(semiVolPct, atmIvPct) ?: return false
+        return ratio >= minRatio - 1e-12
     }
 }
