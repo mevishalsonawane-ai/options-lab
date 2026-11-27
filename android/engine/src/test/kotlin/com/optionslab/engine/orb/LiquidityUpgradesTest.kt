@@ -100,5 +100,21 @@ class LiquidityUpgradesTest {
         assertTrue(LiquidityRules.passesUp3Gate("NIFTY", cleanBull, +1, 0.04, fkParkinsonRatio = 0.65, requireFkParkinson = true))
         assertFalse(LiquidityRules.passesUp3Gate("NIFTY", cleanBull, +1, 0.04, fkParkinsonRatio = 0.55, requireFkParkinson = true))
         assertFalse(LiquidityRules.passesUp3Gate("NIFTY", cleanBull, +1, 0.04, fkParkinsonRatio = null, requireFkParkinson = true))
+        // Branch coverage for empty, invalid window, multi-day/invalid bars, and NaN/negative inputs
+        assertEquals(null, LiquidityRules.parkinsonRvPct(emptyList()))
+        assertEquals(null, LiquidityRules.parkinsonRvPct(activeBars, window = 0))
+        val mixedBars = listOf(
+            Bar(t0.minusDays(1), 100.0, 101.0, 99.0, 100.0),
+            Bar(t0, 100.0, Double.NaN, 100.0, 100.0),
+            Bar(t0.plusMinutes(1), 100.0, 100.1, Double.NaN, 100.0),
+            Bar(t0.plusMinutes(2), 100.0, 100.1, 0.0, 100.0),
+            Bar(t0.plusMinutes(3), 100.0, 99.0, 100.0, 100.0),
+        ) + activeBars
+        assertTrue(LiquidityRules.parkinsonRvPct(mixedBars) != null)
+        assertEquals(null, LiquidityRules.feynmanKacParkinsonRatio(null, 15.0))
+        assertEquals(null, LiquidityRules.feynmanKacParkinsonRatio(10.0, null))
+        assertEquals(null, LiquidityRules.feynmanKacParkinsonRatio(Double.NaN, 15.0))
+        assertEquals(null, LiquidityRules.feynmanKacParkinsonRatio(-1.0, 15.0))
+        assertFalse(LiquidityRules.passesUp3Gate("NIFTY", cleanBull, +1, 0.04, fkParkinsonRatio = Double.NaN, requireFkParkinson = true))
     }
 }
