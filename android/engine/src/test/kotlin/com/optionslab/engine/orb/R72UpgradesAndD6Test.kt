@@ -2,6 +2,7 @@ package com.optionslab.engine.orb
 
 import java.time.LocalDate
 import kotlin.test.Test
+import java.time.LocalDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -89,4 +90,45 @@ class R72UpgradesAndD6Test {
         assertTrue(dFallback.isFinite() && dFallback in 0.50..0.75)
         assertTrue(NiftyExpiryD6Arm.liveCallDelta(Double.NaN, 42.0, 36.0, 14.5, 60).isNaN())
     }
+
+@Test
+fun directionalSemiVolFeynmanKacEstimatorAndGateVerifyBothSidesAndFilteredSignals() {
+    val t0 = LocalDateTime.of(2026, 10, 19, 9, 15)
+val upBars = (0..30).map { i ->
+val px = 100.0 * Math.pow(1.0005, i.toDouble())
+Bar(t0.plusMinutes(i.toLong()), px, px, px, px)
+}
+        val svUp = BreadthDonchianArm.directionalSemiVolPct(upBars, +1)
+        val svUpWrongSide = BreadthDonchianArm.directionalSemiVolPct(upBars, -1)
+        assertTrue(svUp != null && svUp > 20.0)
+        assertEquals(0.0, svUpWrongSide ?: -1.0, 1e-9)
+        assertTrue(BreadthDonchianArm.passesFeynmanKacSemiVolGate(svUp, 15.0))
+        assertFalse(BreadthDonchianArm.passesFeynmanKacSemiVolGate(svUpWrongSide, 15.0))
+
+        val dnBars = (0..30).map { i ->
+            val px = 100.0 * Math.pow(0.9995, i.toDouble())
+            Bar(t0.plusMinutes(i.toLong()), px, px, px, px)
+        }
+        val svDn = BreadthDonchianArm.directionalSemiVolPct(dnBars, -1)
+        assertTrue(BreadthDonchianArm.passesFeynmanKacSemiVolGate(svDn, 15.0))
+        assertFalse(BreadthDonchianArm.passesFeynmanKacSemiVolGate(BreadthDonchianArm.directionalSemiVolPct(dnBars, +1), 15.0))
+
+        assertEquals(null, BreadthDonchianArm.directionalSemiVolPct(upBars.take(10), +1))
+        assertFalse(BreadthDonchianArm.passesFeynmanKacSemiVolGate(svUp, Double.NaN))
+        assertFalse(BreadthDonchianArm.passesFeynmanKacSemiVolGate(svUp, 0.0))
+
+        fun baseSeries(base: Double, breakClose: Double, breakHigh: Double): List<PassedArms.Bar5> =
+            (55 until 75).map { b5(prev, it, base, base + 2.0, base - 2.0, base) } +
+                listOf(b5(day, 1, base, breakHigh, base - 1.0, breakClose))
+        val series = mapOf(
+            "NIFTY" to baseSeries(24000.0, 24005.0, 24006.0),
+            "BANKNIFTY" to baseSeries(52000.0, 52010.0, 52011.0),
+            "FINNIFTY" to baseSeries(23000.0, 23005.0, 23006.0),
+            "MIDCPNIFTY" to baseSeries(12000.0, 12000.0, 12001.0),
+            "SENSEX" to baseSeries(80000.0, 80012.0, 80013.0),
+        )
+        val fkMap = mapOf(("SENSEX" to 1) to 0.85, ("NIFTY" to 1) to 0.55, ("FINNIFTY" to 1) to Double.NaN)
+        val filtered = BreadthDonchianArm.filteredSignals(series, day, fkSemiVolRatioByBar = fkMap)
+        assertEquals(listOf("SENSEX"), filtered.map { it.underlying })
+}
 }
