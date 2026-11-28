@@ -110,6 +110,8 @@ object LiquidityRules {
     fun underlyingOf(arm: Arm): String = when {
         arm.source.endsWith("_fin") -> "FINNIFTY"
         arm.source.endsWith("_mid") -> "MIDCPNIFTY"
+        arm.source.endsWith("_nifty") -> "NIFTY"
+        arm.source.endsWith("_sensex") -> "SENSEX"
         else -> "BANKNIFTY"
     }
     /** Strike spacing of the index's options: BANKNIFTY 100, FINNIFTY 50, MIDCPNIFTY 25. */
@@ -373,4 +375,144 @@ object LiquidityRules {
 
     /** [INDEX_NOTES] for [und], or null (BANKNIFTY: the 26 Oct decision's own index has none). */
     fun indexNote(und: String): String? = INDEX_NOTES[und]
+
+
+    // ---- Verified UP-3 Options-Buying Upgrades (Nov 2026 real 1m option-price walk-forward) ------------------------------
+
+    /** Extended paper books for NIFTY and SENSEX (Ex-BANKNIFTY UP-3 universe). */
+    val NIFTY15 = Arm("liquidity15_nifty", "Liquidity 15m NIFTY", liquidity = true)
+    val NIFTY5 = Arm("liquidity5_nifty", "Liquidity 5m NIFTY", liquidity = true)
+    val SENSEX15 = Arm("liquidity15_sensex", "Liquidity 15m SENSEX", liquidity = true)
+    val SENSEX5 = Arm("liquidity5_sensex", "Liquidity 5m SENSEX", liquidity = true)
+
+    /**
+     * Ex-BANKNIFTY execution universe verified on real 1m option prices (Jul 2024 - Oct 2026):
+     *   - UP-3 (Ex-BN + straddle_vs_0920 > 0 + oppWick < 0.35 + HTF-first tie-break, 1-pos Rs 56k):
+     *     N=292, 68.8% WR, +₹1,20,233 (2x +₹1,18,802), PF 1.90/1.88, Max DD -₹9,499, Worst Mo -₹2,689, day-t +3.92.
+     *   - Zero-extra-feed HTF-only fallback ([EX_BN_HTF_BOOKS]):
+     *     N=309, 64.1% WR, +₹77,699 (2x +₹72,816), PF 1.48/1.44, Max DD -₹12,205, day-t +2.54.
+     */
+    val EX_BN_UNDERLYINGS = listOf("NIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX")
+    val EX_BN_HTF_BOOKS = listOf(FIN30, MID15, NIFTY15, SENSEX15)
+    val EX_BN_BOOKS = listOf(FIN30, MID15, NIFTY15, SENSEX15, FIN5, MID5, NIFTY5, SENSEX5)
+
+    /** Opposing-wick absorption ceiling matching BreadthDonchianArm (skip breakout bars with opposing wick >= 35%). */
+    const val MAX_OPPOSING_WICK = 0.35
+
+    /** Extended strike spacing supporting NIFTY (50) and SENSEX (100) without altering legacy [strikeStep]. Pure. */
+    fun strikeStepEx(underlying: String): Int = when (underlying) {
+        "NIFTY", "FINNIFTY" -> 50
+        "MIDCPNIFTY" -> 25
+        else -> 100
+    }
+
+    /** Extended index-stop points (~0.065% of index) supporting NIFTY (15) and SENSEX (50) without altering [indexStopPoints]. Pure. */
+    fun indexStopPointsEx(underlying: String): Double = when (underlying) {
+        "NIFTY", "FINNIFTY" -> 15.0
+        "MIDCPNIFTY" -> 8.0
+        "SENSEX" -> 50.0
+        else -> 30.0
+    }
+
+    /**
+     * Fraction of [bar]'s high-low range consumed by the opposing rejection wick for [side] (+1 call: upper wick; -1 put:
+     * lower wick). Returns 0.0 for flat bars or non-finite prices. Pure.
+     */
+    fun opposingWick(bar: Bar, side: Int): Double {
+        if (!bar.open.isFinite() || !bar.high.isFinite() || !bar.low.isFinite() || !bar.close.isFinite()) return 0.0
+        val range = bar.high - bar.low
+        if (!(range > 0.0)) return 0.0
+        val wick = if (side > 0) bar.high - maxOf(bar.open, bar.close) else minOf(bar.open, bar.close) - bar.low
+        return (wick / range).coerceIn(0.0, 1.0)
+    }
+
+    /** True when [bar] does not show passive opposing-wick absorption ([opposingWick] strictly below [maxWick]). Pure. */
+    fun passesAbsorptionGate(bar: Bar, side: Int, maxWick: Double = MAX_OPPOSING_WICK): Boolean =
+        side != 0 && opposingWick(bar, side) < maxWick - 1e-12
+
+    /** True when causal ATM straddle expansion vs 09:20 ([straddleVs0920]) is strictly positive. Unknown/NaN returns false. Pure. */
+    fun straddleExpanding(straddleVs0920: Double?): Boolean =
+        straddleVs0920 != null && straddleVs0920.isFinite() && straddleVs0920 > 0.0
+
+    /**
+     * Unified UP-3 entry gate for Liquidity 15+5:
+     *   1. Ex-BANKNIFTY execution ([EX_BN_UNDERLYINGS]),
+     *   2. Opposing-wick absorption filter ([passesAbsorptionGate], default < 0.35),
+     *   3. Causal ATM straddle expansion ([straddleExpanding], default required),
+     *   4. Optional R140 wide-day skip ([applyWideDaySkip], recommended under shorter 20m-30m exits).
+     * Pure.
+     */
+    fun passesUp3Gate(
+        underlying: String,
+        bar: Bar,
+        side: Int,
+        straddleVs0920: Double?,
+        wideRatio: Double? = null,
+        requireStraddle: Boolean = true,
+        applyWideDaySkip: Boolean = false,
+        maxOpposingWick: Double = MAX_OPPOSING_WICK,
+        fkParkinsonRatio: Double? = null,
+minFkParkinsonRatio: Double = MIN_FK_PARKINSON_RATIO,
+requireFkParkinson: Boolean = false,
+    ): Boolean {
+        if (underlying !in EX_BN_UNDERLYINGS) return false
+        if (!passesAbsorptionGate(bar, side, maxOpposingWick)) return false
+        if (requireStraddle && !straddleExpanding(straddleVs0920)) return false
+        if (applyWideDaySkip && BreadthDonchianArm.wideDay(wideRatio)) return false
+        if (requireFkParkinson && (fkParkinsonRatio == null || !fkParkinsonRatio.isFinite() || fkParkinsonRatio < minFkParkinsonRatio - 1e-12)) return false
+        return true
+    }
+
+    /** Candidate liquidity signal paired with its chart timeframe for strict 1-position HTF-first ranking. */
+    data class Candidate(val arm: Arm, val underlying: String, val minutes: Int, val signal: Signal, val bar: Bar)
+
+    /**
+     * Ranks same-bar liquidity candidates for a strict 1-position Rs 56,000 account: higher timeframes first (30m > 15m > 5m),
+     * preserving deterministic input order on equal timeframes. Pure.
+     */
+    fun rankCandidates(candidates: List<Candidate>): List<Candidate> =
+        candidates.sortedByDescending { it.minutes }
+        
+    // ---- Verified Feynman-Kac Parkinson Range-RV Gate (Nov 2026 MC + Walk-Forward) ---------------------------------------
+
+    const val FK_PARKINSON_WINDOW = 30
+    const val FK_PARKINSON_MIN_BARS = 15
+    const val MIN_FK_PARKINSON_RATIO = 0.60
+    private val ANNUALIZE_1M_PCT = kotlin.math.sqrt(252.0 * 375.0) * 100.0
+    private val PARKINSON_CONST = 1.0 / (4.0 * kotlin.math.ln(2.0))
+
+    fun parkinsonRvPct(
+        ones: List<Bar>,
+        window: Int = FK_PARKINSON_WINDOW,
+        minBars: Int = FK_PARKINSON_MIN_BARS,
+    ): Double? {
+        if (ones.isEmpty() || window <= 0) return null
+        val sessionDate = ones.maxOf { it.start.toLocalDate() }
+        val valid = ones.filter {
+            it.start.toLocalDate() == sessionDate &&
+                it.high.isFinite() && it.low.isFinite() && it.low > 0.0 && it.high >= it.low
+        }.sortedBy { it.start }.takeLast(window)
+        if (valid.size < minBars) return null
+        var sumHl2 = 0.0
+        for (b in valid) {
+            val r = kotlin.math.ln(b.high / b.low)
+            sumHl2 += r * r
+        }
+        return kotlin.math.sqrt((sumHl2 / valid.size) * PARKINSON_CONST) * ANNUALIZE_1M_PCT
+    }
+
+    fun feynmanKacParkinsonRatio(parkinsonRvPct: Double?, atmIvPct: Double?): Double? {
+        if (parkinsonRvPct == null || atmIvPct == null || !parkinsonRvPct.isFinite() || !atmIvPct.isFinite()) return null
+        if (parkinsonRvPct < 0.0 || atmIvPct <= 0.0) return null
+        return parkinsonRvPct / maxOf(1.0, atmIvPct)
+    }
+
+    fun passesFeynmanKacParkinsonGate(
+        parkinsonRvPct: Double?,
+        atmIvPct: Double?,
+        minRatio: Double = MIN_FK_PARKINSON_RATIO,
+    ): Boolean {
+        val ratio = feynmanKacParkinsonRatio(parkinsonRvPct, atmIvPct) ?: return false
+        return ratio >= minRatio - 1e-12
+    }
 }
