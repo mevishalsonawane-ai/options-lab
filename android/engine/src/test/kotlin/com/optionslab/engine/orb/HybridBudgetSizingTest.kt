@@ -15,6 +15,7 @@ class HybridBudgetSizingTest {
         assertEquals(HybridBudgetSizing.ExitMode.X1_FAST, HybridBudgetSizing.exitModeFor(LiquidityRules.MID15.source, lots = 3))
         assertEquals(HybridBudgetSizing.ExitMode.X1_FAST, HybridBudgetSizing.exitModeFor(LiquidityRules.SENSEX5.source, lots = 3))
         assertEquals(HybridBudgetSizing.ExitMode.X1_FAST, HybridBudgetSizing.exitModeFor(NiftyExpiryD6Arm.SOURCE, lots = 2))
+        assertTrue(HybridBudgetSizing.ExitMode.values().contains(HybridBudgetSizing.ExitMode.X4_HOLD_30M))
     }
 
     @Test
@@ -22,16 +23,24 @@ class HybridBudgetSizingTest {
         assertEquals(8, HybridBudgetSizing.EX_BN_LIQUIDITY_SOURCES.size)
         for (book in LiquidityRules.EX_BN_BOOKS) {
             assertTrue(HybridBudgetSizing.isExBnLiquidity(book.source))
+            assertTrue(HybridBudgetSizing.isLiquidityArm(book.source))
             assertTrue(HybridBudgetSizing.isAllowedArm(book.source))
             assertEquals(56_000.0, HybridBudgetSizing.budgetFor(book.source), 1e-6)
             assertEquals(3, HybridBudgetSizing.maxLotsFor(book.source))
         }
+        assertTrue(HybridBudgetSizing.isLiquidityArm(LiquidityRules.ARM.source))
+        assertTrue(HybridBudgetSizing.isLiquidityArm(LiquidityRules.ARM15.source))
+        assertTrue(HybridBudgetSizing.isLiquidityArm(LiquidityRules.ARM5.source))
+        assertFalse(HybridBudgetSizing.isLiquidityArm(BreadthDonchianArm.SOURCE))
+        assertFalse(HybridBudgetSizing.isLiquidityArm(NiftyExpiryD6Arm.SOURCE))
         assertFalse(HybridBudgetSizing.isExBnLiquidity(LiquidityRules.ARM15.source))
         assertFalse(HybridBudgetSizing.isExBnLiquidity(LiquidityRules.ARM5.source))
         assertFalse(HybridBudgetSizing.isAllowedArm(LiquidityRules.ARM15.source))
         assertFalse(HybridBudgetSizing.isAllowedArm(LiquidityRules.ARM5.source))
         assertTrue(HybridBudgetSizing.isAllowedArm(BreadthDonchianArm.SOURCE))
         assertTrue(HybridBudgetSizing.isAllowedArm(NiftyExpiryD6Arm.SOURCE))
+        assertEquals(40_000.0, HybridBudgetSizing.budgetFor(BreadthDonchianArm.SOURCE), 1e-6)
+        assertEquals(2, HybridBudgetSizing.maxLotsFor(BreadthDonchianArm.SOURCE))
     }
 
     @Test
@@ -41,12 +50,23 @@ class HybridBudgetSizingTest {
         assertEquals(3, liqPlan.x1Lots)
         assertEquals(0, liqPlan.x4Lots)
         assertEquals(225, liqPlan.totalQuantity)
+        assertEquals(225, liqPlan.x1Quantity)
+        assertEquals(0, liqPlan.x4Quantity)
         assertEquals(HybridBudgetSizing.ExitMode.X1_FAST, liqPlan.exitMode)
         assertFalse(liqPlan.isSplit)
 
-        val bnPlan = HybridBudgetSizing.planFor(LiquidityRules.ARM5.source, entryPremium = 200.0, lotSize = 30)
-        assertEquals(0, bnPlan.totalLots)
-        assertEquals(0, bnPlan.totalQuantity)
+        val bnBlocked = HybridBudgetSizing.planFor(LiquidityRules.ARM5.source, entryPremium = 200.0, lotSize = 30)
+        assertEquals(0, bnBlocked.totalLots)
+        assertEquals(0, bnBlocked.totalQuantity)
+
+        val bnOverride = HybridBudgetSizing.planFor(
+            LiquidityRules.ARM15.source,
+            entryPremium = 200.0,
+            lotSize = 30,
+            allowNonExBnLiquidity = true,
+        )
+        assertEquals(2, bnOverride.totalLots)
+        assertEquals(HybridBudgetSizing.ExitMode.X1_FAST, bnOverride.exitMode)
 
         val r72Split = HybridBudgetSizing.planFor(BreadthDonchianArm.SOURCE, entryPremium = 200.0, lotSize = 75)
         assertEquals(2, r72Split.totalLots)
@@ -64,6 +84,9 @@ class HybridBudgetSizingTest {
         assertEquals(HybridBudgetSizing.ExitMode.X1_FAST, r72Single.exitMode)
         assertFalse(r72Single.isSplit)
 
+        val r72Rejected = HybridBudgetSizing.planFor(BreadthDonchianArm.SOURCE, entryPremium = 1000.0, lotSize = 75)
+        assertEquals(0, r72Rejected.totalLots)
+
         val d6Plan = HybridBudgetSizing.planFor(NiftyExpiryD6Arm.SOURCE, entryPremium = 200.0, lotSize = 75)
         assertEquals(2, d6Plan.totalLots)
         assertEquals(2, d6Plan.x1Lots)
@@ -78,14 +101,28 @@ class HybridBudgetSizingTest {
         assertEquals(3, liq56.x1Lots)
         assertEquals(0, liq56.x4Lots)
 
+        val r72Odd = HybridBudgetSizing.compoundingPlanFor(BreadthDonchianArm.SOURCE, 112_000.0, 200.0, 75, maxLotsOverride = 3)
+        assertEquals(3, r72Odd.totalLots)
+        assertEquals(2, r72Odd.x1Lots)
+        assertEquals(1, r72Odd.x4Lots)
+        assertEquals(HybridBudgetSizing.ExitMode.SPLIT_X1_X4, r72Odd.exitMode)
+
         val r72At112 = HybridBudgetSizing.compoundingPlanFor(BreadthDonchianArm.SOURCE, 112_000.0, 200.0, 75, maxLotsOverride = 4)
         assertEquals(4, r72At112.totalLots)
         assertEquals(2, r72At112.x1Lots)
         assertEquals(2, r72At112.x4Lots)
-        assertEquals(HybridBudgetSizing.ExitMode.SPLIT_X1_X4, r72At112.exitMode)
 
-        val bnComp = HybridBudgetSizing.compoundingPlanFor(LiquidityRules.ARM15.source, 112_000.0, 200.0, 30)
-        assertEquals(0, bnComp.totalLots)
+        val bnCompBlocked = HybridBudgetSizing.compoundingPlanFor(LiquidityRules.ARM15.source, 112_000.0, 200.0, 30)
+        assertEquals(0, bnCompBlocked.totalLots)
+
+        val bnCompOverride = HybridBudgetSizing.compoundingPlanFor(
+            LiquidityRules.ARM15.source,
+            112_000.0,
+            200.0,
+            30,
+            allowNonExBnLiquidity = true,
+        )
+        assertEquals(2, bnCompOverride.totalLots)
     }
 
     @Test
